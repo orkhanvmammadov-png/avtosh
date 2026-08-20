@@ -16,24 +16,27 @@ export interface ApiErrorBody {
   };
 }
 
-function baseHeaders(requestId?: string): HeadersInit {
+function baseHeaders(requestId?: string, setCookie?: string): HeadersInit {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
   if (requestId !== undefined) {
     headers[REQUEST_ID_HEADER] = requestId;
   }
+  if (setCookie !== undefined) {
+    headers["Set-Cookie"] = setCookie;
+  }
   return headers;
 }
 
 export function apiSuccess<T>(
   data: T,
-  options?: { status?: number; requestId?: string },
+  options?: { status?: number; requestId?: string; setCookie?: string },
 ): Response {
   const body: ApiSuccessBody<T> = { data };
   return Response.json(body, {
     status: options?.status ?? 200,
-    headers: baseHeaders(options?.requestId),
+    headers: baseHeaders(options?.requestId, options?.setCookie),
   });
 }
 

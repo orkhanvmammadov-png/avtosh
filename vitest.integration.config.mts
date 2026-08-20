@@ -12,6 +12,14 @@ export default defineConfig({
     fileParallelism: false,
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    env: {
+      // Test-only auth secrets/tuning — NOT production values. The
+      // pepper is deliberately a committed dummy: real peppers live
+      // only in deployment secret stores.
+      OTP_PEPPER: "integration-test-pepper-0123456789abcdef",
+      OTP_MIN_INTERVAL_SECONDS: "0",
+      OTP_RESEND_COOLDOWN_SECONDS: "0",
+    },
   },
   resolve: {
     alias: {

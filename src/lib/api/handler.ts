@@ -31,6 +31,32 @@ export function createApiHandler(
  * a VALIDATION_ERROR ApiError carrying only safe issue details
  * (parameter path + message — never raw values echoed back).
  */
+/**
+ * Parses a JSON request body against a Zod schema. Non-JSON bodies
+ * and schema failures both become VALIDATION_ERROR with safe details.
+ */
+export async function parseBody<Schema extends z.ZodType>(
+  request: Request,
+  schema: Schema,
+): Promise<z.infer<Schema>> {
+  let raw: unknown;
+  try {
+    raw = await request.json();
+  } catch {
+    throw new ApiError("VALIDATION_ERROR", "Request body must be valid JSON.");
+  }
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) {
+    throw new ApiError("VALIDATION_ERROR", "Invalid request body.", {
+      details: parsed.error.issues.map((issue) => ({
+        parameter: issue.path.join("."),
+        message: issue.message,
+      })),
+    });
+  }
+  return parsed.data;
+}
+
 export function parseQuery<Schema extends z.ZodType>(
   request: Request,
   schema: Schema,
