@@ -3,11 +3,28 @@
 This directory holds everything database-related for AVTOSH.AZ
 (Supabase PostgreSQL).
 
-- `migrations/` — versioned SQL schema migrations
-- `seed/` — development/test seed data (never production data)
+- `migrations/` — versioned SQL schema migrations (the executable
+  source of truth for the schema; see `docs/architecture/database.md`
+  for the design documentation)
+- `seed/` — development/test seed data (never production data).
+  Stable system/reference seed data lives in the
+  `..._initial_seed.sql` migration instead, so every environment gets
+  it deterministically.
 
-No business schema exists yet; the schema arrives in
-Phase 4.2 — Database Schema & Migrations.
+The Phase 4.2 schema covers identity, catalog, marketplace,
+moderation, payments, promotions, notifications, and governance.
+
+## Validating migrations locally
+
+```bash
+pnpm db:validate
+```
+
+boots a throwaway local PostgreSQL instance (requires Homebrew/system
+PostgreSQL binaries), applies every migration from scratch, runs the
+negative constraint tests in `scripts/db/constraint-tests.sql`, and
+tears everything down. It never touches a shared or production
+database.
 
 ## Migration Rules (binding)
 
@@ -26,9 +43,12 @@ Phase 4.2 — Database Schema & Migrations.
    TIMESTAMPTZ for timestamps, and explicit FK/unique/check
    constraints and indexes (see CLAUDE.md → Database).
 
-## Local setup
+## Supabase CLI status
 
-The Supabase CLI is not yet part of this repository's tooling
-(it was not available when the foundation was created). When local
-Supabase development starts (Phase 4.2), initialize it with
-`supabase init` and commit the generated `supabase/config.toml`.
+The Supabase CLI local stack requires Docker, which is not available
+on the current development machine, so `supabase init`/`supabase db`
+validation has not been run. Migrations follow the standard Supabase
+`YYYYMMDDHHMMSS_name.sql` convention and are validated against plain
+PostgreSQL 16 via `pnpm db:validate` instead. When Docker/CLI become
+available, run `supabase init`, commit the generated `config.toml`,
+and use `supabase db reset` as the canonical local workflow.

@@ -3,10 +3,12 @@
 Azerbaijan-focused responsive **web** marketplace for cars and
 motorcycles. Web only — no native iOS/Android applications.
 
-**Current phase: Phase 4.1 — Engineering Foundation.**
-No business features (auth, listings, payments, moderation, …) are
-implemented yet. `CLAUDE.md` is the authoritative product/architecture
-instruction file.
+**Current phase: Phase 4.2 — Database Schema & Migrations (complete).**
+The full MVP database schema exists as Supabase migrations; no
+application business features (auth, listings, payments, moderation, …)
+are implemented yet. `CLAUDE.md` is the authoritative
+product/architecture instruction file; see
+`docs/architecture/database.md` for the schema design.
 
 ## Technology stack
 
@@ -44,6 +46,7 @@ Health check: `GET http://localhost:3000/api/v1/health`
 | `pnpm typecheck`| TypeScript (strict, no emit)     |
 | `pnpm test`     | Unit tests (Vitest)              |
 | `pnpm test:e2e` | E2E smoke tests (Playwright)     |
+| `pnpm db:validate` | Apply all migrations to an ephemeral PostgreSQL and run constraint tests |
 
 Before first `pnpm test:e2e` run: `pnpm exec playwright install chromium`.
 
