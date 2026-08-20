@@ -11,10 +11,10 @@ export default defineConfig({
       // "server-only" throws outside a React Server environment; unit
       // tests run in plain Node, so it is stubbed out here.
       "server-only": path.resolve(
-        __dirname,
+        import.meta.dirname,
         "tests/helpers/server-only-stub.ts",
       ),
-      "@": path.resolve(__dirname, "src"),
+      "@": path.resolve(import.meta.dirname, "src"),
     },
   },
 });

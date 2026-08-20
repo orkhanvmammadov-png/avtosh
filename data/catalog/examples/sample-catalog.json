@@ -1,0 +1,24 @@
+{
+  "brands": [
+    { "name": "Toyota", "slug": "toyota", "categories": ["CAR"] },
+    { "name": "BMW", "slug": "bmw", "categories": ["CAR", "MOTORCYCLE"] },
+    { "name": "Yamaha", "slug": "yamaha", "categories": ["MOTORCYCLE"] }
+  ],
+  "models": [
+    { "brand_slug": "toyota", "category": "CAR", "name": "Corolla", "slug": "corolla" },
+    { "brand_slug": "toyota", "category": "CAR", "name": "Camry", "slug": "camry" },
+    { "brand_slug": "bmw", "category": "CAR", "name": "3 Series", "slug": "3-series" },
+    { "brand_slug": "bmw", "category": "MOTORCYCLE", "name": "R 1250 GS", "slug": "r-1250-gs" },
+    { "brand_slug": "yamaha", "category": "MOTORCYCLE", "name": "YZF-R6", "slug": "yzf-r6" }
+  ],
+  "cities": [
+    { "name_az": "Bakı", "slug": "baki", "sort_order": 1 },
+    { "name_az": "Gəncə", "slug": "gence", "sort_order": 2 },
+    { "name_az": "Sumqayıt", "slug": "sumqayit", "sort_order": 3 }
+  ],
+  "features": [
+    { "code": "AIR_CONDITIONING", "name_az": "Kondisioner", "category": "CAR" },
+    { "code": "ABS", "name_az": "ABS", "category": null },
+    { "code": "PARKING_SENSOR", "name_az": "Park radarı", "category": "CAR" }
+  ]
+}

@@ -7,7 +7,7 @@ on:
 
 jobs:
   quality:
-    name: Typecheck, lint, test, build
+    name: Typecheck, lint, test, db, build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -25,6 +25,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # The DB checks use the repo's own ephemeral-PostgreSQL harness
+      # (scripts/db/with-temp-postgres.sh) — the same one used locally.
+      # It only needs initdb/pg_ctl/psql on PATH; ubuntu-latest ships
+      # PostgreSQL preinstalled, with apt as a fallback. The instance
+      # is throwaway and listens on 127.0.0.1 only — no external or
+      # shared database, no credentials.
+      - name: Set up PostgreSQL binaries
+        run: |
+          if ! ls /usr/lib/postgresql/*/bin/initdb >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends postgresql
+          fi
+          PG_BIN="$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)"
+          echo "Using PostgreSQL binaries at $PG_BIN"
+          echo "$PG_BIN" >> "$GITHUB_PATH"
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -33,6 +49,12 @@ jobs:
 
       - name: Unit tests
         run: pnpm test
+
+      - name: Database constraint validation
+        run: pnpm db:validate
+
+      - name: Database integration tests
+        run: pnpm test:integration:db
 
       - name: Production build
         run: pnpm build

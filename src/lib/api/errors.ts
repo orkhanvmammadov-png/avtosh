@@ -2,11 +2,19 @@
  * Machine-readable API error codes. Phase 4.1 only needs generic codes;
  * the business error catalog is added in later phases.
  */
-export type ApiErrorCode = "VALIDATION_ERROR" | "INTERNAL_ERROR";
+export type ApiErrorCode =
+  | "VALIDATION_ERROR"
+  | "INTERNAL_ERROR"
+  | "CATALOG_INVALID_CATEGORY"
+  | "CATALOG_INVALID_BRAND"
+  | "CATALOG_INVALID_GROUP";
 
 const DEFAULT_STATUS: Record<ApiErrorCode, number> = {
   VALIDATION_ERROR: 400,
   INTERNAL_ERROR: 500,
+  CATALOG_INVALID_CATEGORY: 400,
+  CATALOG_INVALID_BRAND: 400,
+  CATALOG_INVALID_GROUP: 400,
 };
 
 /**

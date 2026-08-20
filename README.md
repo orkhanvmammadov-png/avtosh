@@ -3,12 +3,14 @@
 Azerbaijan-focused responsive **web** marketplace for cars and
 motorcycles. Web only — no native iOS/Android applications.
 
-**Current phase: Phase 4.2 — Database Schema & Migrations (complete).**
-The full MVP database schema exists as Supabase migrations; no
-application business features (auth, listings, payments, moderation, …)
-are implemented yet. `CLAUDE.md` is the authoritative
-product/architecture instruction file; see
-`docs/architecture/database.md` for the schema design.
+**Current phase: Phase 4.3 — Catalog & Reference Data (complete).**
+The MVP database schema exists as Supabase migrations and the public
+read-only Catalog API (`/api/v1/catalog/*`) is implemented; business
+flows (auth, listings, payments, moderation, …) are not implemented
+yet. `CLAUDE.md` is the authoritative product/architecture
+instruction file; see `docs/architecture/database.md` (schema),
+`docs/architecture/catalog.md` (catalog design) and
+`docs/api/catalog.md` (API contract).
 
 ## Technology stack
 
@@ -47,8 +49,19 @@ Health check: `GET http://localhost:3000/api/v1/health`
 | `pnpm test`     | Unit tests (Vitest)              |
 | `pnpm test:e2e` | E2E smoke tests (Playwright)     |
 | `pnpm db:validate` | Apply all migrations to an ephemeral PostgreSQL and run constraint tests |
+| `pnpm test:integration:db` | Catalog API integration tests against a real ephemeral PostgreSQL |
+| `pnpm catalog:import <file> [--dry-run]` | Import verified catalog data (needs `DATABASE_URL`) |
 
 Before first `pnpm test:e2e` run: `pnpm exec playwright install chromium`.
+
+CI (GitHub Actions) runs typecheck, lint, unit tests, the database
+constraint validation, the database integration tests (both on an
+ephemeral throwaway PostgreSQL — no shared or production database),
+and the production build as required checks. `pnpm db:validate` and
+`pnpm test:integration:db` require local PostgreSQL binaries
+(`brew install postgresql@16`); Docker is not needed. Native Supabase
+CLI reset validation remains a later checkpoint once Docker is
+available (see `supabase/README.md`).
 
 ## Environment variables
 
@@ -66,12 +79,20 @@ Before first `pnpm test:e2e` run: `pnpm exec playwright install chromium`.
 
 ```
 src/app/            Next.js App Router (pages + /api/v1 routes)
-src/lib/api/        API envelope, typed errors, request-ID handling
+src/lib/api/        API envelope, typed errors, request-ID, route handler helpers
 src/lib/env/        Zod-validated server/client environment modules
+src/lib/server/db/  Server-only postgres.js client (lazy, pooler-compatible)
+src/repositories/   SQL-only data access (parameterized)
+src/services/       Domain services + DTO mapping
+src/validators/     Zod schemas for API inputs
 supabase/           Database migrations & seed (rules in supabase/README.md)
+data/catalog/       Catalog import format + examples (no production data)
+scripts/            DB validation harness, catalog importer
 tests/unit/         Vitest unit tests
+tests/integration/  Real-PostgreSQL integration tests
 tests/e2e/          Playwright smoke tests
 docs/architecture/  Engineering decisions
+docs/api/           API contracts
 .github/workflows/  CI pipeline
 ```
 

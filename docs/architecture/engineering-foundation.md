@@ -113,9 +113,13 @@ deliberately avoided.
 
 `.github/workflows/ci.yml` runs on pushes to `main` and all PRs:
 checkout → pnpm → Node (from `.nvmrc`) → frozen-lockfile install →
-typecheck → lint → unit tests → production build. No secrets
-required. Playwright is **not** in the required pipeline yet (browser
-provisioning would slow/fragile-ify the initial pipeline); it can be
+PostgreSQL binaries on PATH → typecheck → lint → unit tests →
+database constraint validation (`pnpm db:validate`) → database
+integration tests (`pnpm test:integration:db`) → production build.
+The database checks use the repository's own ephemeral-PostgreSQL
+harness against a throwaway localhost instance — no secrets, no
+shared or production databases. Playwright is **not** in the required
+pipeline (browser provisioning would slow/fragile-ify it); it can be
 added as a separate job when E2E coverage grows.
 
 ## Supabase
