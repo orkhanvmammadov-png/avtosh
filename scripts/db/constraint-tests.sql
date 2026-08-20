@@ -243,6 +243,18 @@ begin
   exception when unique_violation then raise notice 'ok 21: duplicate idempotency key rejected';
   end;
 
+  -- 22. non-positive declared upload size rejected (Phase 4.5 table)
+  begin
+    insert into listing_image_uploads
+      (listing_id, user_id, temp_storage_path, declared_mime_type,
+       declared_size_bytes, expires_at)
+      values (v_listing1, v_user1, 'uploads/x', 'image/jpeg', 0,
+              now() + interval '5 minutes');
+    raise exception 'TEST 22 FAILED: zero declared upload size accepted';
+  exception when check_violation then
+    raise notice 'ok 22: non-positive declared upload size rejected';
+  end;
+
   raise notice 'All constraint tests passed.';
 end;
 $$;

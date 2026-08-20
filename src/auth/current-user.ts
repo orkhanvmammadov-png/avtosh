@@ -60,3 +60,22 @@ export async function requireAuth(request: Request): Promise<AuthContext> {
   }
   return auth;
 }
+
+/**
+ * Centralized guard for seller mutations: authenticated AND not
+ * blocked. BLOCKED users keep read access to their own account
+ * (/auth/me) but may not perform seller mutations (accepted business
+ * rule).
+ */
+export async function requireActiveSeller(
+  request: Request,
+): Promise<AuthContext> {
+  const auth = await requireAuth(request);
+  if (auth.user.status === "BLOCKED") {
+    throw new ApiError(
+      "USER_BLOCKED",
+      "Your account is blocked and cannot perform this action.",
+    );
+  }
+  return auth;
+}

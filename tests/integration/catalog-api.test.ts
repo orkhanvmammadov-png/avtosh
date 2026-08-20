@@ -247,7 +247,13 @@ describe("GET /catalog/cities", () => {
       `${BASE}/cities`,
     );
     expect(status).toBe(200);
-    expect(body.data?.map((c) => c.name)).toEqual(["Bakı", "Gəncə"]);
+    // Other integration files may add their own active cities to the
+    // shared database — assert on this file's fixtures only.
+    const names = body.data?.map((c) => c.name) ?? [];
+    expect(names).toContain("Bakı");
+    expect(names).toContain("Gəncə");
+    expect(names.indexOf("Bakı")).toBeLessThan(names.indexOf("Gəncə"));
+    expect(names).not.toContain("KöhnəŞəhər"); // inactive stays hidden
   });
 });
 
