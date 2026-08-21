@@ -1,0 +1,456 @@
+import { createHash } from "node:crypto";
+import { maskPhone } from "@/auth/phone";
+import { ApiError } from "@/lib/api/errors";
+import { listingImageConfig } from "@/lib/config/listing-images";
+import { marketplaceConfig, type SearchSort } from "@/lib/config/marketplace";
+import { getSql } from "@/lib/server/db/client";
+import { getStorageProvider } from "@/providers/storage/factory";
+import {
+  findActiveBrandInCategory,
+  findActiveCategoryByCode,
+  findActiveCityById,
+  findActiveModelInBrandCategory,
+  findActiveReferenceOptionForCategory,
+  filterActiveFeatureIdsForCategory,
+} from "@/repositories/catalog";
+import {
+  boostCandidates,
+  countNewLast24h,
+  getBoostMaxSlots,
+  getPublicDetail,
+  incrementViewCount,
+  listPublicFeatureNames,
+  listPublicImagePaths,
+  premiumListings,
+  searchListings,
+  type CardRow,
+  type SearchCursor,
+  type SearchFilters,
+} from "@/repositories/marketplace";
+import { getCategories, type CategoryDto } from "@/services/catalog";
+import type { SearchQuery } from "@/validators/marketplace";
+
+/**
+ * Public marketplace read model: anonymous, purpose-built DTOs, the
+ * central visibility invariant applied by the repository, keyset
+ * cursors, deterministic write-free Boost rotation, lazy Premium feed.
+ */
+
+// --- DTOs -------------------------------------------------------------------
+
+export interface PublicCardDto {
+  publicId: string;
+  category: string;
+  brand: string | null;
+  model: string | null;
+  year: number | null;
+  priceMinor: number | null;
+  currency: string;
+  mileage: number | null;
+  city: string | null;
+  primaryImageUrl: string | null;
+  publishedAt: string;
+  badges: { premium: boolean; boosted: boolean };
+}
+
+async function signPublic(path: string | null): Promise<string | null> {
+  if (path === null) return null;
+  const config = listingImageConfig();
+  try {
+    return await getStorageProvider().createSignedReadUrl(
+      config.imagesBucket,
+      path,
+      config.publicReadTtlSeconds,
+    );
+  } catch {
+    return null; // card-level graceful degradation; provider text never leaks
+  }
+}
+
+async function toCard(row: CardRow): Promise<PublicCardDto> {
+  return {
+    publicId: row.public_id,
+    category: row.category,
+    brand: row.brand,
+    model: row.model,
+    year: row.year,
+    priceMinor: row.price_minor === null ? null : Number(row.price_minor),
+    currency: row.currency,
+    mileage: row.mileage,
+    city: row.city,
+    primaryImageUrl: await signPublic(row.primary_image_path),
+    publishedAt: row.published_at.toISOString(),
+    badges: { premium: row.is_premium, boosted: row.is_boosted },
+  };
+}
+
+async function toCards(rows: CardRow[]): Promise<PublicCardDto[]> {
+  return Promise.all(rows.map(toCard));
+}
+
+// --- cursors ----------------------------------------------------------------
+
+const CURSOR_VERSION = "v1";
+
+export function encodeSearchCursor(sort: SearchSort, value: string, id: string): string {
+  return Buffer.from(`${CURSOR_VERSION}|${sort}|${value}|${id}`).toString("base64url");
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const TS = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}(:\d{2})?$/;
+
+/** Untrusted input: version, sort binding, and value shape are all enforced. */
+export function decodeSearchCursor(cursor: string, expectedSort: SearchSort): SearchCursor {
+  const invalid = () => new ApiError("VALIDATION_ERROR", "Invalid cursor.");
+  let decoded: string;
+  try {
+    decoded = Buffer.from(cursor, "base64url").toString("utf8");
+  } catch {
+    throw invalid();
+  }
+  const [version, sort, value, id] = decoded.split("|");
+  if (version !== CURSOR_VERSION || sort !== expectedSort || value === undefined || id === undefined) {
+    throw invalid();
+  }
+  if (!UUID.test(id)) throw invalid();
+  const valueOk =
+    sort === "NEWEST" ? TS.test(value) : /^-?\d{1,15}$/.test(value);
+  if (!valueOk) throw invalid();
+  return { sort: expectedSort, value, id };
+}
+
+function sortKeyValue(row: CardRow, sort: SearchSort, publishedAtText: string): string {
+  switch (sort) {
+    case "PRICE_ASC":
+    case "PRICE_DESC":
+      return row.price_minor ?? "0";
+    case "YEAR_DESC":
+      return String(row.year ?? 0);
+    default:
+      return publishedAtText;
+  }
+}
+
+// --- Boost rotation ---------------------------------------------------------
+
+/**
+ * Deterministic, write-free fair rotation. For a given search
+ * signature and hour bucket every candidate gets a pseudo-random but
+ * stable score; the lowest N win. Stable within the hour (pagination
+ * and refreshes agree), rotates every hour, no listing is permanently
+ * favored, zero database writes.
+ */
+export function rotateBoosts<T extends { id: string }>(
+  candidates: T[],
+  searchSignature: string,
+  slots: number,
+  now: Date = new Date(),
+): T[] {
+  const hourBucket = Math.floor(now.getTime() / 3_600_000);
+  const key = createHash("sha256").update(`${searchSignature}|${hourBucket}`).digest("hex");
+  return [...candidates]
+    .map((c) => ({
+      c,
+      score: createHash("sha256").update(`${key}|${c.id}`).digest("hex"),
+    }))
+    .sort((a, b) => (a.score < b.score ? -1 : a.score > b.score ? 1 : 0))
+    .slice(0, slots)
+    .map((x) => x.c);
+}
+
+function searchSignature(filters: SearchFilters, sort: SearchSort): string {
+  const ordered = Object.entries(filters)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+    .join("&");
+  return `${sort}?${ordered}`;
+}
+
+// --- filter resolution ------------------------------------------------------
+
+const REFERENCE_FILTERS: {
+  key: keyof SearchQuery;
+  group: string;
+  assign: (filters: SearchFilters, value: string) => void;
+}[] = [
+  { key: "fuel_type_id", group: "FUEL_TYPE", assign: (f, v) => { f.fuelTypeId = v; } },
+  { key: "transmission_id", group: "TRANSMISSION", assign: (f, v) => { f.transmissionId = v; } },
+  { key: "body_type_id", group: "BODY_TYPE", assign: (f, v) => { f.bodyTypeId = v; } },
+  { key: "drive_type_id", group: "DRIVE_TYPE", assign: (f, v) => { f.driveTypeId = v; } },
+  { key: "motorcycle_type_id", group: "MOTORCYCLE_TYPE", assign: (f, v) => { f.motorcycleTypeId = v; } },
+  { key: "color_id", group: "COLOR", assign: (f, v) => { f.colorId = v; } },
+];
+
+/** Validates filter relationships against current catalog data (catalog semantics reused). */
+async function resolveFilters(query: SearchQuery): Promise<SearchFilters> {
+  const category = await findActiveCategoryByCode(query.category);
+  if (category === undefined) {
+    throw new ApiError("CATALOG_INVALID_CATEGORY", "Unknown or inactive category.");
+  }
+  const filters: SearchFilters = { categoryId: category.id };
+  if (query.brand_id !== undefined) {
+    const brand = await findActiveBrandInCategory(query.brand_id, category.id);
+    if (brand === undefined) {
+      throw new ApiError("CATALOG_INVALID_BRAND", "Brand is not available in this category.");
+    }
+    filters.brandId = query.brand_id;
+  }
+  if (query.model_id !== undefined) {
+    if (filters.brandId === undefined) {
+      throw new ApiError("VALIDATION_ERROR", "model_id requires brand_id.");
+    }
+    const model = await findActiveModelInBrandCategory(query.model_id, filters.brandId, category.id);
+    if (model === undefined) {
+      throw new ApiError("CATALOG_INVALID_BRAND", "Model does not belong to the brand and category.");
+    }
+    filters.modelId = query.model_id;
+  }
+  if (query.city_id !== undefined) {
+    if ((await findActiveCityById(query.city_id)) === undefined) {
+      throw new ApiError("VALIDATION_ERROR", "Unknown or inactive city.");
+    }
+    filters.cityId = query.city_id;
+  }
+  for (const ref of REFERENCE_FILTERS) {
+    const value = query[ref.key] as string | undefined;
+    if (value === undefined) continue;
+    const option = await findActiveReferenceOptionForCategory(value, ref.group, category.id);
+    if (option === undefined) {
+      throw new ApiError("CATALOG_INVALID_GROUP", `Invalid ${ref.group} filter for this category.`);
+    }
+    ref.assign(filters, value);
+  }
+  if (query.feature_ids !== undefined) {
+    const valid = await filterActiveFeatureIdsForCategory(query.feature_ids, category.id);
+    if (valid.length !== query.feature_ids.length) {
+      throw new ApiError("VALIDATION_ERROR", "One or more features are invalid for this category.");
+    }
+    filters.featureIds = query.feature_ids;
+  }
+  if (query.price_min !== undefined) filters.priceMin = query.price_min;
+  if (query.price_max !== undefined) filters.priceMax = query.price_max;
+  if (query.year_min !== undefined) filters.yearMin = query.year_min;
+  if (query.year_max !== undefined) filters.yearMax = query.year_max;
+  if (query.mileage_max !== undefined) filters.mileageMax = query.mileage_max;
+  if (query.credit !== undefined) filters.credit = query.credit;
+  if (query.barter !== undefined) filters.barter = query.barter;
+  return filters;
+}
+
+// --- search -----------------------------------------------------------------
+
+export interface SearchResultDto {
+  promoted: PublicCardDto[];
+  items: PublicCardDto[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+export async function searchMarketplace(query: SearchQuery): Promise<SearchResultDto> {
+  const sql = getSql();
+  const config = marketplaceConfig();
+  const limit = Math.min(query.limit ?? config.pageSize, config.maxPageSize);
+  const filters = await resolveFilters(query);
+  const cursor = query.cursor === undefined ? null : decodeSearchCursor(query.cursor, query.sort);
+
+  // Boost placement only on the first page; promoted ids are excluded
+  // from the organic first page so a listing never appears twice.
+  let promotedRows: CardRow[] = [];
+  if (cursor === null) {
+    const slots = await getBoostMaxSlots(sql);
+    const candidates = await boostCandidates(sql, filters, 50);
+    promotedRows = rotateBoosts(candidates, searchSignature(filters, query.sort), slots);
+  }
+
+  const rows = await searchListings(sql, {
+    filters,
+    sort: query.sort,
+    limit: limit + 1,
+    cursor,
+    excludeIds: promotedRows.map((r) => r.id),
+  });
+  const hasMore = rows.length > limit;
+  const page = rows.slice(0, limit);
+  const last = page[page.length - 1];
+  let nextCursor: string | null = null;
+  if (hasMore && last !== undefined) {
+    const publishedText = await fullPrecisionPublishedAt(last.id);
+    nextCursor = encodeSearchCursor(query.sort, sortKeyValue(last, query.sort, publishedText), last.id);
+  }
+  return {
+    promoted: await toCards(promotedRows),
+    items: await toCards(page),
+    nextCursor,
+    hasMore,
+  };
+}
+
+/** Keyset timestamps must round-trip at microsecond precision. */
+async function fullPrecisionPublishedAt(listingId: string): Promise<string> {
+  const sql = getSql();
+  const rows = await sql<{ t: string }[]>`
+    select published_at::text as t from listings where id = ${listingId}
+  `;
+  return rows[0]?.t ?? "";
+}
+
+// --- premium ----------------------------------------------------------------
+
+export async function premiumFeed(input: {
+  limit?: number;
+  cursor?: string;
+}): Promise<{ items: PublicCardDto[]; nextCursor: string | null; hasMore: boolean }> {
+  const sql = getSql();
+  const config = marketplaceConfig();
+  const limit = Math.min(input.limit ?? config.pageSize, config.maxPageSize);
+  let cursor: { value: string; id: string } | null = null;
+  if (input.cursor !== undefined) {
+    const decoded = decodeSearchCursor(input.cursor, "NEWEST"); // same shape: timestamp|id
+    cursor = { value: decoded.value, id: decoded.id };
+  }
+  const rows = await premiumListings(sql, { limit: limit + 1, cursor });
+  const hasMore = rows.length > limit;
+  const page = rows.slice(0, limit);
+  const last = page[page.length - 1];
+  return {
+    items: await toCards(page),
+    nextCursor:
+      hasMore && last !== undefined && last.premium_since !== null
+        ? encodeSearchCursor("NEWEST", last.premium_since, last.id)
+        : null,
+    hasMore,
+  };
+}
+
+// --- home -------------------------------------------------------------------
+
+export interface HomeDto {
+  newListingsLast24h: number;
+  categories: CategoryDto[];
+  premium: { items: PublicCardDto[]; nextCursor: string | null; hasMore: boolean };
+}
+
+export async function homeData(): Promise<HomeDto> {
+  const sql = getSql();
+  const [newListingsLast24h, categories, premium] = await Promise.all([
+    countNewLast24h(sql),
+    getCategories(),
+    premiumFeed({}),
+  ]);
+  return { newListingsLast24h, categories, premium };
+}
+
+// --- detail -----------------------------------------------------------------
+
+export interface PublicDetailDto {
+  publicId: string;
+  status: "ACTIVE" | "SOLD" | "EXPIRED";
+  contactable: boolean;
+  category: string;
+  brand: string | null;
+  model: string | null;
+  year: number | null;
+  priceMinor: number | null;
+  currency: string;
+  mileage: number | null;
+  city: string | null;
+  publishedAt: string | null;
+  images: { url: string | null; width: number | null; height: number | null; isPrimary: boolean }[];
+  badges: { premium: boolean; boosted: boolean };
+  // Full-detail fields (null/empty for limited SOLD/EXPIRED views)
+  engineCc: number | null;
+  fuelType: string | null;
+  transmission: string | null;
+  bodyType: string | null;
+  driveType: string | null;
+  motorcycleType: string | null;
+  color: string | null;
+  creditAvailable: boolean | null;
+  barterAvailable: boolean | null;
+  description: string | null;
+  features: { code: string; name: string }[];
+  seller: { displayName: string | null; contactPhoneMasked: string | null } | null;
+}
+
+export async function publicDetail(publicId: number): Promise<PublicDetailDto> {
+  const sql = getSql();
+  const row = await getPublicDetail(sql, publicId);
+  if (row === undefined) {
+    throw new ApiError("LISTING_NOT_FOUND", "Listing not found.");
+  }
+  const timeValid = row.current_expires_at !== null && row.current_expires_at.getTime() > Date.now();
+  let publicStatus: PublicDetailDto["status"];
+  if (row.status === "ACTIVE" && timeValid) publicStatus = "ACTIVE";
+  else if (row.status === "ACTIVE" || row.status === "EXPIRED") publicStatus = "EXPIRED";
+  else if (row.status === "SOLD") publicStatus = "SOLD";
+  else throw new ApiError("LISTING_NOT_FOUND", "Listing not found."); // never leak other states
+
+  const imagePaths = await listPublicImagePaths(sql, row.id);
+  const contactable = publicStatus === "ACTIVE";
+  const images = contactable
+    ? await Promise.all(
+        imagePaths.map(async (img) => ({
+          url: await signPublic(img.storage_path),
+          width: img.width,
+          height: img.height,
+          isPrimary: img.is_primary,
+        })),
+      )
+    : await Promise.all(
+        imagePaths
+          .filter((img) => img.is_primary)
+          .map(async (img) => ({
+            url: await signPublic(img.storage_path),
+            width: img.width,
+            height: img.height,
+            isPrimary: true,
+          })),
+      );
+
+  const base = {
+    publicId: row.public_id,
+    status: publicStatus,
+    contactable,
+    category: row.category,
+    brand: row.brand,
+    model: row.model,
+    year: row.year,
+    priceMinor: row.price_minor === null ? null : Number(row.price_minor),
+    currency: row.currency,
+    mileage: row.mileage,
+    city: row.city,
+    publishedAt: row.published_at?.toISOString() ?? null,
+    images,
+    badges: contactable ? { premium: row.is_premium, boosted: row.is_boosted } : { premium: false, boosted: false },
+  };
+  if (!contactable) {
+    return {
+      ...base,
+      engineCc: null, fuelType: null, transmission: null, bodyType: null, driveType: null,
+      motorcycleType: null, color: null, creditAvailable: null, barterAvailable: null,
+      description: null, features: [], seller: null,
+    };
+  }
+  const features = await listPublicFeatureNames(sql, row.id);
+  // Best-effort aggregate view count — never required for serving.
+  await incrementViewCount(sql, row.id).catch(() => undefined);
+  return {
+    ...base,
+    engineCc: row.engine_cc,
+    fuelType: row.fuel_type,
+    transmission: row.transmission,
+    bodyType: row.body_type,
+    driveType: row.drive_type,
+    motorcycleType: row.motorcycle_type,
+    color: row.color,
+    creditAvailable: row.credit_available,
+    barterAvailable: row.barter_available,
+    description: row.description,
+    features,
+    seller: {
+      displayName: row.seller_display_name,
+      // Display-only masked contact; an abuse-protected reveal endpoint is a follow-up.
+      contactPhoneMasked: row.contact_phone_e164 === null ? null : maskPhone(row.contact_phone_e164),
+    },
+  };
+}

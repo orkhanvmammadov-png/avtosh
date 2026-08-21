@@ -16,7 +16,11 @@ export interface ApiErrorBody {
   };
 }
 
-function baseHeaders(requestId?: string, setCookie?: string): HeadersInit {
+function baseHeaders(
+  requestId?: string,
+  setCookie?: string,
+  cacheControl?: string,
+): HeadersInit {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -26,17 +30,30 @@ function baseHeaders(requestId?: string, setCookie?: string): HeadersInit {
   if (setCookie !== undefined) {
     headers["Set-Cookie"] = setCookie;
   }
+  if (cacheControl !== undefined) {
+    headers["Cache-Control"] = cacheControl;
+  }
   return headers;
 }
 
+/** Optional `meta` sits beside `data` (pagination etc.). */
 export function apiSuccess<T>(
   data: T,
-  options?: { status?: number; requestId?: string; setCookie?: string },
+  options?: {
+    status?: number;
+    requestId?: string;
+    setCookie?: string;
+    cacheControl?: string;
+    meta?: Record<string, unknown>;
+  },
 ): Response {
-  const body: ApiSuccessBody<T> = { data };
+  const body: ApiSuccessBody<T> & { meta?: Record<string, unknown> } = { data };
+  if (options?.meta !== undefined) {
+    body.meta = options.meta;
+  }
   return Response.json(body, {
     status: options?.status ?? 200,
-    headers: baseHeaders(options?.requestId, options?.setCookie),
+    headers: baseHeaders(options?.requestId, options?.setCookie, options?.cacheControl),
   });
 }
 

@@ -13,7 +13,8 @@
     "test:e2e": "playwright test",
     "db:validate": "./scripts/db/validate.sh",
     "test:integration:db": "./scripts/db/with-temp-postgres.sh pnpm exec vitest run --config vitest.integration.config.mts",
-    "catalog:import": "node scripts/catalog/import.mts"
+    "catalog:import": "node scripts/catalog/import.mts",
+    "db:explain": "./scripts/db/with-temp-postgres.sh node scripts/db/explain-search.mjs"
   },
   "engines": {
     "node": ">=24"
