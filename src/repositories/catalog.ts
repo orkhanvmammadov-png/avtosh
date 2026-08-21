@@ -155,6 +155,73 @@ export async function listActiveReferenceOptions(
   `;
 }
 
+/** Point lookup: active model belonging to the brand AND category. */
+export async function findActiveModelInBrandCategory(
+  modelId: string,
+  brandId: string,
+  categoryId: string,
+): Promise<ModelRow | undefined> {
+  const sql = getSql();
+  const rows = await sql<ModelRow[]>`
+    select id, brand_id, name, slug
+    from models
+    where id = ${modelId}
+      and brand_id = ${brandId}
+      and category_id = ${categoryId}
+      and is_active
+  `;
+  return rows[0];
+}
+
+export async function findActiveCityById(
+  cityId: string,
+): Promise<CityRow | undefined> {
+  const sql = getSql();
+  const rows = await sql<CityRow[]>`
+    select id, name_az, slug from cities where id = ${cityId} and is_active
+  `;
+  return rows[0];
+}
+
+/**
+ * Point lookup: active option of the expected group that is either
+ * global or scoped to the given category.
+ */
+export async function findActiveReferenceOptionForCategory(
+  optionId: string,
+  groupCode: string,
+  categoryId: string,
+): Promise<ReferenceOptionRow | undefined> {
+  const sql = getSql();
+  const rows = await sql<ReferenceOptionRow[]>`
+    select id, code, name_az
+    from reference_options
+    where id = ${optionId}
+      and group_code = ${groupCode}
+      and is_active
+      and (category_id is null or category_id = ${categoryId})
+  `;
+  return rows[0];
+}
+
+/** IDs of the given features that are active and category-compatible. */
+export async function filterActiveFeatureIdsForCategory(
+  featureIds: string[],
+  categoryId: string,
+): Promise<string[]> {
+  if (featureIds.length === 0) {
+    return [];
+  }
+  const sql = getSql();
+  const rows = await sql<{ id: string }[]>`
+    select id from features
+    where id in ${sql(featureIds)}
+      and is_active
+      and (category_id is null or category_id = ${categoryId})
+  `;
+  return rows.map((row) => row.id);
+}
+
 /**
  * Active features. With a category: global features (category_id IS
  * NULL) plus features scoped to that category — the applicability

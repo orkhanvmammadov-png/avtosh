@@ -6,24 +6,45 @@ import { resolveRequestId } from "@/lib/api/request-id";
 export interface ApiHandlerContext {
   request: Request;
   requestId: string;
+  /** Dynamic route params ({} for static routes). */
+  params: Record<string, string>;
+}
+
+interface RouteContext {
+  params: Promise<Record<string, string>>;
 }
 
 /**
  * Wraps a route handler with the standard request-ID resolution and
  * safe error envelope, so individual routes never duplicate the
- * try/catch or leak internal errors.
+ * try/catch or leak internal errors. Dynamic route params are awaited
+ * and passed through.
  */
 export function createApiHandler(
   handler: (context: ApiHandlerContext) => Promise<Response>,
-): (request: Request) => Promise<Response> {
-  return async (request: Request): Promise<Response> => {
+): (request: Request, context?: RouteContext) => Promise<Response> {
+  return async (request: Request, context?: RouteContext): Promise<Response> => {
     const requestId = resolveRequestId(request);
     try {
-      return await handler({ request, requestId });
+      const params = context === undefined ? {} : await context.params;
+      return await handler({ request, requestId, params });
     } catch (error) {
       return apiFailure(error, requestId);
     }
   };
+}
+
+/** Validates a route param as a UUID; unparseable → VALIDATION_ERROR. */
+export function requireUuidParam(
+  params: Record<string, string>,
+  name: string,
+): string {
+  const value = params[name];
+  const parsed = z.uuid().safeParse(value);
+  if (!parsed.success) {
+    throw new ApiError("VALIDATION_ERROR", `Invalid ${name} parameter.`);
+  }
+  return parsed.data;
 }
 
 /**

@@ -3,15 +3,17 @@
 Azerbaijan-focused responsive **web** marketplace for cars and
 motorcycles. Web only — no native iOS/Android applications.
 
-**Current phase: Phase 4.4 — WhatsApp OTP & Sessions.**
+**Current phase: Phase 4.5 — Listing Draft & Image Upload.**
 Implemented so far: the MVP database schema (Supabase migrations),
-the public read-only Catalog API (`/api/v1/catalog/*`), and
-passwordless WhatsApp-OTP authentication with opaque cookie sessions
-(`/api/v1/auth/*` — production WhatsApp delivery still pending).
-Listings, payments, and moderation flows are not implemented yet.
-`CLAUDE.md` is the authoritative product/architecture instruction
-file; see `docs/architecture/` (database, catalog, authentication)
-and `docs/api/` for contracts.
+the public read-only Catalog API (`/api/v1/catalog/*`), passwordless
+WhatsApp-OTP authentication with opaque cookie sessions
+(`/api/v1/auth/*` — production WhatsApp delivery pending), and the
+authenticated seller draft + image-upload foundation
+(`/api/v1/me/listings/*` — real Supabase Storage smoke test pending).
+Submission, payments, moderation, and public search are not
+implemented yet. `CLAUDE.md` is the authoritative
+product/architecture instruction file; see `docs/architecture/`,
+`docs/api/`, and `docs/runbooks/` for details.
 
 ## Technology stack
 
