@@ -360,3 +360,23 @@ export async function incrementViewCount(sql: Sql, listingId: string): Promise<v
     on conflict (listing_id) do update set view_count = listing_stats.view_count + 1
   `;
 }
+
+/** Contact source for the public CTA: the LISTING contact phone only (never users.phone_e164). */
+export async function getPublicContact(
+  sql: Sql,
+  publicId: number,
+): Promise<{ id: string; status: string; current_expires_at: Date | null; contact_phone_e164: string | null } | undefined> {
+  const rows = await sql<{ id: string; status: string; current_expires_at: Date | null; contact_phone_e164: string | null }[]>`
+    select id, status, current_expires_at, contact_phone_e164
+    from listings where public_id = ${publicId}
+  `;
+  return rows[0];
+}
+
+/** Best-effort aggregate phone-reveal counter (no per-event rows). */
+export async function incrementPhoneRevealCount(sql: Sql, listingId: string): Promise<void> {
+  await sql`
+    insert into listing_stats (listing_id, phone_reveal_count) values (${listingId}, 1)
+    on conflict (listing_id) do update set phone_reveal_count = listing_stats.phone_reveal_count + 1
+  `;
+}

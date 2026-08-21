@@ -17,7 +17,9 @@ import {
   boostCandidates,
   countNewLast24h,
   getBoostMaxSlots,
+  getPublicContact,
   getPublicDetail,
+  incrementPhoneRevealCount,
   incrementViewCount,
   listPublicFeatureNames,
   listPublicImagePaths,
@@ -512,4 +514,39 @@ export async function publicDetail(
     },
     },
   };
+}
+
+// --- contact reveal ---------------------------------------------------------
+
+export interface ContactRevealDto {
+  phone: string;
+  /** Outbound WhatsApp deep link built from the revealed digits only. */
+  whatsappUrl: string;
+}
+
+/**
+ * Explicit buyer action: reveals the LISTING contact phone for a
+ * publicly visible (ACTIVE + unexpired) listing. Never falls back to
+ * the seller's account phone; SOLD/EXPIRED/non-public → not found /
+ * unavailable. Aggregate reveal counter is best-effort. Per-IP rate
+ * limiting is a documented follow-up (no compatible infrastructure
+ * exists without a new table); platform/WAF controls apply meanwhile.
+ */
+export async function revealListingContact(publicId: number): Promise<ContactRevealDto> {
+  const sql = getSql();
+  const row = await getPublicContact(sql, publicId);
+  const visible =
+    row !== undefined &&
+    row.status === "ACTIVE" &&
+    row.current_expires_at !== null &&
+    row.current_expires_at.getTime() > Date.now();
+  if (!visible) {
+    throw new ApiError("LISTING_NOT_FOUND", "Listing not found.");
+  }
+  if (row.contact_phone_e164 === null) {
+    throw new ApiError("LISTING_CONTACT_UNAVAILABLE", "Contact information is not available.");
+  }
+  await incrementPhoneRevealCount(sql, row.id).catch(() => undefined);
+  const digits = row.contact_phone_e164.replace(/[^0-9]/g, "");
+  return { phone: row.contact_phone_e164, whatsappUrl: `https://wa.me/${digits}` };
 }
