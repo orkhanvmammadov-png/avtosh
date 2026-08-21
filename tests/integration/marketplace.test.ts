@@ -53,12 +53,13 @@ async function insertListing(spec: Spec) {
   const [row] = await sql<{ id: string; public_id: string }[]>`
     insert into listings (owner_id, category_id, brand_id, model_id, city_id, year, price_minor, mileage,
       fuel_type_id, body_type_id, motorcycle_type_id, credit_available, barter_available,
-      description, contact_phone_e164, status, published_at, current_expires_at, sold_at)
+      description, contact_phone_e164, status, submitted_at, published_at, current_expires_at, sold_at)
     values (${ownerId}, ${category}, ${brand}, ${model}, ${spec.city ?? city1},
       ${spec.year ?? 2020}, ${spec.price ?? 1000000}, ${spec.mileage ?? 50000},
       ${spec.fuel ?? null}, ${spec.body ?? null}, ${spec.moto ?? null},
       ${spec.credit ?? false}, ${spec.barter ?? false},
       'Təsvir', '+994501234567', ${status}::listing_status,
+      ${status === "PENDING_MODERATION" ? sql`now()` : null},
       ${status === "DRAFT" || status === "PENDING_MODERATION" || status === "PAYMENT_REQUIRED" ? null : sql`now() - (${publishedOffset} || ' minutes')::interval`},
       ${status === "DRAFT" || status === "PENDING_MODERATION" || status === "PAYMENT_REQUIRED" ? null : sql`now() + (${expiresOffset} || ' minutes')::interval`},
       ${status === "SOLD" ? sql`now()` : null})

@@ -116,3 +116,8 @@ export async function uploadAndConfirmVia(
     revision: confirm.body.data?.revision as number,
   };
 }
+
+/** Assertion message for unexpected statuses: status + safe body + request id. */
+export function explain(r: { status: number; body: Envelope; response: Response }): string {
+  return `status=${r.status} request_id=${r.response.headers.get("x-request-id")} body=${JSON.stringify(r.body).slice(0, 600)}`;
+}

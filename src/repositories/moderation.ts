@@ -116,6 +116,10 @@ export async function listModerationQueue(
     left join moderation_claims mc
       on mc.listing_id = l.id and mc.released_at is null and mc.expires_at > now()
     where l.status = 'PENDING_MODERATION'
+      -- Queue ordering/SLA is defined by submitted_at; a pending row
+      -- without it violates the submission invariant and is excluded
+      -- rather than crashing the queue (it can never be decided here).
+      and l.submitted_at is not null
     ${cursorClause}
     order by l.submitted_at asc, l.id asc
     limit ${input.limit}

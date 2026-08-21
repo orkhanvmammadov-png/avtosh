@@ -26,6 +26,13 @@ state. `GET /moderator/listings/:id` returns the full review view
 (labels, ordered images via signed URLs, feature ids, review history,
 claim) — never storage paths.
 
+Queue rows require `submitted_at` (it defines ordering/SLA); a
+PENDING_MODERATION row without it violates the submission invariant
+and is excluded rather than failing the queue. Primary-image signing
+failures degrade to `null` (same as the public read model) so one
+broken object cannot take the queue down — authorization is
+unaffected.
+
 ## Claims — `POST /moderator/listings/:id/claim`
 
 Operational coordination (10 min TTL, `MODERATION_CLAIM_TTL_SECONDS`).

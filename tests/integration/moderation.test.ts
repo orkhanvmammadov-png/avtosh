@@ -9,6 +9,7 @@ import { createTestUserSession } from "./helpers/session";
 import {
   api,
   createDraftVia,
+  explain,
   LISTINGS_BASE,
   uploadAndConfirmVia,
   type ListingRoutes,
@@ -138,7 +139,8 @@ describe("staff authorization", () => {
     expect(denied.body.error?.code).toBe("STAFF_ROLE_REQUIRED");
     for (const role of ["MODERATOR", "ADMIN", "SUPER_ADMIN"]) {
       const staff = await newUser({ roles: [role] });
-      expect((await queue(staff)).status).toBe(200);
+      const r = await queue(staff);
+      expect(r.status, explain(r)).toBe(200);
     }
     const blockedMod = await newUser({ roles: ["MODERATOR"], blocked: true });
     expect((await queue(blockedMod)).body.error?.code).toBe("USER_BLOCKED");
@@ -159,6 +161,7 @@ describe("moderation queue", () => {
     const a = await pendingListing(seller);
     const b = await pendingListing(seller);
     const page1 = await queue(mod, "?limit=1");
+    expect(page1.status, explain(page1)).toBe(200);
     const items1 = page1.body.data?.items as { id: string }[];
     const cursor = page1.body.data?.next_cursor as string;
     expect(items1.length).toBe(1);
@@ -199,6 +202,38 @@ describe("moderation queue", () => {
     expect(after).not.toContain(paid.id);
     expect(after).not.toContain(a.id);
     expect(after).toContain(b.id);
+  });
+
+  it("tolerates invariant-violating and unsignable rows instead of failing the queue", async () => {
+    const mod = await newUser({ roles: ["MODERATOR"] });
+    const seller = await newUser();
+    const sql = getSql();
+    // A PENDING_MODERATION row without submitted_at (cannot happen via
+    // the API; simulates corrupt/legacy data) must be excluded, not 500.
+    const [orphan] = await sql<{ id: string }[]>`
+      insert into listings (owner_id, category_id, status)
+      values (${seller.userId}, (select id from categories where code = 'CAR'), 'PENDING_MODERATION')
+      returning id
+    `;
+    const healthy = await pendingListing(seller);
+    const r = await queue(mod, "?limit=100");
+    expect(r.status, explain(r)).toBe(200);
+    const ids = (r.body.data?.items as { id: string }[]).map((i) => i.id);
+    expect(ids).toContain(healthy.id);
+    expect(ids).not.toContain(orphan.id);
+    // An image that cannot be signed degrades to null rather than failing the queue.
+    const original = storage.createSignedReadUrl;
+    storage.createSignedReadUrl = async () => { throw new Error("signing down"); };
+    try {
+      const degraded = await queue(mod, "?limit=100");
+      expect(degraded.status, explain(degraded)).toBe(200);
+      const item = (degraded.body.data?.items as { id: string; primaryImageUrl: string | null }[]).find((i) => i.id === healthy.id)!;
+      expect(item.primaryImageUrl).toBeNull();
+      expect(JSON.stringify(degraded.body)).not.toContain("signing down");
+    } finally {
+      storage.createSignedReadUrl = original;
+    }
+    await sql`delete from listings where id = ${orphan.id}`;
   });
 
   it("detail exposes labels, images, reviews and claim without storage internals", async () => {

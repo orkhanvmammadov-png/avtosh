@@ -16,7 +16,8 @@ export interface ListingImageDto {
   width: number | null;
   height: number | null;
   mimeType: string;
-  url: string;
+  /** Signed read URL; null when signing fails (graceful degradation). */
+  url: string | null;
 }
 
 export interface OwnerListingDto {
@@ -53,11 +54,13 @@ export async function toListingImageDto(
   row: ListingImageRow,
 ): Promise<ListingImageDto> {
   const config = listingImageConfig();
-  const url = await getStorageProvider().createSignedReadUrl(
-    config.imagesBucket,
-    row.storage_path,
-    config.signedReadTtlSeconds,
-  );
+  const url = await getStorageProvider()
+    .createSignedReadUrl(
+      config.imagesBucket,
+      row.storage_path,
+      config.signedReadTtlSeconds,
+    )
+    .catch(() => null);
   return {
     id: row.id,
     sortOrder: row.sort_order,
