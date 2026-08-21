@@ -866,3 +866,99 @@ describe("image delete / reorder / primary", () => {
     expect(del.body.error?.code).toBe("LISTING_NOT_EDITABLE");
   });
 });
+
+describe("concurrent upload-url issuance", () => {
+  it("cannot exceed the pending-upload cap under parallel requests", async () => {
+    await withEnv({ LISTING_IMAGE_MAX_PENDING_UPLOADS: "5" }, async () => {
+      const listingId = await createDraft(seller.cookie);
+      // Seed 4 live pending uploads sequentially.
+      for (let i = 0; i < 4; i += 1) {
+        const { status } = await api(uploadUrlRoute, "POST", `${BASE}/${listingId}/images/upload-url`, {
+          body: { declared_mime_type: "image/jpeg", declared_size_bytes: 1000 },
+          cookie: seller.cookie,
+          params: { listingId },
+        });
+        expect(status).toBe(200);
+      }
+      // 10 concurrent authorization requests: only ONE slot remains.
+      const results = await Promise.all(
+        Array.from({ length: 10 }, () =>
+          api(uploadUrlRoute, "POST", `${BASE}/${listingId}/images/upload-url`, {
+            body: { declared_mime_type: "image/jpeg", declared_size_bytes: 1000 },
+            cookie: seller.cookie,
+            params: { listingId },
+          }),
+        ),
+      );
+      const successes = results.filter((r) => r.status === 200);
+      const limited = results.filter((r) => r.status === 429);
+      expect(successes.length).toBe(1);
+      expect(limited.length).toBe(9);
+      expect(limited.every((r) => r.body.error?.code === "IMAGE_UPLOAD_RATE_LIMITED")).toBe(true);
+      const sql = getSql();
+      const [row] = await sql<{ count: string }[]>`
+        select count(*)::text as count from listing_image_uploads
+        where listing_id = ${listingId} and status = 'PENDING' and expires_at > now()
+      `;
+      expect(Number(row.count)).toBe(5); // cap holds in the database
+      // Ownership/status rules untouched: another user still gets 404.
+      const foreign = await api(uploadUrlRoute, "POST", `${BASE}/${listingId}/images/upload-url`, {
+        body: { declared_mime_type: "image/jpeg", declared_size_bytes: 1000 },
+        cookie: otherUser.cookie,
+        params: { listingId },
+      });
+      expect(foreign.status).toBe(404);
+    });
+  });
+
+  it("cannot exceed the image maximum via parallel issuance (images + pending)", async () => {
+    await setImageMax(3);
+    try {
+      const listingId = await createDraft(seller.cookie);
+      await uploadAndConfirm(seller.cookie, listingId); // 1 persisted image
+      const results = await Promise.all(
+        Array.from({ length: 8 }, () =>
+          api(uploadUrlRoute, "POST", `${BASE}/${listingId}/images/upload-url`, {
+            body: { declared_mime_type: "image/jpeg", declared_size_bytes: 1000 },
+            cookie: seller.cookie,
+            params: { listingId },
+          }),
+        ),
+      );
+      expect(results.filter((r) => r.status === 200).length).toBe(2); // 1 image + 2 pending = 3
+      expect(
+        results
+          .filter((r) => r.status !== 200)
+          .every((r) => r.status === 409 && r.body.error?.code === "LISTING_IMAGE_LIMIT_REACHED"),
+      ).toBe(true);
+    } finally {
+      await setImageMax(null);
+    }
+  });
+
+  it("marks the pending row FAILED when the provider cannot issue a URL", async () => {
+    const listingId = await createDraft(seller.cookie);
+    const original = storage.createSignedUploadUrl;
+    storage.createSignedUploadUrl = async () => {
+      throw new Error("simulated provider outage");
+    };
+    try {
+      const { status, body } = await api(uploadUrlRoute, "POST", `${BASE}/${listingId}/images/upload-url`, {
+        body: { declared_mime_type: "image/jpeg", declared_size_bytes: 1000 },
+        cookie: seller.cookie,
+        params: { listingId },
+      });
+      expect(status).toBe(502);
+      expect(body.error?.code).toBe("INTERNAL_ERROR");
+      expect(JSON.stringify(body)).not.toContain("outage"); // no provider leak
+    } finally {
+      storage.createSignedUploadUrl = original;
+    }
+    const sql = getSql();
+    const rows = await sql<{ status: string }[]>`
+      select status from listing_image_uploads where listing_id = ${listingId}
+    `;
+    expect(rows.length).toBe(1);
+    expect(rows[0].status).toBe("FAILED"); // no live pending slot consumed
+  });
+});

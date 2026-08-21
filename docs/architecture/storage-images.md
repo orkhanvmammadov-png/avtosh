@@ -51,10 +51,20 @@ no client string ever reaches a path.
 PENDING → COMPLETED (sets `image_id` exactly once — the idempotency
 anchor) / FAILED (bad bytes, provider failure) / EXPIRED (window
 passed). Confirmation always checks `expires_at` directly; the status
-is bookkeeping. Signed-upload window: **300 s** (configurable).
-Issuance is limited transactionally: `images + pending < max` and
-`pending ≤ 5` per listing (abuse control without Redis; platform/WAF
-controls are a future layer).
+is bookkeeping. Signed-upload window: **300 s** (configurable) —
+Supabase's own signed-upload validity is longer (~2 h) and is NOT
+relied upon; `expires_at` governs, so a late physical upload can
+never be confirmed.
+
+**Issuance concurrency**: the upload-url transaction takes
+`SELECT … FOR UPDATE` on the listing row, then counts persisted
+images and live pending uploads (`status='PENDING' AND expires_at >
+now()`), enforces `images + pending < max` and `pending < 5`, and
+inserts — so concurrent requests serialize on the row lock and each
+sees the committed effect of the previous one (regression-tested with
+4 pending + 10 parallel requests → exactly 1 success). The provider
+call happens only after commit; if it fails the row is marked FAILED
+so it consumes no live slot.
 
 ## Validation & processing (sharp)
 
@@ -62,7 +72,11 @@ controls are a future layer).
   extension/Content-Type. SVG, GIF, and HEIC are rejected (HEIC is
   not advertised because the pipeline hasn't proven it).
 - Size: original ≤ **12 MB** (checked at issuance on the declared
-  hint AND at confirm on actual bytes).
+  hint AND at confirm on actual bytes). The application cannot stop
+  an oversized direct upload from being *attempted* — the temporary
+  bucket MUST carry a storage-side `file_size_limit` of 12582912
+  bytes (required in the runbook); bucket MIME restrictions are
+  defense in depth only.
 - Decompression-bomb guard: 50-megapixel decode cap.
 - Pipeline: auto-orient → resize longest edge to **1600 px**
   (`fit: inside`, no upscaling) → **WebP q80**. All EXIF/GPS metadata

@@ -14,12 +14,37 @@ Create via Supabase Dashboard → Storage (or management API). Names
 are configurable through `STORAGE_LISTING_UPLOADS_BUCKET` /
 `STORAGE_LISTING_IMAGES_BUCKET` if they must differ.
 
-Recommended bucket settings:
-- `listing-uploads`: file size limit 12 MB (matches
-  `LISTING_IMAGE_MAX_UPLOAD_BYTES`); allowed MIME types image/jpeg,
-  image/png, image/webp (defense in depth — the app re-validates by
-  decoding).
-- `listing-images`: written only by the server (processed WebP).
+## REQUIRED bucket configuration (not optional)
+
+The application enforces the 12 MB original-image limit at
+authorization and again on the downloaded bytes at confirmation, but
+that cannot stop a malicious client from attempting a far larger
+direct upload through a valid signed URL. The storage side MUST
+reject such objects itself:
+
+| Bucket | Setting | Required value |
+| --- | --- | --- |
+| `listing-uploads` | Public | **off** (private) |
+| `listing-uploads` | **File size limit** | **12582912 bytes (12 MiB)** — exactly `LISTING_IMAGE_MAX_UPLOAD_BYTES`; if the env value is ever changed, change the bucket limit in lockstep |
+| `listing-uploads` | Allowed MIME types | `image/jpeg, image/png, image/webp` — **defense in depth only**; browser Content-Type is never a security control, server-side sharp decoding remains authoritative |
+| `listing-images` | Public | **off** (private in Phase 4.5) |
+| `listing-images` | File size limit | 12582912 bytes (processed WebP is always far smaller) |
+
+In the Supabase Dashboard: Storage → bucket → Edit → "Restrict file
+upload size" / "Restrict file types". Verify during the smoke test
+that a 13 MB upload to a valid signed URL is rejected by Storage
+with an HTTP 413-class error before any confirm is attempted.
+
+## Signed URL validity vs application window
+
+Supabase signed **upload** URLs carry a fixed provider-side validity
+(currently 2 hours) that cannot be shortened via the SDK. The
+application window is the authoritative one: `listing_image_uploads.
+expires_at` = issuance + `LISTING_IMAGE_SIGNED_UPLOAD_TTL_SECONDS`
+(default **300 s**), and confirmation rejects any pending upload past
+`expires_at` with `IMAGE_UPLOAD_EXPIRED` **even if the object was
+physically uploaded** (covered by an integration test). Late objects
+are orphans for the cleanup job, never images.
 
 ## Access model
 

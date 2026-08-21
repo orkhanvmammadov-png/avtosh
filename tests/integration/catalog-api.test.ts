@@ -242,18 +242,20 @@ describe("GET /catalog/models", () => {
 
 describe("GET /catalog/cities", () => {
   it("returns only active cities in deterministic order", async () => {
-    const { status, body } = await call<{ name: string }[]>(
+    const { status, body } = await call<{ name: string; slug: string }[]>(
       getCitiesRoute,
       `${BASE}/cities`,
     );
     expect(status).toBe(200);
-    // Other integration files may add their own active cities to the
-    // shared database — assert on this file's fixtures only.
-    const names = body.data?.map((c) => c.name) ?? [];
-    expect(names).toContain("Bakı");
-    expect(names).toContain("Gəncə");
-    expect(names.indexOf("Bakı")).toBeLessThan(names.indexOf("Gəncə"));
-    expect(names).not.toContain("KöhnəŞəhər"); // inactive stays hidden
+    // Other integration files add their own active cities to the shared
+    // database, so assert deterministically on THIS file's fixtures:
+    // projecting the response onto the fixture slugs must yield exactly
+    // the two active ones, in sort_order — the inactive one must be
+    // absent. This still fails if filtering or ordering breaks.
+    const fixtureSlugs = new Set(["baki", "gence", "kohne-seher"]);
+    const ours = (body.data ?? []).filter((c) => fixtureSlugs.has(c.slug));
+    expect(ours.map((c) => c.name)).toEqual(["Bakı", "Gəncə"]);
+    expect(body.data?.some((c) => c.slug === "kohne-seher")).toBe(false);
   });
 });
 
