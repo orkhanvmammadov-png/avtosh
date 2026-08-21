@@ -56,6 +56,9 @@ export interface CardRow {
   mileage: number | null;
   city: string | null;
   published_at: Date;
+  current_expires_at: Date;
+  /** Earliest end of any currently valid promotion on the listing (cache bound). */
+  promo_ends_at: Date | null;
   primary_image_path: string | null;
   is_premium: boolean;
   is_boosted: boolean;
@@ -133,7 +136,9 @@ function cursorFragment(sql: Sql, cursor: SearchCursor): Fragment {
 const CARD_SELECT = (sql: Sql) => sql`
   l.id, l.public_id::text as public_id, c.code as category,
   b.name as brand, m.name as model, l.year, l.price_minor::text as price_minor,
-  l.currency, l.mileage, ci.name_az as city, l.published_at,
+  l.currency, l.mileage, ci.name_az as city, l.published_at, l.current_expires_at,
+  (select min(p.ends_at) from listing_promotions p
+     where p.listing_id = l.id and ${promotionValid(sql)}) as promo_ends_at,
   (select li.storage_path from listing_images li
      where li.listing_id = l.id and li.is_primary limit 1) as primary_image_path,
   exists (select 1 from listing_promotions p
@@ -284,6 +289,7 @@ export interface DetailRow {
   seller_display_name: string | null;
   published_at: Date | null;
   sold_at: Date | null;
+  promo_ends_at: Date | null;
   is_premium: boolean;
   is_boosted: boolean;
 }
@@ -301,6 +307,8 @@ export async function getPublicDetail(
            ci.name_az as city, l.credit_available, l.barter_available, l.description,
            l.contact_phone_e164, u.display_name as seller_display_name,
            l.published_at, l.sold_at,
+           (select min(p.ends_at) from listing_promotions p
+              where p.listing_id = l.id and ${promotionValid(sql)}) as promo_ends_at,
            exists (select 1 from listing_promotions p where p.listing_id = l.id
                    and p.type = 'PREMIUM' and ${promotionValid(sql)}) as is_premium,
            exists (select 1 from listing_promotions p where p.listing_id = l.id

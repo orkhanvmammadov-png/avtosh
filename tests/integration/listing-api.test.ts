@@ -544,6 +544,40 @@ describe("image upload flow", () => {
     expect(confirm.body.data?.revision).toBe(2); // image mutation bumps revision
   });
 
+  it("stores processed images under an opaque path with no owner or listing UUID", async () => {
+    const listingId = await createDraft(seller.cookie);
+    const { imageId } = await uploadAndConfirm(seller.cookie, listingId);
+    const sql = getSql();
+    const [row] = await sql<{ storage_path: string }[]>`
+      select storage_path from listing_images where id = ${imageId}
+    `;
+    expect(row.storage_path).toBe(`listings/${imageId}.webp`);
+    expect(row.storage_path).not.toContain(seller.userId);
+    expect(row.storage_path).not.toContain(listingId);
+    expect(storage.has("listing-images", row.storage_path)).toBe(true);
+    // temp path stays internal; final object key carries nothing identifying
+    for (const key of storage.objects.keys()) {
+      if (key.startsWith("listing-images/")) {
+        expect(key).not.toContain(seller.userId);
+        expect(key).not.toContain(listingId);
+      }
+    }
+    // owner read still works and the signed URL reveals no internal UUIDs
+    const read = await api(getListingRoute, "GET", `${BASE}/${listingId}`, {
+      cookie: seller.cookie,
+      params: { listingId },
+    });
+    const url = (read.body.data?.listing as { images: { url: string }[] }).images[0].url;
+    expect(url).not.toContain(seller.userId);
+    expect(url).not.toContain(listingId);
+    // cross-user access remains impossible (DB ownership, not path secrecy)
+    const foreign = await api(getListingRoute, "GET", `${BASE}/${listingId}`, {
+      cookie: otherUser.cookie,
+      params: { listingId },
+    });
+    expect(foreign.status).toBe(404);
+  });
+
   it("confirm is idempotent", async () => {
     const listingId = await createDraft(seller.cookie);
     const auth = await api(uploadUrlRoute, "POST", `${BASE}/${listingId}/images/upload-url`, {
@@ -821,10 +855,8 @@ describe("image delete / reorder / primary", () => {
     expect(after.length).toBe(2);
     expect(after[0].id).toBe(third.imageId); // sort 0 after reorder
     expect(after[0].is_primary).toBe(true);
-    // storage object of the deleted image removed
-    expect(
-      storage.has("listing-images", `listings/${seller.userId}/${listingId}/${second.imageId}.webp`),
-    ).toBe(false);
+    // storage object of the deleted image removed (opaque path: image id only)
+    expect(storage.has("listing-images", `listings/${second.imageId}.webp`)).toBe(false);
   });
 
   it("rejects reorder lists that do not exactly match the image set", async () => {

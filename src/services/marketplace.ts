@@ -36,6 +36,46 @@ import type { SearchQuery } from "@/validators/marketplace";
  * cursors, deterministic write-free Boost rotation, lazy Premium feed.
  */
 
+// --- cache policy -----------------------------------------------------------
+
+/**
+ * Public responses may be cached only until the EARLIEST business
+ * deadline they contain (listing current_expires_at, promotion
+ * ends_at). Lifetime = min(configured ceiling, seconds until that
+ * deadline); no stale-while-revalidate, because stale serving would
+ * outlive the deadline. Deadlines within ~1 s (or already passed) →
+ * no-store. Never relies on the expiry worker.
+ */
+export function publicCacheControl(earliestDeadline: Date | null, now: Date = new Date()): string {
+  const config = marketplaceConfig();
+  let maxAge = config.cacheMaxAgeSeconds;
+  let sMaxAge = config.cacheSMaxAgeSeconds;
+  if (earliestDeadline !== null) {
+    const secondsLeft = Math.floor((earliestDeadline.getTime() - now.getTime()) / 1000);
+    if (secondsLeft <= 1) {
+      return "no-store";
+    }
+    maxAge = Math.min(maxAge, secondsLeft);
+    sMaxAge = Math.min(sMaxAge, secondsLeft);
+  }
+  if (maxAge <= 0 && sMaxAge <= 0) {
+    return "no-store";
+  }
+  return `public, max-age=${maxAge}, s-maxage=${sMaxAge}`;
+}
+
+function earliestDeadline(dates: (Date | null | undefined)[]): Date | null {
+  let min: Date | null = null;
+  for (const d of dates) {
+    if (d instanceof Date && (min === null || d.getTime() < min.getTime())) min = d;
+  }
+  return min;
+}
+
+function cardDeadlines(rows: CardRow[]): (Date | null)[] {
+  return rows.flatMap((r) => [r.current_expires_at, r.promo_ends_at]);
+}
+
 // --- DTOs -------------------------------------------------------------------
 
 export interface PublicCardDto {
@@ -244,6 +284,7 @@ export interface SearchResultDto {
   items: PublicCardDto[];
   nextCursor: string | null;
   hasMore: boolean;
+  cacheControl: string;
 }
 
 export async function searchMarketplace(query: SearchQuery): Promise<SearchResultDto> {
@@ -282,6 +323,9 @@ export async function searchMarketplace(query: SearchQuery): Promise<SearchResul
     items: await toCards(page),
     nextCursor,
     hasMore,
+    cacheControl: publicCacheControl(
+      earliestDeadline([...cardDeadlines(promotedRows), ...cardDeadlines(page)]),
+    ),
   };
 }
 
@@ -299,7 +343,7 @@ async function fullPrecisionPublishedAt(listingId: string): Promise<string> {
 export async function premiumFeed(input: {
   limit?: number;
   cursor?: string;
-}): Promise<{ items: PublicCardDto[]; nextCursor: string | null; hasMore: boolean }> {
+}): Promise<{ items: PublicCardDto[]; nextCursor: string | null; hasMore: boolean; cacheControl: string }> {
   const sql = getSql();
   const config = marketplaceConfig();
   const limit = Math.min(input.limit ?? config.pageSize, config.maxPageSize);
@@ -319,6 +363,7 @@ export async function premiumFeed(input: {
         ? encodeSearchCursor("NEWEST", last.premium_since, last.id)
         : null,
     hasMore,
+    cacheControl: publicCacheControl(earliestDeadline(cardDeadlines(page))),
   };
 }
 
@@ -330,14 +375,15 @@ export interface HomeDto {
   premium: { items: PublicCardDto[]; nextCursor: string | null; hasMore: boolean };
 }
 
-export async function homeData(): Promise<HomeDto> {
+export async function homeData(): Promise<{ home: HomeDto; cacheControl: string }> {
   const sql = getSql();
-  const [newListingsLast24h, categories, premium] = await Promise.all([
+  const [newListingsLast24h, categories, premiumPage] = await Promise.all([
     countNewLast24h(sql),
     getCategories(),
     premiumFeed({}),
   ]);
-  return { newListingsLast24h, categories, premium };
+  const { cacheControl, ...premium } = premiumPage;
+  return { home: { newListingsLast24h, categories, premium }, cacheControl };
 }
 
 // --- detail -----------------------------------------------------------------
@@ -372,7 +418,9 @@ export interface PublicDetailDto {
   seller: { displayName: string | null; contactPhoneMasked: string | null } | null;
 }
 
-export async function publicDetail(publicId: number): Promise<PublicDetailDto> {
+export async function publicDetail(
+  publicId: number,
+): Promise<{ listing: PublicDetailDto; cacheControl: string }> {
   const sql = getSql();
   const row = await getPublicDetail(sql, publicId);
   if (row === undefined) {
@@ -387,6 +435,11 @@ export async function publicDetail(publicId: number): Promise<PublicDetailDto> {
 
   const imagePaths = await listPublicImagePaths(sql, row.id);
   const contactable = publicStatus === "ACTIVE";
+  // Limited (SOLD/EXPIRED) views have no business deadline of their own;
+  // contactable views are bounded by listing expiry and promotion ends.
+  const cacheControl = contactable
+    ? publicCacheControl(earliestDeadline([row.current_expires_at, row.promo_ends_at]))
+    : publicCacheControl(null);
   const images = contactable
     ? await Promise.all(
         imagePaths.map(async (img) => ({
@@ -425,16 +478,21 @@ export async function publicDetail(publicId: number): Promise<PublicDetailDto> {
   };
   if (!contactable) {
     return {
-      ...base,
-      engineCc: null, fuelType: null, transmission: null, bodyType: null, driveType: null,
-      motorcycleType: null, color: null, creditAvailable: null, barterAvailable: null,
-      description: null, features: [], seller: null,
+      listing: {
+        ...base,
+        engineCc: null, fuelType: null, transmission: null, bodyType: null, driveType: null,
+        motorcycleType: null, color: null, creditAvailable: null, barterAvailable: null,
+        description: null, features: [], seller: null,
+      },
+      cacheControl,
     };
   }
   const features = await listPublicFeatureNames(sql, row.id);
   // Best-effort aggregate view count — never required for serving.
   await incrementViewCount(sql, row.id).catch(() => undefined);
   return {
+    cacheControl,
+    listing: {
     ...base,
     engineCc: row.engine_cc,
     fuelType: row.fuel_type,
@@ -451,6 +509,7 @@ export async function publicDetail(publicId: number): Promise<PublicDetailDto> {
       displayName: row.seller_display_name,
       // Display-only masked contact; an abuse-protected reveal endpoint is a follow-up.
       contactPhoneMasked: row.contact_phone_e164 === null ? null : maskPhone(row.contact_phone_e164),
+    },
     },
   };
 }

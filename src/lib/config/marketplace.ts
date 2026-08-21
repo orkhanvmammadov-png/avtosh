@@ -3,28 +3,30 @@ import { z } from "zod";
 const schema = z.object({
   MARKETPLACE_PAGE_SIZE: z.coerce.number().int().min(1).max(48).default(24),
   MARKETPLACE_MAX_PAGE_SIZE: z.coerce.number().int().min(1).max(100).default(48),
-  MARKETPLACE_CACHE_CONTROL: z
-    .string()
-    .default("public, max-age=30, s-maxage=60, stale-while-revalidate=30"),
+  MARKETPLACE_CACHE_MAX_AGE_SECONDS: z.coerce.number().int().min(0).max(300).default(30),
+  MARKETPLACE_CACHE_S_MAXAGE_SECONDS: z.coerce.number().int().min(0).max(600).default(60),
 });
 
 export interface MarketplaceConfig {
   pageSize: number;
   maxPageSize: number;
-  /** Applied only to anonymous public read responses. */
-  cacheControl: string;
+  /** Cache CEILINGS for public reads; actual lifetime is bounded by business expiry. */
+  cacheMaxAgeSeconds: number;
+  cacheSMaxAgeSeconds: number;
 }
 
 export function marketplaceConfig(): MarketplaceConfig {
   const parsed = schema.parse({
     MARKETPLACE_PAGE_SIZE: process.env.MARKETPLACE_PAGE_SIZE,
     MARKETPLACE_MAX_PAGE_SIZE: process.env.MARKETPLACE_MAX_PAGE_SIZE,
-    MARKETPLACE_CACHE_CONTROL: process.env.MARKETPLACE_CACHE_CONTROL,
+    MARKETPLACE_CACHE_MAX_AGE_SECONDS: process.env.MARKETPLACE_CACHE_MAX_AGE_SECONDS,
+    MARKETPLACE_CACHE_S_MAXAGE_SECONDS: process.env.MARKETPLACE_CACHE_S_MAXAGE_SECONDS,
   });
   return {
     pageSize: parsed.MARKETPLACE_PAGE_SIZE,
     maxPageSize: parsed.MARKETPLACE_MAX_PAGE_SIZE,
-    cacheControl: parsed.MARKETPLACE_CACHE_CONTROL,
+    cacheMaxAgeSeconds: parsed.MARKETPLACE_CACHE_MAX_AGE_SECONDS,
+    cacheSMaxAgeSeconds: parsed.MARKETPLACE_CACHE_S_MAXAGE_SECONDS,
   };
 }
 

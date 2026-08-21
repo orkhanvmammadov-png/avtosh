@@ -1,6 +1,5 @@
 import { createApiHandler, parseQuery } from "@/lib/api/handler";
 import { apiSuccess } from "@/lib/api/response";
-import { marketplaceConfig } from "@/lib/config/marketplace";
 import { premiumFeed } from "@/services/marketplace";
 import { premiumQuerySchema } from "@/validators/marketplace";
 
@@ -14,7 +13,7 @@ export const GET = createApiHandler(async ({ request, requestId }) => {
     { items: result.items },
     {
       requestId,
-      cacheControl: marketplaceConfig().cacheControl,
+      cacheControl: result.cacheControl,
       meta: { next_cursor: result.nextCursor, has_more: result.hasMore },
     },
   );

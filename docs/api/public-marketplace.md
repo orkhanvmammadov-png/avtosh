@@ -1,8 +1,12 @@
 # Public Marketplace API Contract (v1)
 
 Anonymous, read-only. Standard envelope; list endpoints add
-`meta: { next_cursor, has_more }`; public responses carry short shared
-`Cache-Control`. Design: `../architecture/public-marketplace.md`.
+`meta: { next_cursor, has_more }`. Public responses carry
+`Cache-Control: public, max-age=≤30, s-maxage=≤60` **bounded by the
+earliest listing/promotion expiry in the response** (no
+stale-while-revalidate; `no-store` when a contained deadline is
+imminent). Image URLs are signed, short-lived, and opaque (no
+internal identifiers). Design: `../architecture/public-marketplace.md`.
 
 ## GET /api/v1/listings
 

@@ -245,10 +245,13 @@ export async function confirmUpload(
     throw new ApiError("IMAGE_PROCESSING_FAILED", "The image could not be processed.");
   }
 
-  // Deterministic final path (image id = upload id): a concurrent or
-  // retried confirm overwrites the same object with identical content
-  // instead of duplicating it.
-  const finalPath = `listings/${auth.user.id}/${listingId}/${uploadId}.webp`;
+  // Opaque, deterministic final path (image id = upload id): no owner,
+  // listing, or seller identifiers in the object key — public signed
+  // URLs therefore reveal nothing internal. Authorization is decided
+  // by PostgreSQL ownership/state via listing_images, never by path
+  // secrecy. A concurrent or retried confirm overwrites the same
+  // object with identical content instead of duplicating it.
+  const finalPath = `listings/${uploadId}.webp`;
   await storage.uploadObject(
     config.imagesBucket,
     finalPath,

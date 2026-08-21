@@ -103,20 +103,37 @@ only). Public signed-URL TTL **3600 s** (`LISTING_IMAGE_PUBLIC_READ_TTL_SECONDS`
 Signing failure → `null` URL on that card (graceful, provider text
 never exposed), the page still serves.
 
-**Checkpoint**: signed URLs embed the Phase 4.5 storage path
-`listings/{owner_uuid}/{listing_uuid}/{image_id}.webp`, so public
-image URLs carry owner/listing UUIDs (seller correlation). The
-accepted path scheme was designed for private access; before/with the
-public-CDN strategy, adopt opaque public object paths (or a
-path-rewriting delivery layer). Tracked as an open risk.
+Processed image object keys are opaque (`listings/{image_id}.webp`,
+Phase 4.8 hardening), so public signed URLs reveal no owner/listing
+UUIDs or seller identifiers; authorization stays in PostgreSQL.
 
-## Caching
+## Caching — bounded by business validity
 
-Public read responses send `Cache-Control: public, max-age=30,
-s-maxage=60, stale-while-revalidate=30` (configurable). Bounded well
-inside the 1 h image-URL TTL; the time-checked invariant means a
-listing can be served at most ~90 s past expiry/promotion end.
-Owner/moderator routes send no cache headers.
+Public responses may be cached only until the **earliest business
+deadline they contain**; the worker is never trusted. For every
+response the service computes
+`min(ceiling, seconds until earliest of: each returned listing's
+current_expires_at, each returned listing's earliest valid promotion
+ends_at)` and emits `Cache-Control: public, max-age=<≤30>,
+s-maxage=<≤60>` with **no stale-while-revalidate**; deadlines within
+~1 s (or passed) → `no-store`. Ceilings: `MARKETPLACE_CACHE_MAX_AGE_
+SECONDS` (30) / `MARKETPLACE_CACHE_S_MAXAGE_SECONDS` (60).
+
+| Endpoint | Bound |
+| --- | --- |
+| `GET /listings` (search) | earliest `current_expires_at` / promotion `ends_at` across promoted + organic cards |
+| `GET /listings/premium` | earliest listing expiry / promotion end across the page |
+| `GET /home` | same bound as the embedded first Premium page |
+| `GET /listings/:publicId` (ACTIVE) | its own `current_expires_at` and earliest valid promotion end |
+| `GET /listings/:publicId` (SOLD/EXPIRED limited view) | ceilings (no live deadline) |
+| owner / moderator routes | no cache headers |
+
+Guarantee: a response containing data that expires in N seconds is
+never marked cacheable for more than N seconds (tested at the
+boundary for search, Boost, Premium, Home and detail, plus a real
+crossing test where an ACTIVE listing passes `current_expires_at`
+and disappears from search / becomes a non-contactable EXPIRED
+detail).
 
 ## Query shape & indexes
 
@@ -138,6 +155,6 @@ ACTIVE listings and prints EXPLAIN ANALYZE for the key shapes:
 
 Real Supabase Storage delivery (Phase 4.5 smoke test) still pending;
 public CDN / opaque-path strategy; production catalog data;
-phone-reveal endpoint; rate limiting for anonymous search at the
+phone-reveal endpoint; public CDN / cache-key strategy; rate limiting for anonymous search at the
 platform/WAF layer (queries are bounded: max 48 rows, 50 Boost
 candidates, validated filters).

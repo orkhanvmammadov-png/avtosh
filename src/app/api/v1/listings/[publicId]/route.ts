@@ -1,7 +1,6 @@
 import { ApiError } from "@/lib/api/errors";
 import { createApiHandler } from "@/lib/api/handler";
 import { apiSuccess } from "@/lib/api/response";
-import { marketplaceConfig } from "@/lib/config/marketplace";
 import { publicDetail } from "@/services/marketplace";
 import { publicIdParamSchema } from "@/validators/marketplace";
 
@@ -13,6 +12,6 @@ export const GET = createApiHandler(async ({ requestId, params }) => {
   if (!parsed.success) {
     throw new ApiError("LISTING_NOT_FOUND", "Listing not found.");
   }
-  const listing = await publicDetail(parsed.data);
-  return apiSuccess({ listing }, { requestId, cacheControl: marketplaceConfig().cacheControl });
+  const { listing, cacheControl } = await publicDetail(parsed.data);
+  return apiSuccess({ listing }, { requestId, cacheControl });
 });

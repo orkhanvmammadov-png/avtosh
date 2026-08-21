@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { closeSql, getSql } from "@/lib/server/db/client";
 import {
@@ -66,8 +67,8 @@ async function insertListing(spec: Spec) {
   if (spec.image !== false) {
     await sql`
       insert into listing_images (listing_id, storage_path, sort_order, is_primary, mime_type, file_size_bytes, width, height)
-      values (${row.id}, ${`listings/${ownerId}/${row.id}/img1.webp`}, 0, true, 'image/webp', 1000, 1600, 900),
-             (${row.id}, ${`listings/${ownerId}/${row.id}/img2.webp`}, 1, false, 'image/webp', 1000, 1600, 900)
+      values (${row.id}, ${`listings/${randomUUID()}.webp`}, 0, true, 'image/webp', 1000, 1600, 900),
+             (${row.id}, ${`listings/${randomUUID()}.webp`}, 1, false, 'image/webp', 1000, 1600, 900)
     `;
   }
   for (const f of spec.features ?? []) {
@@ -104,9 +105,15 @@ function ids(r: { body: { data?: Record<string, unknown> } }, key: "items" | "pr
   const mine = new Set(Object.values(created).map((c) => c.publicId));
   return allIds(r, key).filter((id) => mine.has(id));
 }
-/** Signed image URLs legitimately embed storage paths; strip them before leak assertions. */
-function withoutUrls(value: unknown): string {
-  return JSON.stringify(value, (k, v) => (k === "primaryImageUrl" || k === "url" ? undefined : v));
+/** Leak checks run over the FULL serialized body — including URLs. */
+function fullJson(value: unknown): string {
+  return JSON.stringify(value);
+}
+function cacheSeconds(r: { response: Response }): { maxAge: number; sMaxAge: number; raw: string } {
+  const raw = r.response.headers.get("cache-control") ?? "";
+  const m = /max-age=(\d+)/.exec(raw);
+  const sm = /s-maxage=(\d+)/.exec(raw);
+  return { maxAge: m ? Number(m[1]) : -1, sMaxAge: sm ? Number(sm[1]) : -1, raw };
 }
 function sameSet(a: string[], b: string[]) {
   expect([...a].sort()).toEqual([...b].sort());
@@ -166,7 +173,8 @@ describe("public search — visibility & filters", () => {
   it("anonymous search returns only ACTIVE + unexpired listings", async () => {
     const r = await search("category=CAR&limit=48");
     expect(r.status).toBe(200);
-    expect(r.response.headers.get("cache-control")).toContain("s-maxage");
+    expect(r.response.headers.get("cache-control")).toMatch(/^public, max-age=\d+, s-maxage=\d+$/);
+    expect(r.response.headers.get("cache-control")).not.toContain("stale-while-revalidate");
     const got = ids(r);
     for (const k of ["active1", "active2", "active3", "recent"]) expect(got).toContain(created[k].publicId);
     for (const k of ["timeExpired", "pending", "payment", "sold", "expired", "suspended", "deleted", "draft", "activeMoto"]) {
@@ -180,8 +188,9 @@ describe("public search — visibility & filters", () => {
     const card = (r.body.data?.items as Record<string, unknown>[]).find((c) => mine.has(c.publicId as string))!;
     expect(Object.keys(card).sort()).toEqual(["badges", "brand", "category", "city", "currency", "mileage", "model", "priceMinor", "primaryImageUrl", "publicId", "publishedAt", "year"]);
     expect(card.primaryImageUrl).toContain("memory://signed-read/");
-    const raw = withoutUrls(r.body);
+    const raw = fullJson(r.body);
     expect(raw).not.toContain(ownerId);
+    for (const c of Object.values(created)) expect(raw).not.toContain(c.id); // no listing UUIDs anywhere, URLs included
     expect(raw).not.toMatch(/storage_?path/);
     expect(raw).not.toContain("+99450");
   });
@@ -388,10 +397,14 @@ describe("public detail", () => {
     expect((d.images as { url: string; isPrimary: boolean }[])[0].isPrimary).toBe(true);
     expect((d.features as { code: string }[]).map((f) => f.code).sort()).toEqual(["PM_ABS", "PM_AC"]);
     expect((d.seller as { contactPhoneMasked: string }).contactPhoneMasked).toBe("+994•••••••67");
-    const raw = withoutUrls(r.body);
+    const raw = fullJson(r.body);
     expect(raw).not.toContain(ownerId);
     expect(raw).not.toContain(created.active1.id);
     expect(raw).not.toContain("+994501234567");
+    for (const img of d.images as { url: string }[]) {
+      expect(img.url).not.toContain(ownerId);
+      expect(img.url).not.toContain(created.active1.id);
+    }
     expect(raw).not.toMatch(/storage_?path|payment|moderat|owner_id/i);
     const sql = getSql();
     const [stats] = await sql<{ view_count: string }[]>`select view_count::text as view_count from listing_stats where listing_id = ${created.active1.id}`;
@@ -433,5 +446,62 @@ describe("public detail", () => {
     } finally {
       storage.createSignedReadUrl = original;
     }
+  });
+});
+
+describe("cache lifetime is bounded by business validity", () => {
+  it("search cache cannot outlive the earliest listing or promotion deadline", async () => {
+    const soon = await insertListing({ key: "expiresSoon", expiresOffsetMin: 0.33, publishedOffsetMin: 3000, price: 123456 }); // ~20s
+    const r = await search("category=CAR&price_min=123456&price_max=123456");
+    expect(ids(r)).toEqual([soon.publicId]);
+    const { maxAge, sMaxAge, raw } = cacheSeconds(r);
+    expect(raw).not.toContain("stale-while-revalidate");
+    expect(sMaxAge).toBeGreaterThan(0);
+    expect(sMaxAge).toBeLessThanOrEqual(20);
+    expect(maxAge).toBeLessThanOrEqual(20);
+
+    const boosted = await insertListing({ key: "boostEndsSoon", publishedOffsetMin: 3100, price: 654321 });
+    await promote(boosted.id, "BOOST", -60, 0.17); // ends in ~10s
+    const rb = await search("category=CAR&price_min=654321&price_max=654321");
+    expect(ids(rb, "promoted")).toEqual([boosted.publicId]);
+    expect(cacheSeconds(rb).sMaxAge).toBeLessThanOrEqual(10);
+
+    // headroom everywhere → configured ceilings apply
+    const far = await search(`category=CAR&brand_id=${brandB}`);
+    expect(cacheSeconds(far).sMaxAge).toBeLessThanOrEqual(60);
+  });
+
+  it("premium and home caches cannot outlive the earliest premium/listing deadline", async () => {
+    const prem = await insertListing({ key: "premEndsSoon", publishedOffsetMin: 3200 });
+    await promote(prem.id, "PREMIUM", -60, 0.25); // ends in ~15s
+    const feed = await api(premiumRoute, "GET", `${PREMIUM}?limit=48`);
+    expect(ids(feed)).toContain(prem.publicId);
+    expect(cacheSeconds(feed).sMaxAge).toBeLessThanOrEqual(15);
+    const home = await api(homeRoute, "GET", HOME);
+    expect(cacheSeconds(home).sMaxAge).toBeLessThanOrEqual(15);
+  });
+
+  it("detail cache is bounded by its own expiry; imminent expiry → no-store", async () => {
+    const soon = await insertListing({ key: "detailExpiresSoon", expiresOffsetMin: 0.2, publishedOffsetMin: 3300 }); // ~12s
+    const r = await api(detailRoute, "GET", `http://localhost/api/v1/listings/${soon.publicId}`, { params: { publicId: soon.publicId } });
+    expect(cacheSeconds(r).sMaxAge).toBeLessThanOrEqual(12);
+    const imminent = await insertListing({ key: "detailImminent", expiresOffsetMin: 0.01, publishedOffsetMin: 3400 }); // ~0.6s
+    const ri = await api(detailRoute, "GET", `http://localhost/api/v1/listings/${imminent.publicId}`, { params: { publicId: imminent.publicId } });
+    expect(ri.response.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("an ACTIVE listing crossing current_expires_at stops being publicly valid", async () => {
+    const crossing = await insertListing({ key: "crossing", expiresOffsetMin: 0.02, publishedOffsetMin: 3500, price: 777777 }); // ~1.2s
+    expect(ids(await search("category=CAR&price_min=777777&price_max=777777"))).toEqual([crossing.publicId]);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    expect(ids(await search("category=CAR&price_min=777777&price_max=777777"))).toEqual([]);
+    const d = await api(detailRoute, "GET", `http://localhost/api/v1/listings/${crossing.publicId}`, { params: { publicId: crossing.publicId } });
+    const listing = d.body.data?.listing as { status: string; contactable: boolean };
+    expect(listing.status).toBe("EXPIRED");
+    expect(listing.contactable).toBe(false);
+    // SOLD/SUSPENDED/DELETED semantics unchanged
+    expect(((await api(detailRoute, "GET", `http://localhost/api/v1/listings/${created.sold.publicId}`, { params: { publicId: created.sold.publicId } })).body.data?.listing as { status: string }).status).toBe("SOLD");
+    expect((await api(detailRoute, "GET", `http://localhost/api/v1/listings/${created.suspended.publicId}`, { params: { publicId: created.suspended.publicId } })).status).toBe(404);
+    expect((await api(detailRoute, "GET", `http://localhost/api/v1/listings/${created.deleted.publicId}`, { params: { publicId: created.deleted.publicId } })).status).toBe(404);
   });
 });
