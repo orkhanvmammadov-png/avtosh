@@ -151,14 +151,19 @@ export async function getModerationQueue(input: {
         phoneMasked: maskPhone(row.owner_phone),
         displayName: row.owner_display_name,
       },
+      // Image signing failures degrade to null (same strategy as the
+      // public read model) — one broken object must not take the whole
+      // moderation queue down. Authorization is unaffected.
       primaryImageUrl:
         row.primary_image_path === null
           ? null
-          : await storage.createSignedReadUrl(
-              config.imagesBucket,
-              row.primary_image_path,
-              config.signedReadTtlSeconds,
-            ),
+          : await storage
+              .createSignedReadUrl(
+                config.imagesBucket,
+                row.primary_image_path,
+                config.signedReadTtlSeconds,
+              )
+              .catch(() => null),
       claim:
         row.claim_moderator_id === null || row.claim_expires_at === null
           ? null

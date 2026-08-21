@@ -19,7 +19,19 @@ DATADIR="$WORKDIR/pgdata"
 # Unix sockets are limited to 103 bytes on macOS, so the socket dir
 # must live at a short path even when TMPDIR is long.
 SOCKDIR="$(mktemp -d /tmp/avtoshpg.XXXXXX)"
-PORT="${TEMP_PG_PORT:-54329}"
+# Pick a free TCP port so back-to-back/parallel runs cannot collide
+# (TEMP_PG_PORT still pins one explicitly).
+pick_free_port() {
+  local p
+  for p in $(seq 54329 54399); do
+    if ! (exec 3<>"/dev/tcp/127.0.0.1/$p") 2>/dev/null; then
+      echo "$p"; return 0
+    fi
+    exec 3>&- 2>/dev/null || true
+  done
+  echo "54329"
+}
+PORT="${TEMP_PG_PORT:-$(pick_free_port)}"
 DB=avtosh_temp
 export PGUSER=avtosh
 # Avoid the macOS "postmaster became multithreaded during startup"

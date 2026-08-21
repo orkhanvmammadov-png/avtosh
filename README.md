@@ -3,7 +3,7 @@
 Azerbaijan-focused responsive **web** marketplace for cars and
 motorcycles. Web only — no native iOS/Android applications.
 
-**Current phase: Phase 4.7 — Moderation & Listing Activation.**
+**Current phase: Phase 4.8 — Public Marketplace Read APIs.**
 Implemented so far: the MVP database schema (Supabase migrations),
 the public read-only Catalog API (`/api/v1/catalog/*`), passwordless
 WhatsApp-OTP authentication with opaque cookie sessions
@@ -14,8 +14,10 @@ and initial submission with lifetime first-3-free publication
 accounting (FREE → moderation queue, PAID → internal payment intent),
 and the moderation engine (`/api/v1/moderator/*`: queue, claims,
 approve/reject/correction, first 30-day activation, seller
-resubmission). Payment-provider fulfillment, public search, and the
-expiry/notification workers are not implemented yet. `CLAUDE.md` is the authoritative
+resubmission), and the anonymous public read model (`/api/v1/home`,
+`/api/v1/listings` search with Boost placement, `/api/v1/listings/premium`,
+`/api/v1/listings/:publicId`). Payment-provider fulfillment, the public
+web UI, and the expiry/notification workers are not implemented yet. `CLAUDE.md` is the authoritative
 product/architecture instruction file; see `docs/architecture/`,
 `docs/api/`, and `docs/runbooks/` for details.
 

@@ -38,13 +38,19 @@ created from server-processed objects.
 Paths are 100% server-generated — the client only ever holds an
 opaque `upload_id`:
 
-- temp: `uploads/{user_id}/{listing_id}/{upload_id}`
-- final: `listings/{user_id}/{listing_id}/{image_id}.webp`
+- temp (private/internal): `uploads/{user_id}/{listing_id}/{upload_id}`
+- final (opaque, since Phase 4.8 hardening): `listings/{image_id}.webp`
 
-`image_id` equals `upload_id`, so a retried/concurrent confirm
-overwrites the same final object deterministically instead of
-duplicating it. Traversal/absolute/cross-user paths are impossible —
-no client string ever reaches a path.
+The final object key carries **no owner, listing, phone, or seller
+identifier** — public signed URLs therefore reveal nothing internal.
+Authorization always comes from PostgreSQL (`listing_images` is the
+authoritative mapping, owner/state checks on every read), never from
+path secrecy. `image_id` equals `upload_id`, so a retried/concurrent
+confirm overwrites the same final object deterministically. No client
+string ever reaches a path. (The pre-launch `listings/{user}/
+{listing}/{image}.webp` convention was replaced before any production
+inventory existed; rows always resolve through `storage_path`, so no
+compatibility shim is needed.)
 
 ## Pending uploads (`listing_image_uploads`, migration 013)
 

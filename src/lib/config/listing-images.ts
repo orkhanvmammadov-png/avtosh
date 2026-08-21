@@ -25,6 +25,11 @@ const schema = z.object({
     .int()
     .positive()
     .default(600),
+  LISTING_IMAGE_PUBLIC_READ_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(3600),
   LISTING_IMAGE_MAX_EDGE_PX: z.coerce.number().int().positive().default(1600),
   LISTING_IMAGE_WEBP_QUALITY: z.coerce.number().int().min(1).max(100).default(80),
   LISTING_IMAGE_MAX_PENDING_UPLOADS: z.coerce
@@ -40,6 +45,8 @@ export interface ListingImageConfig {
   maxUploadBytes: number;
   signedUploadTtlSeconds: number;
   signedReadTtlSeconds: number;
+  /** Longer-lived signed URLs for public (ACTIVE) listing images. */
+  publicReadTtlSeconds: number;
   maxEdgePx: number;
   webpQuality: number;
   maxPendingUploads: number;
@@ -54,6 +61,8 @@ export function listingImageConfig(): ListingImageConfig {
       process.env.LISTING_IMAGE_SIGNED_UPLOAD_TTL_SECONDS,
     LISTING_IMAGE_SIGNED_READ_TTL_SECONDS:
       process.env.LISTING_IMAGE_SIGNED_READ_TTL_SECONDS,
+    LISTING_IMAGE_PUBLIC_READ_TTL_SECONDS:
+      process.env.LISTING_IMAGE_PUBLIC_READ_TTL_SECONDS,
     LISTING_IMAGE_MAX_EDGE_PX: process.env.LISTING_IMAGE_MAX_EDGE_PX,
     LISTING_IMAGE_WEBP_QUALITY: process.env.LISTING_IMAGE_WEBP_QUALITY,
     LISTING_IMAGE_MAX_PENDING_UPLOADS:
@@ -65,6 +74,7 @@ export function listingImageConfig(): ListingImageConfig {
     maxUploadBytes: parsed.LISTING_IMAGE_MAX_UPLOAD_BYTES,
     signedUploadTtlSeconds: parsed.LISTING_IMAGE_SIGNED_UPLOAD_TTL_SECONDS,
     signedReadTtlSeconds: parsed.LISTING_IMAGE_SIGNED_READ_TTL_SECONDS,
+    publicReadTtlSeconds: parsed.LISTING_IMAGE_PUBLIC_READ_TTL_SECONDS,
     maxEdgePx: parsed.LISTING_IMAGE_MAX_EDGE_PX,
     webpQuality: parsed.LISTING_IMAGE_WEBP_QUALITY,
     maxPendingUploads: parsed.LISTING_IMAGE_MAX_PENDING_UPLOADS,
