@@ -79,3 +79,22 @@ export async function requireActiveSeller(
   }
   return auth;
 }
+
+export const STAFF_ROLES = ["MODERATOR", "ADMIN", "SUPER_ADMIN"] as const;
+
+/**
+ * Staff guard for moderator endpoints: authenticated, not BLOCKED
+ * (a blocked account gets no staff access), and holding at least one
+ * staff role. The actor is always the session user — never a body
+ * field. Normal USERs receive STAFF_ROLE_REQUIRED.
+ */
+export async function requireStaff(request: Request): Promise<AuthContext> {
+  const auth = await requireActiveSeller(request);
+  const isStaff = auth.roles.some((role) =>
+    (STAFF_ROLES as readonly string[]).includes(role),
+  );
+  if (!isStaff) {
+    throw new ApiError("STAFF_ROLE_REQUIRED", "Staff role required.");
+  }
+  return auth;
+}

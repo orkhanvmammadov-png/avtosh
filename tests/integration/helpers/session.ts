@@ -12,11 +12,14 @@ import {
  */
 export async function createTestUserSession(
   phone: string,
-  options: { blocked?: boolean } = {},
+  options: { blocked?: boolean; roles?: string[] } = {},
 ): Promise<{ userId: string; cookie: string; token: string }> {
   const sql = getSql();
   const user = await upsertUserOnLogin(sql, phone);
   await ensureUserRole(sql, user.id, "USER");
+  for (const role of options.roles ?? []) {
+    await ensureUserRole(sql, user.id, role);
+  }
   if (options.blocked === true) {
     await sql`
       update users set status = 'BLOCKED', blocked_at = now()

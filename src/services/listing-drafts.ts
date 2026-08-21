@@ -23,6 +23,7 @@ import {
   type ListingRow,
 } from "@/repositories/listings";
 import { toOwnerListingDto, type OwnerListingDto } from "@/services/listing-dto";
+import { isSellerEditable } from "@/services/listing-states";
 import type { DraftPatchInput } from "@/validators/listings";
 
 /**
@@ -109,10 +110,10 @@ export async function updateDraft(
   patch: DraftPatchInput,
 ): Promise<OwnerListingDto> {
   const listing = await loadOwnedListingOrThrow(listingId, auth.user.id);
-  if (listing.status !== "DRAFT") {
+  if (!isSellerEditable(listing.status)) {
     throw new ApiError(
       "LISTING_NOT_EDITABLE",
-      "Only draft listings can be edited.",
+      "The listing is not editable in its current state.",
     );
   }
 
@@ -267,7 +268,7 @@ export async function updateDraft(
             listingId,
             ownerId: auth.user.id,
             expectedRevision: patch.expected_revision,
-            set: { status: "DRAFT" }, // no-op column keeps the guarded, revision-bumping update shape
+            set: { status: listing.status }, // no-op column keeps the guarded, revision-bumping update shape
           });
     if (!applied) {
       return false;
@@ -284,10 +285,10 @@ export async function updateDraft(
     // Distinguish stale revision from state change without leaking
     // other users' resources (ownership was already proven above).
     const current = await loadOwnedListingOrThrow(listingId, auth.user.id);
-    if (current.status !== "DRAFT") {
+    if (!isSellerEditable(current.status)) {
       throw new ApiError(
         "LISTING_NOT_EDITABLE",
-        "Only draft listings can be edited.",
+        "The listing is not editable in its current state.",
       );
     }
     throw new ApiError(

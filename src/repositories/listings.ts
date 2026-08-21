@@ -1,4 +1,5 @@
 import type { Sql } from "@/lib/server/db/client";
+import { SELLER_EDITABLE_STATUSES } from "@/services/listing-states";
 
 /**
  * Listing repository — parameterized SQL only. Handles are passed in
@@ -94,7 +95,8 @@ export async function getOwnedListingForUpdate(
 /**
  * Optimistic-concurrency draft update: applies the allowlisted column
  * values and bumps revision atomically, only when the listing is
- * still the owner's DRAFT at the expected revision.
+ * still the owner's and in a seller-editable state at the expected
+ * revision.
  */
 export async function updateDraftListing(
   sql: Sql,
@@ -110,7 +112,7 @@ export async function updateDraftListing(
     set ${sql(input.set)}, revision = revision + 1
     where id = ${input.listingId}
       and owner_id = ${input.ownerId}
-      and status = 'DRAFT'
+      and status::text in ${sql([...SELLER_EDITABLE_STATUSES])}
       and revision = ${input.expectedRevision}
     returning id
   `;

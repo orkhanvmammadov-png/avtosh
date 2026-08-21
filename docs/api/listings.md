@@ -117,3 +117,16 @@ Errors: `LISTING_REVISION_CONFLICT` 409 · `LISTING_NOT_EDITABLE` 409
 · `LISTING_INVALID_CATALOG_SELECTION` 400 (`details.field`) ·
 `LISTING_PAYMENT_CONFIGURATION_ERROR` 500 · `USER_BLOCKED` 403 ·
 `LISTING_NOT_FOUND` 404.
+
+## POST /api/v1/me/listings/:id/resubmit (Phase 4.7)
+
+`{ "expected_revision": n }` from CORRECTION_REQUIRED / REJECTED.
+Same completeness/catalog rules as submit; returns
+`{ listing: { id, status: "PENDING_MODERATION", revision }, publication: { number, billingType }, nextAction: "MODERATION" }`.
+Never creates a new publication/ordinal/payment. Idempotent.
+Errors: `LISTING_NOT_EDITABLE` 409 · `LISTING_REVISION_CONFLICT` 409 ·
+`LISTING_INCOMPLETE` · `LISTING_INSUFFICIENT_IMAGES` ·
+`LISTING_INVALID_CATALOG_SELECTION` · `USER_BLOCKED` 403.
+
+Seller field/image mutation endpoints now also accept listings in
+`CORRECTION_REQUIRED` and `REJECTED` (same rules as DRAFT).

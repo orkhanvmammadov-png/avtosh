@@ -88,3 +88,5 @@ export const submitListingSchema = z
     expected_revision: z.number().int().min(1),
   })
   .strict();
+
+export const resubmitListingSchema = submitListingSchema;
