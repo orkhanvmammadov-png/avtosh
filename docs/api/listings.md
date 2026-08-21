@@ -85,3 +85,35 @@ primary per listing (DB-enforced).
 - Draft minimum image count (3) is enforced at submission
   (Phase 4.6), not while drafting; maximum comes from the
   `listing.image_max` setting (20).
+
+## GET /api/v1/me/listing-quota (Phase 4.6)
+
+Advisory only. `200`:
+
+```json
+{ "data": { "quota": { "freeLimit": 3, "lifetimePublications": 2, "freeUsed": 2, "freeRemaining": 1, "nextPublicationNumber": 3, "nextPublicationIsPaid": false, "listingFeeMinor": 200, "currency": "AZN" } } }
+```
+
+BLOCKED users may read it. `LISTING_PAYMENT_CONFIGURATION_ERROR` 500 if settings are missing.
+
+## POST /api/v1/me/listings/:id/submit (Phase 4.6)
+
+`{ "expected_revision": 7 }` — nothing else is accepted. Requires a
+complete DRAFT (see `../architecture/listing-submission.md`).
+
+FREE result (`200`):
+```json
+{ "data": { "listing": { "id": "…", "status": "PENDING_MODERATION", "revision": 7 }, "publication": { "number": 3, "billingType": "FREE" }, "payment": null, "nextAction": "MODERATION" } }
+```
+PAID result (`200`):
+```json
+{ "data": { "listing": { "id": "…", "status": "PAYMENT_REQUIRED", "revision": 7 }, "publication": { "number": 4, "billingType": "PAID" }, "payment": { "id": "…", "type": "LISTING_FEE", "amountMinor": 200, "currency": "AZN", "status": "CREATED" }, "nextAction": "PAYMENT" } }
+```
+No checkout data exists yet. Retrying returns the same result.
+
+Errors: `LISTING_REVISION_CONFLICT` 409 · `LISTING_NOT_EDITABLE` 409
+· `LISTING_INCOMPLETE` 400 (`details.missing`) ·
+`LISTING_INSUFFICIENT_IMAGES` 400 (`details.required/confirmed/primary`)
+· `LISTING_INVALID_CATALOG_SELECTION` 400 (`details.field`) ·
+`LISTING_PAYMENT_CONFIGURATION_ERROR` 500 · `USER_BLOCKED` 403 ·
+`LISTING_NOT_FOUND` 404.

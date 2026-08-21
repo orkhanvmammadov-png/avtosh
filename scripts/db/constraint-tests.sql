@@ -255,6 +255,20 @@ begin
     raise notice 'ok 22: non-positive declared upload size rejected';
   end;
 
+  -- 23. progressed payment without provider rejected (Phase 4.6)
+  begin
+    insert into payments (user_id, type, amount_minor, idempotency_key, status)
+      values (v_user1, 'LISTING_FEE', 200, 'idem-noprov-success', 'SUCCESS');
+    raise exception 'TEST 23 FAILED: SUCCESS payment without provider accepted';
+  exception when check_violation then
+    raise notice 'ok 23: progressed payment without provider rejected';
+  end;
+
+  -- 24. CREATED payment intent without provider accepted (pre-provider)
+  insert into payments (user_id, type, amount_minor, idempotency_key, status)
+    values (v_user1, 'LISTING_FEE', 200, 'idem-noprov-created', 'CREATED');
+  raise notice 'ok 24: CREATED payment intent without provider accepted';
+
   raise notice 'All constraint tests passed.';
 end;
 $$;
