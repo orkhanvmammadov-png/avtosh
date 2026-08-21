@@ -33,6 +33,8 @@ import {
   getOwnedListingRowForUpdate,
   type ListingRow,
 } from "@/repositories/listings";
+import { resubmitListing as resubmitListingRow } from "@/repositories/moderation";
+import { RESUBMITTABLE_STATUSES } from "@/services/listing-states";
 
 /**
  * Initial submission & lifetime publication allocation.
@@ -313,5 +315,86 @@ export async function submitListing(
       publication,
       payment,
     );
+  });
+}
+
+export interface ResubmissionResultDto {
+  listing: { id: string; status: string; revision: number };
+  publication: { number: number; billingType: "FREE" | "PAID" };
+  nextAction: "MODERATION";
+}
+
+/**
+ * Seller resubmission after CORRECTION_REQUIRED / REJECTED. Re-enters
+ * the moderation queue with a fresh submitted_at. NO new publication
+ * row, ordinal, or LISTING_FEE payment — the existing initial
+ * publication (free or already paid) remains authoritative, so a
+ * future paid listing that reaches moderation resubmits identically.
+ * Idempotent: a retry that finds the listing already PENDING_MODERATION
+ * at the same revision returns the same result without new effects.
+ */
+export async function resubmitListing(
+  auth: AuthContext,
+  listingId: string,
+  expectedRevision: number,
+): Promise<ResubmissionResultDto> {
+  return withTransaction(async (tx) => {
+    const settings = await requireSettings(tx);
+    const listing = await getOwnedListingRowForUpdate(tx, listingId, auth.user.id);
+    if (listing === undefined) {
+      throw new ApiError("LISTING_NOT_FOUND", "Listing not found.");
+    }
+    const publication = await getPublicationByListing(tx, listingId);
+    if (publication === undefined) {
+      throw new ApiError("LISTING_NOT_EDITABLE", "The listing was never submitted.");
+    }
+    const result = (): ResubmissionResultDto => ({
+      listing: { id: listing.id, status: "PENDING_MODERATION", revision: listing.revision },
+      publication: { number: publication.publication_number, billingType: publication.billing_type },
+      nextAction: "MODERATION",
+    });
+    if (listing.status === "PENDING_MODERATION" && listing.revision === expectedRevision) {
+      return result(); // idempotent retry
+    }
+    if (!(RESUBMITTABLE_STATUSES as readonly string[]).includes(listing.status)) {
+      throw new ApiError("LISTING_NOT_EDITABLE", "The listing cannot be resubmitted from its current state.");
+    }
+    if (listing.revision !== expectedRevision) {
+      throw new ApiError(
+        "LISTING_REVISION_CONFLICT",
+        "The listing was modified by another request. Reload and retry.",
+        { details: { current_revision: listing.revision } },
+      );
+    }
+    await assertComplete(tx, listing, settings.imageMin);
+    await revalidateCatalog(tx, listing);
+    const ok = await resubmitListingRow(tx, {
+      listingId,
+      expectedRevision,
+      fromStatuses: RESUBMITTABLE_STATUSES,
+    });
+    if (!ok) {
+      throw new ApiError("LISTING_REVISION_CONFLICT", "The listing changed during resubmission.");
+    }
+    await expirePendingUploadsForListing(tx, listingId);
+    await insertStatusHistory(tx, {
+      listingId,
+      fromStatus: listing.status,
+      toStatus: "PENDING_MODERATION",
+      actorUserId: auth.user.id,
+      reasonCode: "RESUBMISSION",
+    });
+    await insertOutboxEvent(tx, {
+      eventType: "LISTING_ENTERED_MODERATION",
+      aggregateId: listingId,
+      payload: {
+        listing_id: listingId,
+        user_id: auth.user.id,
+        publication_number: publication.publication_number,
+        billing_type: publication.billing_type,
+        resubmission: true,
+      },
+    });
+    return result();
   });
 }

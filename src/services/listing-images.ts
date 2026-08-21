@@ -36,6 +36,7 @@ import {
   incrementListingRevision,
 } from "@/repositories/listings";
 import { toListingImageDto, type ListingImageDto } from "@/services/listing-dto";
+import { isSellerEditable } from "@/services/listing-states";
 
 /**
  * Listing image service: signed direct-to-storage uploads, verified
@@ -57,10 +58,10 @@ async function requireOwnedDraft(
   if (listing === undefined) {
     throw new ApiError("LISTING_NOT_FOUND", "Listing not found.");
   }
-  if (listing.status !== "DRAFT") {
+  if (!isSellerEditable(listing.status)) {
     throw new ApiError(
       "LISTING_NOT_EDITABLE",
-      "Only draft listings can be edited.",
+      "The listing is not editable in its current state.",
     );
   }
 }
@@ -109,7 +110,7 @@ export async function createUploadAuthorization(
 
   await withTransaction(async (tx) => {
     const listing = await getOwnedListingForUpdate(tx, listingId, auth.user.id);
-    if (listing === undefined || listing.status !== "DRAFT") {
+    if (listing === undefined || !isSellerEditable(listing.status)) {
       throw new ApiError("LISTING_NOT_FOUND", "Listing not found.");
     }
     const [imageMax, imageCount, pendingCount] = [
@@ -260,7 +261,7 @@ export async function confirmUpload(
   try {
     const result = await withTransaction(async (tx) => {
       const listing = await getOwnedListingForUpdate(tx, listingId, auth.user.id);
-      if (listing === undefined || listing.status !== "DRAFT") {
+      if (listing === undefined || !isSellerEditable(listing.status)) {
         throw new ApiError("LISTING_NOT_FOUND", "Listing not found.");
       }
       const lockedUpload = await getImageUploadForUpdate(
@@ -338,7 +339,7 @@ export async function deleteImage(
   await requireOwnedDraft(listingId, auth.user.id);
   const result = await withTransaction(async (tx) => {
     const listing = await getOwnedListingForUpdate(tx, listingId, auth.user.id);
-    if (listing === undefined || listing.status !== "DRAFT") {
+    if (listing === undefined || !isSellerEditable(listing.status)) {
       throw new ApiError("LISTING_NOT_FOUND", "Listing not found.");
     }
     const removed = await deleteListingImage(tx, imageId, listingId);
@@ -369,7 +370,7 @@ export async function reorderImages(
   await requireOwnedDraft(listingId, auth.user.id);
   return withTransaction(async (tx) => {
     const listing = await getOwnedListingForUpdate(tx, listingId, auth.user.id);
-    if (listing === undefined || listing.status !== "DRAFT") {
+    if (listing === undefined || !isSellerEditable(listing.status)) {
       throw new ApiError("LISTING_NOT_FOUND", "Listing not found.");
     }
     const images = await listListingImages(tx, listingId);
@@ -400,7 +401,7 @@ export async function setPrimary(
   await requireOwnedDraft(listingId, auth.user.id);
   return withTransaction(async (tx) => {
     const listing = await getOwnedListingForUpdate(tx, listingId, auth.user.id);
-    if (listing === undefined || listing.status !== "DRAFT") {
+    if (listing === undefined || !isSellerEditable(listing.status)) {
       throw new ApiError("LISTING_NOT_FOUND", "Listing not found.");
     }
     const image = await getListingImage(tx, imageId, listingId);
