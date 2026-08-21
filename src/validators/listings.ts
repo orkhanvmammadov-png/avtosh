@@ -82,3 +82,9 @@ export const reorderImagesSchema = z
       ),
   })
   .strict();
+
+export const submitListingSchema = z
+  .object({
+    expected_revision: z.number().int().min(1),
+  })
+  .strict();

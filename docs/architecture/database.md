@@ -99,6 +99,13 @@ are added in migration 006 (payments) after `payments` exists.
 after `promotion_packages` exists. Documented here and in the
 migration headers.
 
+## Pre-provider payment intents (migration 014)
+
+`payments.provider` is nullable so an internal LISTING_FEE intent can
+exist in `CREATED` state before any provider/checkout; `CHECK
+(provider IS NOT NULL OR status IN ('CREATED','CANCELLED'))` keeps
+every progressed payment bound to a real provider.
+
 ## Idempotency foundations
 
 - **Payments**: `idempotency_key UNIQUE` (client/server retry

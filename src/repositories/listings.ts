@@ -171,3 +171,29 @@ export async function removeIncompatibleListingFeatures(
       and not (f.is_active and (f.category_id is null or f.category_id = ${categoryId}))
   `;
 }
+
+/**
+ * Full owner-scoped listing row, locked for the transaction. Used by
+ * submission after the user row lock (lock order: users → listings).
+ */
+export async function getOwnedListingRowForUpdate(
+  sql: Sql,
+  listingId: string,
+  ownerId: string,
+): Promise<ListingRow | undefined> {
+  const rows = await sql<ListingRow[]>`
+    select
+      l.id, l.public_id::text as public_id, l.owner_id, l.category_id,
+      c.code as category_code,
+      l.brand_id, l.model_id, l.year, l.price_minor::text as price_minor,
+      l.currency, l.mileage, l.engine_cc, l.fuel_type_id, l.transmission_id,
+      l.body_type_id, l.drive_type_id, l.motorcycle_type_id, l.color_id,
+      l.city_id, l.credit_available, l.barter_available, l.description,
+      l.contact_phone_e164, l.status, l.revision, l.created_at, l.updated_at
+    from listings l
+    join categories c on c.id = l.category_id
+    where l.id = ${listingId} and l.owner_id = ${ownerId}
+    for update of l
+  `;
+  return rows[0];
+}
