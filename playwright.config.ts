@@ -28,7 +28,16 @@ export default defineConfig({
   ],
   webServer: {
     command: "./scripts/db/with-temp-postgres.sh sh -c 'node scripts/e2e/seed.mjs && pnpm dev'",
-    env: { OTP_PEPPER: "e2e-test-pepper-0123456789abcdef" }, // test-only; enables hashed-IP rate limiting paths
+    env: {
+      OTP_PEPPER: "e2e-test-pepper-0123456789abcdef", // test-only; enables hashed-IP rate limiting paths
+      // Short (not disabled) throttles so real cooldown UI is testable
+      // without minute-long sleeps; per-phone isolation comes from
+      // distinct test phone numbers (see tests/e2e/auth-helpers.ts).
+      OTP_RESEND_COOLDOWN_SECONDS: "2",
+      OTP_MIN_INTERVAL_SECONDS: "0",
+      OTP_IP_MAX_PER_HOUR: "100",
+      OTP_PHONE_MAX_PER_HOUR: "10",
+    },
     url: "http://localhost:3000/api/v1/health",
     reuseExistingServer: false,
     timeout: 240_000,

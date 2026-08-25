@@ -98,7 +98,7 @@ export interface PublicCardDto {
   badges: { premium: boolean; boosted: boolean };
 }
 
-async function signPublic(path: string | null): Promise<string | null> {
+export async function signPublicImage(path: string | null): Promise<string | null> {
   if (path === null) return null;
   const config = listingImageConfig();
   try {
@@ -123,7 +123,7 @@ async function toCard(row: CardRow): Promise<PublicCardDto> {
     currency: row.currency,
     mileage: row.mileage,
     city: row.city,
-    primaryImageUrl: await signPublic(row.primary_image_path),
+    primaryImageUrl: await signPublicImage(row.primary_image_path),
     publishedAt: row.published_at.toISOString(),
     badges: { premium: row.is_premium, boosted: row.is_boosted },
   };
@@ -448,7 +448,7 @@ export async function publicDetail(
   const images = contactable
     ? await Promise.all(
         imagePaths.map(async (img) => ({
-          url: await signPublic(img.storage_path),
+          url: await signPublicImage(img.storage_path),
           width: img.width,
           height: img.height,
           isPrimary: img.is_primary,
@@ -458,7 +458,7 @@ export async function publicDetail(
         imagePaths
           .filter((img) => img.is_primary)
           .map(async (img) => ({
-            url: await signPublic(img.storage_path),
+            url: await signPublicImage(img.storage_path),
             width: img.width,
             height: img.height,
             isPrimary: true,

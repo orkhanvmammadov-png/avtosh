@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+import { authConfig } from "@/auth/config";
 import { readSessionToken } from "@/auth/cookies";
 import { hashSessionToken } from "@/auth/otp-crypto";
 import { ApiError } from "@/lib/api/errors";
@@ -97,4 +99,34 @@ export async function requireStaff(request: Request): Promise<AuthContext> {
     throw new ApiError("STAFF_ROLE_REQUIRED", "Staff role required.");
   }
   return auth;
+}
+
+/**
+ * Server-Component variant of getCurrentAuth (no Request object in
+ * RSCs): reads the session cookie via next/headers and runs the same
+ * query-time validity checks. Null for anonymous visitors.
+ */
+export async function getCurrentAuthFromCookies(): Promise<AuthContext | null> {
+  const store = await cookies();
+  const token = store.get(authConfig().sessionCookieName)?.value;
+  if (token === undefined || token.length === 0) {
+    return null;
+  }
+  const sql = getSql();
+  const row = await findActiveSessionWithUser(sql, hashSessionToken(token));
+  if (row === undefined) {
+    return null;
+  }
+  await touchSessionLastSeen(sql, row.session_id);
+  const roles = await getUserRoleCodes(sql, row.user_id);
+  return {
+    sessionId: row.session_id,
+    user: {
+      id: row.user_id,
+      phone_e164: row.phone_e164,
+      display_name: row.display_name,
+      status: row.status,
+    },
+    roles,
+  };
 }

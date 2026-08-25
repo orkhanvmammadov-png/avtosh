@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ContactCard } from "@/components/marketplace/contact-card";
+import { FavoriteButton } from "@/components/shared/favorite-button";
 import { Gallery } from "@/components/marketplace/gallery";
 import { Badge } from "@/components/ui/badge";
 import { ApiError } from "@/lib/api/errors";
@@ -69,7 +70,10 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           {listing.badges.premium ? <Badge tone="premium">{UI.premiumBadge}</Badge> : null}
           {listing.badges.boosted ? <Badge tone="boosted">{UI.boostedBadge}</Badge> : null}
         </div>
-        <h1 className="mt-2 text-2xl font-bold text-navy md:text-3xl">{title}</h1>
+        <div className="mt-2 flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-bold text-navy md:text-3xl">{title}</h1>
+          <FavoriteButton publicId={listing.publicId} size="lg" autoIntent />
+        </div>
         <p className="mt-1 text-2xl font-extrabold text-primary" data-testid="detail-price">{formatPriceMinor(listing.priceMinor, listing.currency)}</p>
         {limited ? (
           <p role="status" className="mt-3 rounded-lg bg-line/60 px-4 py-3 text-sm text-navy" data-testid="limited-notice">
