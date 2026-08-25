@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { closeSql, getSql } from "@/lib/server/db/client";
 import { POST as contactRoute } from "@/app/api/v1/listings/[publicId]/contact/route";

@@ -10,7 +10,7 @@ const LINKS = [
 ];
 
 /** Native <dialog> drawer: focus trapped by the browser, Esc closes. */
-export function MobileNav() {
+export function MobileNav({ authed = false }: { authed?: boolean }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -58,12 +58,28 @@ export function MobileNav() {
               {link.label}
             </Link>
           ))}
-          <Link href="/elan-yerlesdir" className="mt-2 rounded-lg bg-primary px-3 py-3 text-center text-base font-semibold text-white" onClick={() => dialogRef.current?.close()}>
+          {authed ? (
+            <>
+              <Link href="/profil/secilmisler" className="rounded-lg px-3 py-3 text-base font-medium text-navy hover:bg-surface" onClick={() => dialogRef.current?.close()} data-testid="mobile-favorites">
+                {UI.favorites}
+              </Link>
+              <Link href="/profil" className="rounded-lg px-3 py-3 text-base font-medium text-navy hover:bg-surface" onClick={() => dialogRef.current?.close()} data-testid="mobile-profile">
+                {UI.profile}
+              </Link>
+            </>
+          ) : null}
+          <Link
+            href={authed ? "/elan-yerlesdir" : "/giris?return_to=%2Felan-yerlesdir"}
+            className="mt-2 rounded-lg bg-primary px-3 py-3 text-center text-base font-semibold text-white"
+            onClick={() => dialogRef.current?.close()}
+          >
             {UI.postListing}
           </Link>
-          <Link href="/daxil-ol" className="rounded-lg px-3 py-3 text-base font-medium text-navy hover:bg-surface" onClick={() => dialogRef.current?.close()}>
-            {UI.login}
-          </Link>
+          {authed ? null : (
+            <Link href="/giris" className="rounded-lg px-3 py-3 text-base font-medium text-navy hover:bg-surface" onClick={() => dialogRef.current?.close()} data-testid="mobile-login">
+              {UI.login}
+            </Link>
+          )}
         </nav>
       </dialog>
     </>

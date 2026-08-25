@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { FavoriteButton } from "@/components/shared/favorite-button";
 import { ListingImage } from "@/components/shared/listing-image";
 import { formatFreshness, formatMileage, formatPriceMinor, vehicleTitle } from "@/lib/format";
 import { UI } from "@/lib/marketplace/labels";
@@ -20,7 +21,7 @@ export function ListingCard({
     <article
       data-testid="listing-card"
       data-public-id={listing.publicId}
-      className="group flex h-full flex-col overflow-hidden rounded-card border border-line bg-white transition-shadow hover:shadow-md"
+      className="group relative flex h-full flex-col overflow-hidden rounded-card border border-line bg-white transition-shadow hover:shadow-md"
     >
       <Link href={`/elan/${listing.publicId}`} className="flex h-full flex-col focus-visible:outline-offset-[-2px]">
         <div className="relative aspect-vehicle w-full overflow-hidden bg-line/40">
@@ -43,6 +44,9 @@ export function ListingCard({
           <p className="mt-auto pt-2 text-xs text-muted">{formatFreshness(listing.publishedAt)}</p>
         </div>
       </Link>
+      <div className="absolute right-2 top-2">
+        <FavoriteButton publicId={listing.publicId} />
+      </div>
     </article>
   );
 }
