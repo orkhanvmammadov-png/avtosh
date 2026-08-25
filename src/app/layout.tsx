@@ -3,7 +3,20 @@ import { SiteFooter } from "@/components/shared/site-footer";
 import { SiteHeader } from "@/components/shared/site-header";
 import "./globals.css";
 
+/**
+ * Canonical origin for metadata URL resolution (OG/Twitter images).
+ * Environment-aware: NEXT_PUBLIC_APP_URL when configured; localhost
+ * only outside production builds. In production WITHOUT the env var,
+ * metadataBase stays unset on purpose — Next's build warning then
+ * marks the unfinished origin configuration instead of silently
+ * canonicalizing localhost (production-readiness checkpoint).
+ */
+const siteOrigin =
+  process.env.NEXT_PUBLIC_APP_URL ??
+  (process.env.NODE_ENV === "production" ? undefined : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  ...(siteOrigin === undefined ? {} : { metadataBase: new URL(siteOrigin) }),
   title: { default: "AVTOSH.AZ — avtomobil və motosiklet elanları", template: "%s — AVTOSH.AZ" },
   description: "Azərbaycanda avtomobil və motosiklet alqı-satqı elanları. Premium və yeni elanlar, rahat axtarış.",
   applicationName: "AVTOSH.AZ",

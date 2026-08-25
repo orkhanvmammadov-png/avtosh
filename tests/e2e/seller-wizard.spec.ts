@@ -4,6 +4,7 @@ import { loginAs, testPhone } from "./auth-helpers";
 import {
   bumpListingRevision,
   consumeFreePublications,
+  getListingYear,
   insertListingFixture,
   listingCounts,
   makeTestJpeg,
@@ -146,11 +147,22 @@ test("stale revision conflict freezes editing until explicit reload", async ({ p
   const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 0 });
   await page.goto(`/elan-yerlesdir/${fixture.id}`);
   await expect(page.getByTestId("wizard-year")).toHaveValue("2021");
+  // Interactivity gate: the brand select is server-rendered DISABLED
+  // and enables only after hydration + the catalog fetch effect. A
+  // fill before that point races React's input-event replay, which
+  // loses or corrupts the typed value nondeterministically (the CI
+  // failure) — type only once the editor is provably live.
+  await expect(page.getByTestId("wizard-brand")).toBeEnabled();
 
-  await bumpListingRevision(fixture.id); // "another window" edits
+  await bumpListingRevision(fixture.id); // "another window" edits → server at N+1
+  const stalePatch = page.waitForResponse(
+    (r) => r.request().method() === "PATCH" && r.url().includes(`/api/v1/me/listings/${fixture.id}`),
+  );
   await page.getByTestId("wizard-year").fill("2019");
+  // the stale expected_revision is rejected by the SERVER, not the UI
+  expect((await stalePatch).status()).toBe(409);
   const conflict = page.getByTestId("wizard-conflict");
-  await expect(conflict).toBeVisible({ timeout: 15_000 });
+  await expect(conflict).toBeVisible();
   await expect(conflict).toContainText("Elan başqa pəncərədə dəyişdirilib.");
 
   // further edits are frozen — nothing silently retried or overwritten
@@ -163,6 +175,7 @@ test("stale revision conflict freezes editing until explicit reload", async ({ p
   await expect(page.getByTestId("wizard-year")).toHaveValue("2021"); // local 2019 dropped
   await page.getByTestId("wizard-year").fill("2018");
   await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+  expect(await getListingYear(fixture.id)).toBe(2018); // editing works again, on the fresh revision
 });
 
 test("paid boundary: 4th publication submits into PAYMENT_REQUIRED with the server fee", async ({ page, context }, { project }) => {

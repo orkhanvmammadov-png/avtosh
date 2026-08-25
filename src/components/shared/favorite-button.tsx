@@ -72,15 +72,19 @@ export function FavoriteButton({
 
   const active = favorited === true;
   const label = active ? UI.removeFavorite : UI.addFavorite;
+  // Until the shared ids fetch resolves, the state is UNKNOWN — the
+  // button stays disabled (a click would otherwise toggle from an
+  // assumed "false" and could send the opposite mutation) and the DOM
+  // says so honestly instead of claiming "false".
   return (
     <button
       type="button"
       aria-label={label}
       aria-pressed={active}
       title={label}
-      disabled={busy}
+      disabled={busy || favorited === null}
       data-testid="favorite-button"
-      data-favorited={active ? "true" : "false"}
+      data-favorited={favorited === null ? "unknown" : active ? "true" : "false"}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
