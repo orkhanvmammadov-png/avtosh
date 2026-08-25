@@ -31,6 +31,7 @@ export interface ListingFixtureOptions {
   status: string;
   complete?: boolean;
   images?: number;
+  feeMinor?: number;
   review?: { decision: string; reasonCode: string; note: string | null };
 }
 
@@ -77,6 +78,22 @@ export async function insertListingFixture(
         values (${row.id}, ${ownerId},
           (select coalesce(max(publication_number), 0) + 1 from listing_publications where user_id = ${ownerId}),
           'FREE')
+      `;
+    }
+    // PAYMENT_REQUIRED implies a real CREATED LISTING_FEE intent bound
+    // through the PAID publication (mirrors the submit transaction).
+    if (status === "PAYMENT_REQUIRED") {
+      const [payment] = await sql`
+        insert into payments (user_id, listing_id, type, amount_minor, currency, idempotency_key, status)
+        values (${ownerId}, ${row.id}, 'LISTING_FEE', ${options.feeMinor ?? 200}, 'AZN',
+          ${`listing_fee:initial:${row.id}`}, 'CREATED')
+        returning id
+      `;
+      await sql`
+        insert into listing_publications (listing_id, user_id, publication_number, billing_type, payment_id)
+        values (${row.id}, ${ownerId},
+          (select coalesce(max(publication_number), 0) + 1 from listing_publications where user_id = ${ownerId}),
+          'PAID', ${payment.id})
       `;
     }
     if (options.review !== undefined) {
@@ -153,6 +170,19 @@ export async function listingStatus(listingId: string): Promise<string> {
   const sql = db();
   try {
     return (await sql`select status from listings where id = ${listingId}`)[0].status as string;
+  } finally {
+    await sql.end();
+  }
+}
+
+/** Changes the publication-fee system setting (restore after use). */
+export async function setListingFeeMinor(minor: number): Promise<void> {
+  const sql = db();
+  try {
+    await sql`
+      update system_settings set value = ${String(minor)}::jsonb
+      where key = 'listing.publication_fee_minor'
+    `;
   } finally {
     await sql.end();
   }

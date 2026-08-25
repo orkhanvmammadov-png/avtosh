@@ -29,7 +29,13 @@ Since Phase 4.11 the response also carries `moderation_feedback`: for
 CORRECTION_REQUIRED/REJECTED listings, the latest review as a
 seller-safe projection `{ decision, reasonCode, note, reviewedAt }`
 (controlled reason enum, plain-text note; never moderator identity,
-claims, or review ids); `null` otherwise.
+claims, or review ids); `null` otherwise. It also carries
+`payment_required`: for PAYMENT_REQUIRED listings, the immutable
+CREATED LISTING_FEE intent snapshot
+`{ type, amountMinor, currency, status }` resolved via the initial
+PAID publication (`listing_publications.payment_id`) — never current
+fee settings, never payment UUIDs/provider/idempotency internals;
+`null` for FREE listings or when the intent is absent (fail-safe).
 
 ## PATCH /api/v1/me/listings/:id — autosave
 

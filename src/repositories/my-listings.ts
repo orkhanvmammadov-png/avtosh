@@ -90,3 +90,34 @@ export async function findLatestReviewForListing(
   `;
   return rows[0];
 }
+
+/**
+ * The LISTING_FEE intent snapshot behind this listing's initial PAID
+ * publication — resolved ONLY through the immutable
+ * listing_publications.payment_id relationship (never "latest payment
+ * by user"). The pub.user_id predicate makes cross-user leakage
+ * structurally impossible even if a caller misuses the function.
+ */
+export async function findInitialPaidIntent(
+  sql: Sql,
+  listingId: string,
+  ownerId: string,
+): Promise<{
+  type: string;
+  amount_minor: string;
+  currency: string;
+  status: string;
+} | undefined> {
+  const rows = await sql<
+    { type: string; amount_minor: string; currency: string; status: string }[]
+  >`
+    select p.type::text as type, p.amount_minor::text as amount_minor,
+           p.currency, p.status::text as status
+    from listing_publications pub
+    join payments p on p.id = pub.payment_id
+    where pub.listing_id = ${listingId}
+      and pub.user_id = ${ownerId}
+      and pub.billing_type = 'PAID'
+  `;
+  return rows[0];
+}

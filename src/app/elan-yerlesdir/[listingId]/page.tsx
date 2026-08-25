@@ -8,8 +8,7 @@ import { isApiError } from "@/lib/api/errors";
 import { SELLER, UI } from "@/lib/marketplace/labels";
 import { getOwnedListingDto } from "@/services/listing-drafts";
 import { isSellerEditable } from "@/services/listing-states";
-import { getListingQuota } from "@/services/listing-submission";
-import { sellerFeedbackFor } from "@/services/my-listings";
+import { paymentRequiredFor, sellerFeedbackFor } from "@/services/my-listings";
 
 export const metadata: Metadata = {
   title: `${UI.postListing} — ${UI.brand}`,
@@ -68,16 +67,20 @@ export default async function WizardPage({
   }
 
   if (listing.status === "PAYMENT_REQUIRED") {
-    // Advisory display of the server-configured fee; the authoritative
-    // amount lives on the payment intent and the real checkout CTA is
-    // the Phase 4.12 boundary. Nothing here simulates payment.
-    const quota = await getListingQuota(auth).catch(() => null);
+    // The debt is the CREATED LISTING_FEE intent's immutable snapshot
+    // (resolved via listing_publications.payment_id) — later changes
+    // to the publication-fee setting must never alter it. Quota/
+    // settings are advisory BEFORE submission only. If the intent is
+    // missing (inconsistent data), no amount is shown — current
+    // settings are never presented as the debt. The checkout CTA is
+    // the Phase 4.12 boundary; nothing here simulates payment.
+    const intent = await paymentRequiredFor(listing.id, auth.user.id, listing.status);
     return (
       <div className="py-16 text-center" data-testid="wizard-status-payment">
         <h1 className="text-2xl font-bold text-navy">{SELLER.paymentRequired}</h1>
-        {quota !== null ? (
-          <p className="mt-4 text-3xl font-extrabold text-primary">
-            {formatPriceMinor(quota.listingFeeMinor, quota.currency)}
+        {intent !== null ? (
+          <p className="mt-4 text-3xl font-extrabold text-primary" data-testid="payment-intent-amount">
+            {formatPriceMinor(intent.amountMinor, intent.currency)}
           </p>
         ) : null}
         <p className="mt-3 text-sm text-muted">{SELLER.paymentComingSoon}</p>

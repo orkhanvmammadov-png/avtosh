@@ -22,6 +22,8 @@ let carCat = "";
 let brandId = "";
 let modelId = "";
 let cityId = "";
+let paymentId = "";
+let foreignPaymentId = "";
 const created: Record<string, string> = {};
 
 async function insertListing(
@@ -56,6 +58,23 @@ async function insertListing(
   }
   created[key] = row.id;
   return row.id;
+}
+
+async function attachPaidIntent(listingId: string, ownerId: string, amountMinor: number) {
+  const sql = getSql();
+  const [payment] = await sql<{ id: string }[]>`
+    insert into payments (user_id, listing_id, type, amount_minor, currency, idempotency_key, status)
+    values (${ownerId}, ${listingId}, 'LISTING_FEE', ${amountMinor}, 'AZN',
+      ${`listing_fee:initial:${listingId}`}, 'CREATED')
+    returning id
+  `;
+  await sql`
+    insert into listing_publications (listing_id, user_id, publication_number, billing_type, payment_id)
+    values (${listingId}, ${ownerId},
+      (select coalesce(max(publication_number), 0) + 1 from listing_publications where user_id = ${ownerId}),
+      'PAID', ${payment.id})
+  `;
+  return payment.id;
 }
 
 async function insertReview(
@@ -97,10 +116,14 @@ beforeAll(async () => {
   await insertListing("suspended", "SUSPENDED");
   await insertListing("deleted", "DELETED");
   await insertListing("foreign", "ACTIVE", { ownerId: otherSeller.userId });
+  await insertListing("paidIntent", "PAYMENT_REQUIRED");
+  await insertListing("foreignPaid", "PAYMENT_REQUIRED", { ownerId: otherSeller.userId });
 
   await insertReview(created.correction, "CORRECTION_REQUESTED", "INVALID_PHOTOS", "Şəkillər aydın deyil.");
   await insertReview(created.rejected, "REJECTED", "PROHIBITED_ITEM", "Qadağan olunmuş məhsul.");
   await insertReview(created.active, "APPROVED", null, null); // approval detail must never surface
+  paymentId = await attachPaidIntent(created.paidIntent, seller.userId, 200);
+  foreignPaymentId = await attachPaidIntent(created.foreignPaid, otherSeller.userId, 500);
 });
 
 afterAll(async () => {
@@ -121,7 +144,9 @@ describe("my listings — access", () => {
     const ids = (r.body.data?.items as { id: string }[]).map((i) => i.id);
     expect(ids).not.toContain(created.foreign);
     const other = await api(listRoute, "GET", LIST, { cookie: otherSeller.cookie });
-    expect((other.body.data?.items as { id: string }[]).map((i) => i.id)).toEqual([created.foreign]);
+    const otherIds = (other.body.data?.items as { id: string }[]).map((i) => i.id);
+    expect([...otherIds].sort()).toEqual([created.foreign, created.foreignPaid].sort());
+    expect(otherIds).not.toContain(created.active);
   });
 });
 
@@ -224,5 +249,76 @@ describe("my listings — DTO safety and moderation feedback", () => {
     });
     expect(r.status).toBe(404);
     expect(r.body.error?.code).toBe("LISTING_NOT_FOUND");
+  });
+});
+
+describe("my listings — PAYMENT_REQUIRED intent snapshot", () => {
+  it("detail exposes the intent snapshot, immune to later fee-setting changes", async () => {
+    const sql = getSql();
+    const restore = () =>
+      sql`update system_settings set value = '200'::jsonb where key = 'listing.publication_fee_minor'`;
+    try {
+      // intent created at 200 minor; the system fee then rises to 300
+      await sql`update system_settings set value = '300'::jsonb where key = 'listing.publication_fee_minor'`;
+      const r = await api(detailRoute, "GET", detail(created.paidIntent), {
+        cookie: seller.cookie,
+        params: { listingId: created.paidIntent },
+      });
+      expect(r.status).toBe(200);
+      const snapshot = r.body.data?.payment_required as Record<string, unknown>;
+      expect(snapshot).toEqual({
+        type: "LISTING_FEE",
+        amountMinor: 200, // the immutable intent, NOT the current 300 setting
+        currency: "AZN",
+        status: "CREATED",
+      });
+    } finally {
+      await restore();
+    }
+  });
+
+  it("exposes no payment internals — no UUIDs, provider data, or idempotency keys", async () => {
+    const r = await api(detailRoute, "GET", detail(created.paidIntent), {
+      cookie: seller.cookie,
+      params: { listingId: created.paidIntent },
+    });
+    const snapshot = r.body.data?.payment_required as Record<string, unknown>;
+    expect(Object.keys(snapshot).sort()).toEqual(["amountMinor", "currency", "status", "type"]);
+    const serialized = JSON.stringify(r.body);
+    expect(serialized).not.toContain(paymentId);
+    expect(serialized).not.toContain("idempotency");
+    expect(serialized).not.toContain("provider");
+    expect(serialized).not.toContain("listing_fee:initial");
+  });
+
+  it("non-paid listings expose no snapshot", async () => {
+    for (const key of ["draft", "active", "pending"]) {
+      const r = await api(detailRoute, "GET", detail(created[key]), {
+        cookie: seller.cookie,
+        params: { listingId: created[key] },
+      });
+      expect(r.status).toBe(200);
+      expect(r.body.data?.payment_required).toBeNull();
+    }
+  });
+
+  it("fails safe on inconsistent data: PAYMENT_REQUIRED without an intent shows null, never the current setting", async () => {
+    const r = await api(detailRoute, "GET", detail(created.paymentRequired), {
+      cookie: seller.cookie,
+      params: { listingId: created.paymentRequired },
+    });
+    expect(r.status).toBe(200);
+    expect(r.body.data?.payment_required).toBeNull();
+  });
+
+  it("another user's paid intent is unreachable", async () => {
+    const r = await api(detailRoute, "GET", detail(created.foreignPaid), {
+      cookie: seller.cookie,
+      params: { listingId: created.foreignPaid },
+    });
+    expect(r.status).toBe(404);
+    const serialized = JSON.stringify(r.body);
+    expect(serialized).not.toContain(foreignPaymentId);
+    expect(serialized).not.toContain("500");
   });
 });

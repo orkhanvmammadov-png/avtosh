@@ -7,6 +7,7 @@ import {
   insertListingFixture,
   listingCounts,
   makeTestJpeg,
+  setListingFeeMinor,
 } from "./seller-helpers";
 
 /**
@@ -183,6 +184,19 @@ test("paid boundary: 4th publication submits into PAYMENT_REQUIRED with the serv
   // revisiting the listing shows the payment-required state, not the editor
   await page.goto(`/elan-yerlesdir/${fixture.id}`);
   await expect(page.getByTestId("wizard-status-payment")).toBeVisible();
+  await expect(page.getByTestId("payment-intent-amount")).toHaveText("2 AZN");
+
+  // REGRESSION: raising the publication-fee setting AFTER the intent
+  // was created must not change the seller's existing debt display.
+  try {
+    await setListingFeeMinor(300);
+    await page.reload();
+    await expect(page.getByTestId("wizard-status-payment")).toBeVisible();
+    await expect(page.getByTestId("payment-intent-amount")).toHaveText("2 AZN");
+    await expect(page.getByTestId("wizard-status-payment")).not.toContainText("3 AZN");
+  } finally {
+    await setListingFeeMinor(200);
+  }
 });
 
 test("wizard route is owner-scoped — foreign listings 404", async ({ page, context }, { project }) => {

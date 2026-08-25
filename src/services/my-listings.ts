@@ -3,6 +3,7 @@ import { listingImageConfig } from "@/lib/config/listing-images";
 import { getSql } from "@/lib/server/db/client";
 import { getStorageProvider } from "@/providers/storage/factory";
 import {
+  findInitialPaidIntent,
   findLatestReviewForListing,
   listOwnerListings,
   type OwnerCardRow,
@@ -138,5 +139,43 @@ export async function sellerFeedbackFor(
     reasonCode: review.reason_code,
     note: review.note,
     reviewedAt: review.reviewed_at.toISOString(),
+  };
+}
+
+export interface PaymentRequiredDto {
+  type: string;
+  amountMinor: number;
+  currency: string;
+  status: string;
+}
+
+/**
+ * Owner-safe snapshot of the pending LISTING_FEE intent for a
+ * PAYMENT_REQUIRED listing the caller has ALREADY verified as owned.
+ * Once the intent exists, ITS amount/currency/status are the
+ * authority for this listing's debt — later publication-fee setting
+ * changes must never alter what the seller owes. If the intent is
+ * missing (inconsistent data), this returns null and the UI shows no
+ * amount — it never falls back to current settings as if they were
+ * the debt. No payment UUID, provider, or idempotency internals leave
+ * the server.
+ */
+export async function paymentRequiredFor(
+  listingId: string,
+  ownerId: string,
+  status: string,
+): Promise<PaymentRequiredDto | null> {
+  if (status !== "PAYMENT_REQUIRED") {
+    return null;
+  }
+  const intent = await findInitialPaidIntent(getSql(), listingId, ownerId);
+  if (intent === undefined) {
+    return null;
+  }
+  return {
+    type: intent.type,
+    amountMinor: Number(intent.amount_minor),
+    currency: intent.currency,
+    status: intent.status,
   };
 }

@@ -98,10 +98,31 @@ called for a draft. `GET /me/listing-quota` feeds an advisory banner
 Submit/resubmit send `{ expected_revision }` with the button disabled
 in flight (server idempotency remains the authority). FREE →
 `PENDING_MODERATION` success screen. PAID → `PAYMENT_REQUIRED` screen
-showing the payment intent's server amount with "Onlayn ödəniş
-tezliklə aktiv olacaq" — no checkout UI, no simulated success; the
-payment CTA is Phase 4.12. Money is entered as whole AZN and
-converted to minor units at the form boundary (integer math only).
+with "Onlayn ödəniş tezliklə aktiv olacaq" — no checkout UI, no
+simulated success; the payment CTA is Phase 4.12. Money is entered as
+whole AZN and converted to minor units at the form boundary (integer
+math only).
+
+### Fee display authority (BEFORE vs AFTER submit)
+
+- **BEFORE SUBMIT** — advisory only: `GET /me/listing-quota` (current
+  system settings) feeds the preview banner ("2 AZN" / free
+  remaining).
+- **AFTER PAID SUBMIT** — the CREATED `LISTING_FEE` intent is the
+  immutable snapshot of the seller's debt. Every PAYMENT_REQUIRED
+  surface (submit result and revisit/status screen alike) renders the
+  intent's `amount/currency/status`, resolved through the immutable
+  `listing_publications.payment_id` relationship — never an arbitrary
+  "latest payment", never the current fee setting. A later change to
+  `listing.publication_fee_minor` cannot change an existing debt
+  (regression-tested at 200→300 minor). If the intent is missing
+  (inconsistent data), the UI fails safe and shows no amount rather
+  than presenting current settings as the debt.
+
+The owner detail API exposes this as `payment_required:
+{ type, amountMinor, currency, status }` (null for FREE listings) —
+no payment UUID, provider fields, idempotency keys, or webhook/event
+internals.
 
 ## My Listings
 
