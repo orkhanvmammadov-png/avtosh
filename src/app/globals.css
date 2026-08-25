@@ -1,20 +1,77 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * AVTOSH.AZ design tokens — the single source of truth for the accepted
+ * Phase 2 visual foundation. Tailwind 4 turns these into utilities
+ * (bg-primary, text-muted, border-line, lg: = 1200px, …).
+ */
+@theme {
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-navy: #0f172a;
+  --color-surface: #f8fafc;
+  --color-muted: #64748b;
+  --color-line: #e2e8f0;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Accepted breakpoints: mobile <768, tablet 768–1199, desktop ≥1200.
+     The whole scale is defined in rem: mixing px overrides with the
+     default rem breakpoints breaks Tailwind's media-query sorting, so
+     larger-breakpoint utilities lose the cascade (2-column desktop
+     grids). 1rem = 16px → 48rem=768, 75rem=1200, 90rem=1440. */
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 75rem;
+  --breakpoint-xl: 90rem;
+  --breakpoint-2xl: 96rem;
+
+  --container-content: 1320px;
+  --radius-card: 0.75rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: var(--color-surface);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  background: var(--color-surface);
+  color: var(--color-navy);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Visible, consistent focus for keyboard users everywhere. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 0.375rem;
+}
+
+/* Accepted 4:3 vehicle imagery */
+.aspect-vehicle {
+  aspect-ratio: 4 / 3;
+}
+
+/* Hide scrollbars on the mobile gallery strip without disabling scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

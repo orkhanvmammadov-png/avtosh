@@ -15,9 +15,14 @@ import {
 } from "@/repositories/catalog";
 import {
   boostCandidates,
+  CONTACT_REVEAL_ACTION,
+  countAnonymousActions,
   countNewLast24h,
   getBoostMaxSlots,
+  getPublicContact,
   getPublicDetail,
+  incrementPhoneRevealCount,
+  recordAnonymousAction,
   incrementViewCount,
   listPublicFeatureNames,
   listPublicImagePaths,
@@ -512,4 +517,66 @@ export async function publicDetail(
     },
     },
   };
+}
+
+// --- contact reveal ---------------------------------------------------------
+
+export interface ContactRevealDto {
+  phone: string;
+  /** Outbound WhatsApp deep link built from the revealed digits only. */
+  whatsappUrl: string;
+}
+
+/**
+ * Explicit buyer action: reveals the LISTING contact phone for a
+ * publicly visible (ACTIVE + unexpired) listing. Never falls back to
+ * the seller's account phone; SOLD/EXPIRED/non-public → not found /
+ * unavailable. Aggregate reveal counter is best-effort. Per-IP rate
+ * limiting is a documented follow-up (no compatible infrastructure
+ * exists without a new table); platform/WAF controls apply meanwhile.
+ */
+export async function revealListingContact(
+  publicId: number,
+  sourceHash: string | null,
+): Promise<ContactRevealDto> {
+  const sql = getSql();
+  const row = await getPublicContact(sql, publicId);
+  const visible =
+    row !== undefined &&
+    row.status === "ACTIVE" &&
+    row.current_expires_at !== null &&
+    row.current_expires_at.getTime() > Date.now();
+  if (!visible) {
+    throw new ApiError("LISTING_NOT_FOUND", "Listing not found.");
+  }
+  if (row.contact_phone_e164 === null) {
+    throw new ApiError("LISTING_CONTACT_UNAVAILABLE", "Contact information is not available.");
+  }
+  // Technical anti-abuse windows (config): per source+listing and per
+  // source overall. sourceHash is a keyed HMAC of the trusted client
+  // IP (Phase 4.4 policy); when no trustworthy IP exists (local dev)
+  // limiting is skipped rather than trusting fabrication — production
+  // platforms always provide it. Small concurrent overshoot is
+  // acceptable for an abuse threshold (not a business rule).
+  if (sourceHash !== null) {
+    const config = marketplaceConfig();
+    const since = new Date(Date.now() - config.contactRevealWindowSeconds * 1000);
+    const rateLimited = (): never => {
+      throw new ApiError("CONTACT_RATE_LIMITED", "Too many contact requests. Try again later.", {
+        details: { retry_after_seconds: config.contactRevealWindowSeconds },
+      });
+    };
+    const perListing = await countAnonymousActions(sql, {
+      action: CONTACT_REVEAL_ACTION, sourceHash, subjectId: row.id, since,
+    });
+    if (perListing >= config.contactRevealPerListing) rateLimited();
+    const perSource = await countAnonymousActions(sql, {
+      action: CONTACT_REVEAL_ACTION, sourceHash, since,
+    });
+    if (perSource >= config.contactRevealPerSource) rateLimited();
+    await recordAnonymousAction(sql, { action: CONTACT_REVEAL_ACTION, sourceHash, subjectId: row.id });
+  }
+  await incrementPhoneRevealCount(sql, row.id).catch(() => undefined);
+  const digits = row.contact_phone_e164.replace(/[^0-9]/g, "");
+  return { phone: row.contact_phone_e164, whatsappUrl: `https://wa.me/${digits}` };
 }

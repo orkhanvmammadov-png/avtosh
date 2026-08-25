@@ -25,9 +25,10 @@ export async function api(
     cookie?: string;
     params?: Record<string, string>;
     origin?: string;
+    headers?: Record<string, string>;
   } = {},
 ): Promise<{ status: number; body: Envelope; response: Response }> {
-  const headers: Record<string, string> = { "content-type": "application/json" };
+  const headers: Record<string, string> = { "content-type": "application/json", ...(options.headers ?? {}) };
   if (options.cookie !== undefined) headers.cookie = options.cookie;
   if (options.origin !== undefined) {
     headers.origin = options.origin;

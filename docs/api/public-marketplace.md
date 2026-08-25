@@ -63,3 +63,18 @@ the limited form: `contactable: false`, primary image only, detail
 fields `null`, `features: []`, `seller: null`. Every other state and
 unknown ids → `404 LISTING_NOT_FOUND`. No phone-reveal endpoint
 exists yet (documented follow-up).
+
+## POST /api/v1/listings/:publicId/contact (Phase 4.9)
+
+Explicit, anonymous contact reveal. Only for publicly visible (ACTIVE
+and unexpired) listings; source is the listing contact phone, never
+the seller's account phone. `Cache-Control: no-store`.
+
+```json
+{ "data": { "contact": { "phone": "+994501234567", "whatsappUrl": "https://wa.me/994501234567" } } }
+```
+
+Errors: `LISTING_NOT_FOUND` 404 (unknown, SOLD, EXPIRED, or any
+non-public state) · `LISTING_CONTACT_UNAVAILABLE` 409 (listing has no
+contact phone) · `CONTACT_RATE_LIMITED` 429 with `Retry-After`
+(per-source windows: 3/listing and 15 total per hour, configurable).

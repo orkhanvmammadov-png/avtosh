@@ -106,6 +106,30 @@ function ids(r: { body: { data?: Record<string, unknown> } }, key: "items" | "pr
   const mine = new Set(Object.values(created).map((c) => c.publicId));
   return allIds(r, key).filter((id) => mine.has(id));
 }
+/**
+ * Fully paginates a search (mine-filtered). Boost-promoted listings are
+ * excluded from organic on the FIRST page only (by design), so the
+ * complete coverage set is organic ∪ first-page promoted.
+ */
+async function collectAllPages(
+  query: string,
+  pageSize: number,
+): Promise<{ organic: string[]; promoted: string[] }> {
+  const organic: string[] = [];
+  let promoted: string[] = [];
+  let cursor: string | null = null;
+  let guard = 0;
+  do {
+    const r = await search(`${query}&limit=${pageSize}${cursor ? `&cursor=${cursor}` : ""}`);
+    expect(r.status).toBe(200);
+    if (cursor === null) promoted = ids(r, "promoted");
+    organic.push(...ids(r));
+    cursor = (r.body as { meta?: { next_cursor: string | null } }).meta?.next_cursor ?? null;
+    guard += 1;
+  } while (cursor !== null && guard < 80);
+  return { organic, promoted };
+}
+
 /** Leak checks run over the FULL serialized body — including URLs. */
 function fullJson(value: unknown): string {
   return JSON.stringify(value);
@@ -253,18 +277,11 @@ describe("public search — sorting & cursor pagination", () => {
     expect(yearDesc[0]).toBe(created.active2.publicId);
 
     for (const sort of ["NEWEST", "PRICE_ASC", "PRICE_DESC", "YEAR_DESC"]) {
-      const all = ids(await search(`category=CAR&sort=${sort}&limit=48`));
-      const paged: string[] = [];
-      let cursor: string | null = null;
-      let guard = 0;
-      do {
-        const r = await search(`category=CAR&sort=${sort}&limit=1${cursor ? `&cursor=${cursor}` : ""}`);
-        expect(r.status).toBe(200);
-        paged.push(...ids(r));
-        cursor = (r.body as { meta?: { next_cursor: string | null } }).meta?.next_cursor ?? null;
-        guard += 1;
-      } while (cursor !== null && guard < 50);
-      expect(paged).toEqual(all);
+      const big = await collectAllPages(`category=CAR&sort=${sort}`, 48);
+      const small = await collectAllPages(`category=CAR&sort=${sort}`, 1);
+      expect(new Set(small.organic).size, sort).toBe(small.organic.length); // no duplicates
+      // union coverage is identical regardless of page size
+      expect(new Set([...small.organic, ...small.promoted]), sort).toEqual(new Set([...big.organic, ...big.promoted]));
     }
   });
 
@@ -446,6 +463,27 @@ describe("public detail", () => {
       expect(JSON.stringify(r.body)).not.toContain("provider down");
     } finally {
       storage.createSignedReadUrl = original;
+    }
+  });
+});
+
+describe("sort-key invariants", () => {
+  it("an ACTIVE row with NULL price/year cannot poison keyset sorts", async () => {
+    const sql = getSql();
+    const [rogue] = await sql<{ id: string }[]>`
+      insert into listings (owner_id, category_id, status, published_at, current_expires_at)
+      values (${ownerId}, ${carCat}, 'ACTIVE', now(), now() + interval '5 days')
+      returning id
+    `;
+    try {
+      for (const sort of ["PRICE_ASC", "PRICE_DESC", "YEAR_DESC"]) {
+        const big = await collectAllPages(`category=CAR&sort=${sort}`, 48);
+        const small = await collectAllPages(`category=CAR&sort=${sort}`, 2);
+        expect(new Set(small.organic).size, sort).toBe(small.organic.length);
+        expect(new Set([...small.organic, ...small.promoted]), sort).toEqual(new Set([...big.organic, ...big.promoted]));
+      }
+    } finally {
+      await sql`delete from listings where id = ${rogue.id}`;
     }
   });
 });

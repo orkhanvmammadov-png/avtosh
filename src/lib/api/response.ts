@@ -72,8 +72,17 @@ export function apiFailure(error: unknown, requestId: string): Response {
       request_id: requestId,
     },
   };
-  return Response.json(body, {
-    status: safe.status,
-    headers: baseHeaders(requestId),
-  });
+  const headers = new Headers(baseHeaders(requestId));
+  // Safe retry semantics for 429s that carry a retry hint.
+  const retryAfter =
+    safe.status === 429 &&
+    typeof safe.details === "object" &&
+    safe.details !== null &&
+    "retry_after_seconds" in safe.details
+      ? Number((safe.details as { retry_after_seconds: unknown }).retry_after_seconds)
+      : null;
+  if (retryAfter !== null && Number.isFinite(retryAfter) && retryAfter > 0) {
+    headers.set("Retry-After", String(Math.ceil(retryAfter)));
+  }
+  return Response.json(body, { status: safe.status, headers });
 }
