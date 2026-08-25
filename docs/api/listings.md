@@ -11,9 +11,31 @@ Design: `../architecture/listing-drafts.md`, `storage-images.md`.
 `{ "category": "CAR" }` → `201` `{ "data": { "listing": <DTO> } }` —
 a sparse DRAFT (revision 1) owned by the session user.
 
+## GET /api/v1/me/listings (Phase 4.11)
+
+Owner "My Listings" read model (never public search). Query:
+`filter` ∈ `all | active | moderation | draft | correction`
+(default `all`; `correction` = CORRECTION_REQUIRED + REJECTED).
+Returns `{ items: OwnerCardDto[] }` ordered `updated_at DESC`
+(cap 200, DELETED excluded, `no-store`). Cards carry id, publicId,
+status, revision, title fields, priceMinor, imageCount, signed
+primary-image URL, timestamps, and `moderationFeedback`
+(see below) — no owner phone, no moderator identity.
+
 ## GET /api/v1/me/listings/:id
 
 Owner-only listing DTO with ordered images (signed read URLs, 600 s).
+Since Phase 4.11 the response also carries `moderation_feedback`: for
+CORRECTION_REQUIRED/REJECTED listings, the latest review as a
+seller-safe projection `{ decision, reasonCode, note, reviewedAt }`
+(controlled reason enum, plain-text note; never moderator identity,
+claims, or review ids); `null` otherwise. It also carries
+`payment_required`: for PAYMENT_REQUIRED listings, the immutable
+CREATED LISTING_FEE intent snapshot
+`{ type, amountMinor, currency, status }` resolved via the initial
+PAID publication (`listing_publications.payment_id`) — never current
+fee settings, never payment UUIDs/provider/idempotency internals;
+`null` for FREE listings or when the intent is absent (fail-safe).
 
 ## PATCH /api/v1/me/listings/:id — autosave
 

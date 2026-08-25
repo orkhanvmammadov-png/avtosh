@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
 import { LogoutButton } from "@/components/shared/logout-button";
 import { MobileNav } from "@/components/shared/mobile-nav";
-import { buttonClasses } from "@/components/ui/button";
 import { UI } from "@/lib/marketplace/labels";
 
 /**
@@ -29,13 +28,16 @@ export async function SiteHeader() {
         <div className="flex items-center gap-2" data-testid={authed ? "header-authed" : "header-anonymous"}>
           {authed ? (
             <>
-              <Link href="/profil/secilmisler" className="hidden rounded-lg px-3 py-3 text-sm font-medium text-navy hover:bg-surface md:inline-flex" data-testid="header-favorites">
+              <Link href="/profil/elanlar" className="hidden rounded-lg px-3 py-3 text-sm font-medium text-navy hover:bg-surface lg:inline-flex" data-testid="header-my-listings">
+                {UI.myListings}
+              </Link>
+              <Link href="/profil/secilmisler" className="hidden rounded-lg px-3 py-3 text-sm font-medium text-navy hover:bg-surface lg:inline-flex" data-testid="header-favorites">
                 {UI.favorites}
               </Link>
-              <Link href="/profil" className="hidden rounded-lg px-3 py-3 text-sm font-medium text-navy hover:bg-surface md:inline-flex" data-testid="header-profile">
+              <Link href="/profil" className="hidden rounded-lg px-3 py-3 text-sm font-medium text-navy hover:bg-surface lg:inline-flex" data-testid="header-profile">
                 {UI.profile}
               </Link>
-              <LogoutButton className="hidden md:inline-flex" />
+              <LogoutButton className="hidden lg:inline-flex" />
             </>
           ) : (
             <Link href="/giris" className="hidden rounded-lg px-3 py-3 text-sm font-medium text-navy hover:bg-surface md:inline-flex" data-testid="header-login">
@@ -44,11 +46,11 @@ export async function SiteHeader() {
           )}
           <Link
             href={authed ? "/elan-yerlesdir" : "/giris?return_to=%2Felan-yerlesdir"}
-            className={buttonClasses("primary", "hidden md:inline-flex")}
+            className="hidden min-h-12 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-hover md:inline-flex"
           >
             {UI.postListing}
           </Link>
-          <MobileNav authed={authed} />
+          <MobileNav authed={authed} buttonClassName={authed ? "lg:hidden" : "md:hidden"} />
         </div>
       </div>
     </header>

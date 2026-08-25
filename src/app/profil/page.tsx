@@ -43,13 +43,16 @@ export default async function ProfilePage() {
         </dl>
       </section>
       <nav aria-label={UI.account} className="mt-6 flex max-w-md flex-col gap-2">
+        <Link href="/profil/elanlar" className="rounded-lg border border-line bg-white px-4 py-3 text-sm font-medium text-navy hover:bg-surface" data-testid="profile-my-listings-link">
+          {UI.myListings}
+        </Link>
         <Link href="/profil/secilmisler" className="rounded-lg border border-line bg-white px-4 py-3 text-sm font-medium text-navy hover:bg-surface" data-testid="profile-favorites-link">
           {UI.favorites}
         </Link>
         <Link href="/elan-yerlesdir" className="rounded-lg border border-line bg-white px-4 py-3 text-sm font-medium text-navy hover:bg-surface">
           {UI.postListing}
         </Link>
-        <LogoutButton className="justify-start border border-line bg-white px-4" />
+        <LogoutButton className="inline-flex justify-start border border-line bg-white px-4" />
       </nav>
     </div>
   );
