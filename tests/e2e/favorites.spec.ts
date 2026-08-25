@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { expectNoHorizontalOverflow, seed } from "./helpers";
 import { loginAs, testPhone } from "./auth-helpers";
+import { countFavorites } from "./seller-helpers";
 
 /** Buyer favorites: anonymous intent round trip, toggling, saved page. */
 
@@ -50,7 +51,7 @@ test("card heart favorites without navigating away", async ({ page, context }, {
 
 test("saved listings page: empty state, content, and removal", async ({ page, context }, { project }) => {
   const s = seed();
-  await loginAs(context, testPhone(project.name, 23));
+  const { userId } = await loginAs(context, testPhone(project.name, 23));
   await page.goto("/profil/secilmisler");
   await expect(page.getByTestId("favorites-empty")).toBeVisible();
   await expectNoHorizontalOverflow(page);
@@ -63,8 +64,16 @@ test("saved listings page: empty state, content, and removal", async ({ page, co
   const card = page.locator(`[data-testid="favorite-card"][data-public-id="${s.activeCar}"]`);
   await expect(card).toBeVisible();
   await expectNoHorizontalOverflow(page);
+  expect(await countFavorites(userId)).toBe(1); // exactly one favorite going in
+  // The heart is disabled until its state resolves, so this click can
+  // only ever fire the intended DELETE — await that actual response.
+  const deleteResponse = page.waitForResponse(
+    (r) => r.request().method() === "DELETE" && r.url().includes("/api/v1/me/favorites/"),
+  );
   await card.locator('[data-testid="favorite-button"]').click();
+  expect((await deleteResponse).status()).toBe(200);
   await expect(card.locator('[data-testid="favorite-button"]')).toHaveAttribute("data-favorited", "false");
+  expect(await countFavorites(userId)).toBe(0); // authoritative server state, pre-reload
   await page.reload();
   await expect(page.getByTestId("favorites-empty")).toBeVisible();
 });

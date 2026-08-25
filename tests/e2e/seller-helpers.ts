@@ -187,3 +187,21 @@ export async function setListingFeeMinor(minor: number): Promise<void> {
     await sql.end();
   }
 }
+
+export async function getListingYear(listingId: string): Promise<number | null> {
+  const sql = db();
+  try {
+    return (await sql`select year from listings where id = ${listingId}`)[0].year as number | null;
+  } finally {
+    await sql.end();
+  }
+}
+
+export async function countFavorites(userId: string): Promise<number> {
+  const sql = db();
+  try {
+    return (await sql`select count(*)::int as n from favorites where user_id = ${userId}`)[0].n as number;
+  } finally {
+    await sql.end();
+  }
+}
