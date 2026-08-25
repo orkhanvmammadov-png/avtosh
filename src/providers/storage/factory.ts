@@ -1,3 +1,4 @@
+import { createLocalStorageProvider } from "@/providers/storage/local-provider";
 import { createSupabaseStorageProvider } from "@/providers/storage/supabase-provider";
 import type { StorageProvider } from "@/providers/storage/types";
 
@@ -22,6 +23,11 @@ export function setStorageProviderForTesting(
 export function getStorageProvider(): StorageProvider {
   if (testOverride !== null) {
     return testOverride;
+  }
+  // Dev/E2E filesystem driver — opt-in via env, refused in production
+  // builds (see local-provider.ts). Real environments use Supabase.
+  if (process.env.STORAGE_DRIVER === "local" && process.env.NODE_ENV !== "production") {
+    return createLocalStorageProvider();
   }
   return createSupabaseStorageProvider();
 }

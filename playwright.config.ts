@@ -37,6 +37,10 @@ export default defineConfig({
       OTP_MIN_INTERVAL_SECONDS: "0",
       OTP_IP_MAX_PER_HOUR: "100",
       OTP_PHONE_MAX_PER_HOUR: "10",
+      // Dev/E2E filesystem storage driver (refused in production
+      // builds) so the real signed-upload → confirm image flow runs.
+      STORAGE_DRIVER: "local",
+      LOCAL_STORAGE_SUBDIR: "e2e",
     },
     url: "http://localhost:3000/api/v1/health",
     reuseExistingServer: false,

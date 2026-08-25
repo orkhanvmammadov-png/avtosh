@@ -49,7 +49,9 @@ test("full OTP login lands on profile and header becomes session-aware", async (
   await expect(page.getByTestId("header-authed")).toBeVisible();
   if (!isMobile(project.name)) {
     await expect(page.getByTestId("header-login")).toHaveCount(0);
-    await expect(page.getByTestId("header-profile")).toBeVisible();
+  }
+  if (project.name === "desktop") {
+    await expect(page.getByTestId("header-profile")).toBeVisible(); // text links collapse into the drawer below lg
   }
 });
 
@@ -104,7 +106,7 @@ test("login honors the protected-intent return_to", async ({ page }, { project }
   await page.getByTestId("login-otp").fill(KNOWN_OTP);
   await page.getByTestId("login-verify").click();
   await expect(page).toHaveURL(/\/elan-yerlesdir$/);
-  await expect(page.getByTestId("seller-stub")).toBeVisible();
+  await expect(page.getByTestId("seller-entry")).toBeVisible();
 });
 
 test("an external return_to is never honored", async ({ page }, { project }) => {

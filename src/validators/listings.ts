@@ -90,3 +90,11 @@ export const submitListingSchema = z
   .strict();
 
 export const resubmitListingSchema = submitListingSchema;
+
+export const myListingsQuerySchema = z
+  .object({
+    filter: z
+      .enum(["all", "active", "moderation", "draft", "correction"])
+      .default("all"),
+  })
+  .strict();

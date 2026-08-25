@@ -10,7 +10,7 @@ const LINKS = [
 ];
 
 /** Native <dialog> drawer: focus trapped by the browser, Esc closes. */
-export function MobileNav({ authed = false }: { authed?: boolean }) {
+export function MobileNav({ authed = false, buttonClassName = "md:hidden" }: { authed?: boolean; buttonClassName?: string }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -25,7 +25,7 @@ export function MobileNav({ authed = false }: { authed?: boolean }) {
         type="button"
         aria-label="Menyunu aç"
         aria-haspopup="dialog"
-        className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-lg text-navy md:hidden"
+        className={`inline-flex min-h-12 min-w-12 items-center justify-center rounded-lg text-navy ${buttonClassName}`}
         onClick={() => dialogRef.current?.showModal()}
         data-testid="mobile-menu-button"
       >
@@ -60,6 +60,9 @@ export function MobileNav({ authed = false }: { authed?: boolean }) {
           ))}
           {authed ? (
             <>
+              <Link href="/profil/elanlar" className="rounded-lg px-3 py-3 text-base font-medium text-navy hover:bg-surface" onClick={() => dialogRef.current?.close()} data-testid="mobile-my-listings">
+                {UI.myListings}
+              </Link>
               <Link href="/profil/secilmisler" className="rounded-lg px-3 py-3 text-base font-medium text-navy hover:bg-surface" onClick={() => dialogRef.current?.close()} data-testid="mobile-favorites">
                 {UI.favorites}
               </Link>

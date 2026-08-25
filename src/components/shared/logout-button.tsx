@@ -5,7 +5,7 @@ import { useState } from "react";
 import { UI } from "@/lib/marketplace/labels";
 import { invalidateFavoriteIds } from "@/lib/marketplace/favorites-client";
 
-export function LogoutButton({ className = "" }: { className?: string }) {
+export function LogoutButton({ className = "inline-flex" }: { className?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   async function logout() {
@@ -24,7 +24,7 @@ export function LogoutButton({ className = "" }: { className?: string }) {
       onClick={() => void logout()}
       disabled={busy}
       data-testid="logout-button"
-      className={`inline-flex min-h-12 items-center rounded-lg px-3 text-sm font-medium text-navy hover:bg-surface disabled:text-muted ${className}`}
+      className={`min-h-12 items-center rounded-lg px-3 text-sm font-medium text-navy hover:bg-surface disabled:text-muted ${className}`}
     >
       {UI.logout}
     </button>

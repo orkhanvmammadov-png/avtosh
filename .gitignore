@@ -38,3 +38,4 @@ pnpm-debug.log*
 /blob-report/
 /playwright/.cache/
 .e2e-seed.json
+.dev-storage/
