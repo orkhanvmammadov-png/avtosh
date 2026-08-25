@@ -106,6 +106,14 @@ exist in `CREATED` state before any provider/checkout; `CHECK
 (provider IS NOT NULL OR status IN ('CREATED','CANCELLED'))` keeps
 every progressed payment bound to a real provider.
 
+## Anonymous action rate limiting (migration 016)
+
+`anonymous_action_events` is a generic window bucket for anonymous
+public actions (first user: contact reveal): `action`, `source_hash`
+(always a keyed HMAC of the trusted client IP — never raw),
+`subject_id`, `created_at`, indexed `(action, source_hash,
+created_at)`. Short-lived data; a future job may prune old rows.
+
 ## Idempotency foundations
 
 - **Payments**: `idempotency_key UNIQUE` (client/server retry

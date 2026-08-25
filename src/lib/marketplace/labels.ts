@@ -54,6 +54,7 @@ export const UI = {
   callSeller: "Zəng et",
   whatsapp: "WhatsApp ilə yaz",
   contactUnavailable: "Əlaqə məlumatı mövcud deyil",
+  contactRateLimited: "Çox sayda cəhd edildi. Bir az sonra yenidən yoxlayın.",
   seller: "Satıcı",
   description: "Təsvir",
   features: "Təchizat",

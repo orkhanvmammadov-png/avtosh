@@ -72,3 +72,26 @@ test.describe("Listing detail", () => {
     expect(ok.headers()["cache-control"]).toBe("no-store");
   });
 });
+
+test.describe("contact reveal rate limiting UI", () => {
+  test.use({ extraHTTPHeaders: { "x-forwarded-for": "203.0.113.77" } });
+
+  test("429 shows a safe Azerbaijani message and keeps the page usable", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "single-source scenario; one project only");
+    const s = seed();
+    const target = s.boosted[0]; // ACTIVE listing not used by other reveal tests
+    for (let i = 0; i < 3; i += 1) {
+      await page.goto(`/elan/${target}`);
+      await page.getByTestId("contact-reveal").click();
+      await expect(page.getByTestId("contact-call")).toBeVisible();
+    }
+    await page.goto(`/elan/${target}`);
+    await page.getByTestId("contact-reveal").click();
+    await expect(page.getByText("Çox sayda cəhd edildi")).toBeVisible();
+    await expect(page.getByTestId("contact-call")).toHaveCount(0);
+    await expect(page.getByTestId("detail-price")).toBeVisible(); // page remains usable
+    const body = (await page.textContent("body")) ?? "";
+    expect(body).not.toContain("CONTACT_RATE_LIMITED");
+    expect(body).not.toContain("+994501234567"); // number stays hidden
+  });
+});

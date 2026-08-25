@@ -76,4 +76,5 @@ the seller's account phone. `Cache-Control: no-store`.
 
 Errors: `LISTING_NOT_FOUND` 404 (unknown, SOLD, EXPIRED, or any
 non-public state) · `LISTING_CONTACT_UNAVAILABLE` 409 (listing has no
-contact phone). Rate limiting is a documented follow-up.
+contact phone) · `CONTACT_RATE_LIMITED` 429 with `Retry-After`
+(per-source windows: 3/listing and 15 total per hour, configurable).

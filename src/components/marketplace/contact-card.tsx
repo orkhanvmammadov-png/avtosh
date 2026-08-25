@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { UI } from "@/lib/marketplace/labels";
-import { publicFetch } from "@/lib/marketplace/public-api";
+import { publicFetch, PublicApiError } from "@/lib/marketplace/public-api";
 
 /**
  * Seller contact: masked until the buyer explicitly reveals it through
@@ -24,8 +24,9 @@ export function ContactCard({ publicId, displayName, maskedPhone }: { publicId: 
         { method: "POST" },
       );
       setContact(data.contact);
-    } catch {
-      setError(UI.contactUnavailable);
+    } catch (err) {
+      // 429 gets its own Azerbaijani message; never a raw API error, never a silent retry.
+      setError(err instanceof PublicApiError && err.code === "CONTACT_RATE_LIMITED" ? UI.contactRateLimited : UI.contactUnavailable);
     } finally {
       setLoading(false);
     }

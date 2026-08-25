@@ -155,6 +155,23 @@ const CARD_JOINS = (sql: Sql) => sql`
   left join cities ci on ci.id = l.city_id
 `;
 
+/**
+ * Defense for keyset sorts: ACTIVE listings always carry price/year
+ * (submission completeness), but a row violating that invariant would
+ * poison NULL-key cursor tuples — exclude it from the affected sort.
+ */
+function sortKeyGuard(sql: Sql, sort: SearchSort): Fragment {
+  switch (sort) {
+    case "PRICE_ASC":
+    case "PRICE_DESC":
+      return sql`and l.price_minor is not null`;
+    case "YEAR_DESC":
+      return sql`and l.year is not null`;
+    default:
+      return sql``;
+  }
+}
+
 /** Organic search page (limit+1 rows for has_more detection). */
 export async function searchListings(
   sql: Sql,
@@ -174,6 +191,7 @@ export async function searchListings(
     ${CARD_JOINS(sql)}
     where ${publicVisible(sql)}
       and ${filterFragment(sql, input.filters)}
+      ${sortKeyGuard(sql, input.sort)}
       ${exclude}
       ${cursor}
     order by ${orderFragment(sql, input.sort)}
@@ -378,5 +396,34 @@ export async function incrementPhoneRevealCount(sql: Sql, listingId: string): Pr
   await sql`
     insert into listing_stats (listing_id, phone_reveal_count) values (${listingId}, 1)
     on conflict (listing_id) do update set phone_reveal_count = listing_stats.phone_reveal_count + 1
+  `;
+}
+
+// --- anonymous action rate limiting -----------------------------------------
+
+export const CONTACT_REVEAL_ACTION = "CONTACT_REVEAL";
+
+export async function countAnonymousActions(
+  sql: Sql,
+  input: { action: string; sourceHash: string; subjectId?: string; since: Date },
+): Promise<number> {
+  const subject = input.subjectId === undefined ? sql`` : sql`and subject_id = ${input.subjectId}`;
+  const rows = await sql<{ count: string }[]>`
+    select count(*)::text as count from anonymous_action_events
+    where action = ${input.action}
+      and source_hash = ${input.sourceHash}
+      and created_at > ${input.since}
+      ${subject}
+  `;
+  return Number(rows[0].count);
+}
+
+export async function recordAnonymousAction(
+  sql: Sql,
+  input: { action: string; sourceHash: string; subjectId: string },
+): Promise<void> {
+  await sql`
+    insert into anonymous_action_events (action, source_hash, subject_id)
+    values (${input.action}, ${input.sourceHash}, ${input.subjectId})
   `;
 }

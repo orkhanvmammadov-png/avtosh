@@ -94,9 +94,17 @@ publicly visible, source is **`listing.contact_phone_e164` only**
 aggregate `phone_reveal_count` incremented best-effort, `no-store`.
 The UI reveals on explicit click, then offers `tel:` and a WhatsApp
 deep link built client-side from the revealed digits only; no
-server-side messaging. **Deferred**: per-IP/per-listing reveal rate
-limiting (no compatible infrastructure without a new table) —
-platform/WAF controls apply meanwhile.
+server-side messaging. Abuse protection: reveals are rate limited per
+source (keyed-HMAC of the trusted client IP, Phase 4.4 extraction
+policy and `ip:v1:` domain separation) via the generic
+`anonymous_action_events` bucket (migration 016) — defaults 3 reveals
+per listing and 15 total per source per hour (configurable
+`CONTACT_REVEAL_*`), `429 CONTACT_RATE_LIMITED` with `Retry-After`.
+With no trustworthy client IP (local dev) limiting is skipped rather
+than trusting fabrication; production platforms always provide one.
+The UI shows a dedicated Azerbaijani message on 429 and never
+auto-retries. Rows are short-lived window data prunable by a future
+cleanup job (correctness only counts recent rows).
 
 ## Images & gallery
 
