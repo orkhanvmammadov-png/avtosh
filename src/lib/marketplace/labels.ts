@@ -193,6 +193,8 @@ export const SELLER = {
   boostActivated: "Boost aktiv edildi",
   promotionActivatedHint: "Elanınız seçilmiş müddət ərzində irəli çəkiləcək.",
   promotionNotAvailable: "Bu elan üçün irəli çəkmə hazırda mümkün deyil.",
+  promotionPackagesUnavailable: "Təşviq paketləri hazırda əlçatan deyil.",
+  promotionPackagesUnavailableHint: "Paketlər aktiv olan kimi bu səhifədə görünəcək.",
   promotionOnlyActiveHint: "İrəli çəkmə yalnız aktiv elanlar üçün mümkündür.",
   payGenericTitle: "Ödəniş statusu yoxlanıldı",
   payGenericHint: "Hesabınıza daxil olaraq elanınızın vəziyyətinə baxa bilərsiniz.",

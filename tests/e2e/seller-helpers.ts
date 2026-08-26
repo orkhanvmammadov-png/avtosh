@@ -336,3 +336,13 @@ export async function expireListingPromotions(listingId: string): Promise<void> 
     await sql.end();
   }
 }
+
+/** Toggles every promotion package (zero-package UI state testing). */
+export async function setPromotionPackagesActive(active: boolean): Promise<void> {
+  const sql = db();
+  try {
+    await sql`update promotion_packages set is_active = ${active}`;
+  } finally {
+    await sql.end();
+  }
+}

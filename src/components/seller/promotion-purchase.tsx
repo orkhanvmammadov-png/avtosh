@@ -88,6 +88,12 @@ export function PromotionPurchase({
         </p>
       ) : null}
 
+      {typed.length === 0 ? (
+        <p className="rounded-lg border border-line bg-white px-4 py-3 text-sm text-muted" data-testid="promo-type-unavailable">
+          {SELLER.promotionPackagesUnavailable}
+        </p>
+      ) : null}
+
       <fieldset>
         <legend className="mb-2 text-sm font-medium text-navy">{SELLER.promotionDuration}</legend>
         <div className="space-y-2">

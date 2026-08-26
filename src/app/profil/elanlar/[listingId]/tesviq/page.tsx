@@ -79,6 +79,23 @@ export default async function PromotionPage({
     promotionPackages(),
     myListings(auth, "active"),
   ]);
+  if (packages.length === 0) {
+    // no ACTIVE packages configured (e.g. pricing not yet approved) —
+    // a safe notice instead of an empty purchase form; the server
+    // would reject any checkout attempt regardless
+    return (
+      <div className="py-16 text-center" data-testid="promotion-packages-unavailable">
+        <h1 className="text-2xl font-bold text-navy">{SELLER.promotionPackagesUnavailable}</h1>
+        <p className="mt-2 text-sm text-muted">{SELLER.promotionPackagesUnavailableHint}</p>
+        <Link
+          href="/profil/elanlar"
+          className="mt-8 inline-flex min-h-12 items-center rounded-lg bg-primary px-6 text-sm font-semibold text-white hover:bg-primary-hover"
+        >
+          {UI.myListings}
+        </Link>
+      </div>
+    );
+  }
   const listing = listings.find((item) => item.id === listingId);
   const title = listing !== undefined ? vehicleTitle(listing) : "Elan";
 

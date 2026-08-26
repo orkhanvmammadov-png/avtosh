@@ -9,8 +9,24 @@ pricing UI are later phases)
 `promotion_packages` rows (migration 007, seeded by migration 018)
 are the configurable pricing source of truth: PREMIUM and BOOST ×
 1/3/7 gün, integer minor units, `is_active` toggle, admin-editable
-later. The seeded prices are launch placeholders pending owner
-confirmation. The browser sends only listing + type + package id;
+later.
+
+**Production pricing safeguard:** the seeded `price_minor` values are
+UNAPPROVED placeholders, so migration 018 ships every package with
+`is_active = false` — nothing is sellable by default. Activating a
+package requires explicit owner price approval followed by setting
+the approved `price_minor` and `is_active = true` on the row (until
+an admin pricing UI exists, via a controlled SQL/operations change).
+Server-side eligibility is authoritative: inactive packages are
+invisible to the packages API and unpurchasable (regression: no
+payment intent, no Kapital checkout, no promotion period); there is
+no frontend exception, and the seller purchase page renders a safe
+"Təşviq paketləri hazırda əlçatan deyil." state when no active
+packages exist. Test environments activate packages explicitly as
+fixture data (integration `beforeAll`, E2E seed) — the disabled
+production default itself is regression-tested.
+
+The browser sends only listing + type + package id;
 the server resolves duration/price/currency from the enabled package
 row and freezes them into the payment intent
 (`payments.promotion_package_id`, `package_duration_days`,
@@ -150,16 +166,17 @@ activation.
 
 ## Tests
 
-Unit: date formatting, package price display. Integration (25):
+Unit: date formatting, package price display. Integration (27,
+incl. the disabled-by-default production safeguard):
 package API, eligibility matrix, pricing immutability, double-click +
 10-way checkout concurrency (one provider order), package switching,
 activation (+ lifecycle untouched + audit/outbox), sequential
 extension per type, expired-prior handling, coexistence, expiry
 regression, exactly-once under 10-way verification, concurrent
 +3d/+7d fulfillment (10 abutting days), callback-status impotence,
-amount mismatch, reconciliation. E2E (7 × 3 viewports): full Premium
+amount mismatch, reconciliation. E2E (8 × 3 viewports): full Premium
 purchase to Home-feed appearance, Boost + coexistence with public
 badges, pending/tampered callback never activates, wrong amount held
 safely, repeated callbacks add duration once, extension from current
-end, non-active listing refusal. Visual-review screenshots via the
-fake HPP.
+end, non-active listing refusal, zero-active-package safe state.
+Visual-review screenshots via the fake HPP.

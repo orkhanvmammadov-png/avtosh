@@ -7,6 +7,7 @@ import {
   insertListingFixture,
   promotionEnds,
   promotionPeriodCount,
+  setPromotionPackagesActive,
 } from "./seller-helpers";
 
 /**
@@ -168,4 +169,21 @@ test("promotion purchase is refused for non-active listings", async ({ page }, {
   });
   await page.goto(`/profil/elanlar/${pending.id}/tesviq`);
   await expect(page.getByTestId("promotion-unavailable")).toBeVisible();
+});
+
+test("with no active packages the purchase page shows a safe unavailable state", async ({ page }, { project }) => {
+  const { fixture } = await activeListingFixture(page, project.name, 97);
+  try {
+    await setPromotionPackagesActive(false); // the production default
+    await page.goto(`/profil/elanlar/${fixture.id}/tesviq`);
+    const unavailable = page.getByTestId("promotion-packages-unavailable");
+    await expect(unavailable).toBeVisible();
+    await expect(unavailable).toContainText("Təşviq paketləri hazırda əlçatan deyil.");
+    // no prices, no purchase form, no checkout path
+    await expect(page.getByTestId("promo-pay")).toHaveCount(0);
+    await expect(page.getByTestId("promotion-purchase")).toHaveCount(0);
+    await expect(page.locator("body")).not.toContainText("AZN");
+  } finally {
+    await setPromotionPackagesActive(true); // restore the E2E fixture state
+  }
 });

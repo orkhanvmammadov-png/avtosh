@@ -8,6 +8,12 @@ import postgres from "postgres";
 const sql = postgres(process.env.DATABASE_URL, { prepare: false, max: 2 });
 const out = { databaseUrl: process.env.DATABASE_URL };
 
+// TEST FIXTURE: promotion packages ship DISABLED in the production
+// seed (unapproved placeholder pricing). The E2E environment activates
+// them explicitly as controlled fixture data — this does not weaken
+// the production safeguard, which is regression-tested separately.
+await sql`update promotion_packages set is_active = true`;
+
 const [seller] = await sql`insert into users (phone_e164, display_name) values ('+994501110001', 'Elvin') returning id`;
 const cats = Object.fromEntries((await sql`select id, code from categories`).map((c) => [c.code, c.id]));
 const brand = async (name, slug, codes) => {

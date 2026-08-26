@@ -147,6 +147,14 @@ beforeAll(async () => {
   otherSeller = await createTestUserSession("+994521000002");
   blockedSeller = await createTestUserSession("+994521000003", { blocked: true });
   carCat = (await sql<{ id: string }[]>`select id from categories where code = 'CAR'`)[0].id;
+  // FIXTURE: production seeds ship DISABLED (unapproved placeholder
+  // pricing). Tests explicitly activate them as controlled setup data
+  // — the production safeguard itself is regression-tested below.
+  const [inactiveSeed] = await sql<{ n: string }[]>`
+    select count(*)::text as n from promotion_packages where is_active
+  `;
+  expect(Number(inactiveSeed.n)).toBe(0); // the seed itself is not sellable
+  await sql`update promotion_packages set is_active = true`;
   const rows = await sql<{ id: string; type: string; duration_days: number; price_minor: string }[]>`
     select id, type::text as type, duration_days, price_minor::text as price_minor
     from promotion_packages where is_active
@@ -181,6 +189,43 @@ describe("promotion packages API", () => {
       }
     }
     expect(r.response.headers.get("cache-control")).toContain("no-store");
+  });
+});
+
+describe("promotion packages — production safeguard", () => {
+  it("an INACTIVE package is invisible and unpurchasable: no intent, no checkout, no period", async () => {
+    const provider = installFake();
+    const listing = await insertActiveListing(seller.userId);
+    const premium1 = pkg("PREMIUM", 1);
+    const sql = getSql();
+    try {
+      await sql`update promotion_packages set is_active = false where id = ${premium1.id}`;
+      // invisible in the packages API
+      const list = await api(packagesRoute, "GET", PACKAGES, { cookie: seller.cookie });
+      const ids = (list.body.data?.packages as { id: string }[]).map((p) => p.id);
+      expect(ids).not.toContain(premium1.id);
+      // unpurchasable server-side
+      const r = await promoCheckout(listing.id, { type: "PREMIUM", package_id: premium1.id }, seller.cookie);
+      expect(r.status).toBe(404);
+      expect(r.body.error?.code).toBe("PROMOTION_PACKAGE_NOT_FOUND");
+      expect(provider.state.createCalls).toBe(0); // no Kapital checkout
+      expect(await paymentFor(listing.id, "PREMIUM")).toHaveLength(0); // no intent
+      expect(await promotionRows(listing.id, "PREMIUM")).toHaveLength(0); // no period
+    } finally {
+      await sql`update promotion_packages set is_active = true where id = ${premium1.id}`;
+    }
+  });
+
+  it("with every package inactive the API returns an empty, still-safe list", async () => {
+    const sql = getSql();
+    try {
+      await sql`update promotion_packages set is_active = false`;
+      const r = await api(packagesRoute, "GET", PACKAGES, { cookie: seller.cookie });
+      expect(r.status).toBe(200);
+      expect(r.body.data?.packages).toEqual([]);
+    } finally {
+      await sql`update promotion_packages set is_active = true`;
+    }
   });
 });
 
