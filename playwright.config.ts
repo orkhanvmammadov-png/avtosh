@@ -41,6 +41,12 @@ export default defineConfig({
       // builds) so the real signed-upload → confirm image flow runs.
       STORAGE_DRIVER: "local",
       LOCAL_STORAGE_SUBDIR: "e2e",
+      // Fake Kapital Bank (dev-only routes) — the REAL adapter talks
+      // to it over HTTP, so request shape/auth/parsing run end to end.
+      PAYMENT_FAKE_KAPITAL: "1",
+      KAPITAL_API_BASE_URL: "http://localhost:3000/api/dev-kapital",
+      KAPITAL_USERNAME: "e2e-merchant",
+      KAPITAL_PASSWORD: "e2e-not-a-real-secret",
     },
     url: "http://localhost:3000/api/v1/health",
     reuseExistingServer: false,

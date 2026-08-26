@@ -3,7 +3,7 @@
 Azerbaijan-focused responsive **web** marketplace for cars and
 motorcycles. Web only — no native iOS/Android applications.
 
-**Current phase: Phase 4.11 — Seller Listing Wizard & My Listings.**
+**Current phase: Phase 4.12 — Kapital Bank Payment Integration.**
 Implemented so far: the MVP database schema (Supabase migrations),
 the public read-only Catalog API (`/api/v1/catalog/*`), passwordless
 WhatsApp-OTP authentication with opaque cookie sessions

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
 import { ListingWizard } from "@/components/seller/listing-wizard";
+import { PayButton } from "@/components/seller/pay-button";
 import { formatPriceMinor } from "@/lib/format";
 import { isApiError } from "@/lib/api/errors";
 import { SELLER, UI } from "@/lib/marketplace/labels";
@@ -83,7 +84,10 @@ export default async function WizardPage({
             {formatPriceMinor(intent.amountMinor, intent.currency)}
           </p>
         ) : null}
-        <p className="mt-3 text-sm text-muted">{SELLER.paymentComingSoon}</p>
+        <p className="mt-3 text-sm text-muted">{SELLER.paymentAfterHint}</p>
+        <div className="mt-6 flex justify-center">
+          <PayButton listingId={listing.id} />
+        </div>
         <BackToMyListings />
       </div>
     );

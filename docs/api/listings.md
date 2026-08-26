@@ -152,3 +152,22 @@ Errors: `LISTING_NOT_EDITABLE` 409 · `LISTING_REVISION_CONFLICT` 409 ·
 
 Seller field/image mutation endpoints now also accept listings in
 `CORRECTION_REQUIRED` and `REJECTED` (same rules as DRAFT).
+
+## POST /api/v1/me/listings/:id/payment/checkout (Phase 4.12)
+
+Owner-only (session + same-origin + not blocked). Creates or reuses
+the Kapital Bank checkout for the listing's LISTING_FEE intent.
+Requires listing status PAYMENT_REQUIRED and the intent in
+CREATED/PENDING. The body is empty — amount/currency come from the
+immutable intent snapshot; nothing is accepted from the browser.
+
+`200` `{ "data": { "checkout_url": "https://…/flex?id=…&password=…" } }`
+— one opaque URL; provider credentials/secrets are never separate
+fields. Errors: `LISTING_NOT_FOUND` 404 (missing/foreign/FREE) ·
+`PAYMENT_NOT_REQUIRED` 409 · `PAYMENT_CHECKOUT_UNAVAILABLE` 503
+(provider outage/misconfiguration — nothing changed) · `USER_BLOCKED`
+403. Repeat calls reuse the active checkout (no duplicate provider
+orders); after a declined/cancelled/expired attempt a fresh order is
+created. Verification/fulfillment happens exclusively through the
+server-side Kapital Get Order Details flow — see
+`../architecture/kapital-bank-payments.md`.

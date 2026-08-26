@@ -14,6 +14,7 @@ import {
   type SubmitResult,
 } from "@/lib/seller/owner-api";
 import { MISSING_FIELD_LABELS, REASON_LABELS } from "@/lib/seller/status";
+import { PayButton } from "@/components/seller/pay-button";
 import type { SellerModerationFeedbackDto } from "@/services/my-listings";
 import { useListingEditor } from "@/components/seller/use-listing-editor";
 import { useWizardCatalog } from "@/components/seller/use-wizard-catalog";
@@ -257,7 +258,10 @@ function SubmitResultScreen({ result }: { result: SubmitResult }) {
           <p className="mt-4 text-3xl font-extrabold text-primary" data-testid="wizard-payment-amount">
             {formatPriceMinor(result.payment.amountMinor, result.payment.currency)}
           </p>
-          <p className="mt-2 text-sm text-muted">{SELLER.paymentComingSoon}</p>
+          <p className="mt-2 text-sm text-muted">{SELLER.paymentAfterHint}</p>
+          <div className="mt-6 flex justify-center">
+            <PayButton listingId={result.listing.id} />
+          </div>
         </>
       ) : null}
       <Link
