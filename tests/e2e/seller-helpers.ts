@@ -205,3 +205,38 @@ export async function countFavorites(userId: string): Promise<number> {
     await sql.end();
   }
 }
+
+export interface ListingPaymentInfo {
+  paymentId: string;
+  paymentStatus: string;
+  providerOrderId: string | null;
+  activeAttempts: number;
+  moderationOutbox: number;
+  historyRows: number;
+}
+
+/** Payment/attempt state for a listing's LISTING_FEE intent. */
+export async function paymentInfoForListing(listingId: string): Promise<ListingPaymentInfo> {
+  const sql = db();
+  try {
+    const [row] = await sql`
+      select p.id as payment_id, p.status::text as payment_status, p.provider_order_id,
+        (select count(*)::int from payment_provider_attempts a where a.payment_id = p.id and not a.is_terminal) as active_attempts,
+        (select count(*)::int from outbox_events o where o.aggregate_id = ${listingId} and o.event_type = 'LISTING_ENTERED_MODERATION') as moderation_outbox,
+        (select count(*)::int from listing_status_history h where h.listing_id = ${listingId}) as history_rows
+      from payments p
+      join listing_publications pub on pub.payment_id = p.id
+      where pub.listing_id = ${listingId}
+    `;
+    return {
+      paymentId: row.payment_id as string,
+      paymentStatus: row.payment_status as string,
+      providerOrderId: row.provider_order_id as string | null,
+      activeAttempts: row.active_attempts as number,
+      moderationOutbox: row.moderation_outbox as number,
+      historyRows: row.history_rows as number,
+    };
+  } finally {
+    await sql.end();
+  }
+}

@@ -189,7 +189,7 @@ test("paid boundary: 4th publication submits into PAYMENT_REQUIRED with the serv
   const result = page.getByTestId("wizard-result");
   await expect(result).toHaveAttribute("data-outcome", "PAYMENT", { timeout: 20_000 });
   await expect(page.getByTestId("wizard-payment-amount")).toHaveText("2 AZN");
-  await expect(result).toContainText("Onlayn ödəniş tezliklə"); // no fake checkout
+  await expect(result.getByTestId("pay-button")).toBeVisible(); // real checkout action, no fake completion
   const after = await listingCounts(userId);
   expect(after.publications).toBe(before.publications + 1);
   expect(after.payments).toBe(before.payments + 1); // CREATED intent only
