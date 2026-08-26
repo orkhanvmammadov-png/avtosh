@@ -59,3 +59,16 @@ export function minorToAznInput(minor: string | undefined): string {
   if (minor === undefined || !/^\d+$/.test(minor)) return "";
   return minor.length <= 2 ? "0" : minor.slice(0, -2);
 }
+
+/** DD.MM.YYYY in Asia/Baku — promotion end dates on seller surfaces. */
+export function formatDateAz(value: string | Date): string {
+  const date = typeof value === "string" ? new Date(value) : value;
+  const parts = new Intl.DateTimeFormat("az-Latn-AZ", {
+    timeZone: "Asia/Baku",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("day")}.${get("month")}.${get("year")}`;
+}

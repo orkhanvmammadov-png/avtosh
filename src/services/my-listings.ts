@@ -55,6 +55,8 @@ export interface OwnerCardDto {
   submittedAt: string | null;
   publishedAt: string | null;
   currentExpiresAt: string | null;
+  premiumUntil: string | null;
+  boostUntil: string | null;
   moderationFeedback: SellerModerationFeedbackDto | null;
 }
 
@@ -102,6 +104,8 @@ async function toCardDto(row: OwnerCardRow): Promise<OwnerCardDto> {
     submittedAt: row.submitted_at?.toISOString() ?? null,
     publishedAt: row.published_at?.toISOString() ?? null,
     currentExpiresAt: row.current_expires_at?.toISOString() ?? null,
+    premiumUntil: row.premium_until?.toISOString() ?? null,
+    boostUntil: row.boost_until?.toISOString() ?? null,
     moderationFeedback: feedback,
   };
 }

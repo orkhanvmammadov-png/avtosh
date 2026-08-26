@@ -23,6 +23,12 @@ import {
   type AttemptRow,
 } from "@/repositories/payment-checkout";
 import { insertOutboxEvent } from "@/repositories/listing-publications";
+import {
+  findPromotionByPayment,
+  insertPromotionAudit,
+  insertPromotionPeriod,
+  lockListingForPromotion,
+} from "@/repositories/promotions";
 import { buildHppRedirect } from "@/providers/payments/kapital-provider";
 import {
   getPaymentProvider,
@@ -74,6 +80,14 @@ export interface CheckoutResult {
   checkoutUrl: string;
 }
 
+/** Everything the provider checkout core needs, purpose-agnostic. */
+export interface ProviderCheckoutContext {
+  paymentId: string;
+  amountMinor: number;
+  currency: string;
+  description: string;
+}
+
 function checkoutUnavailable(): ApiError {
   return new ApiError(
     "PAYMENT_CHECKOUT_UNAVAILABLE",
@@ -118,10 +132,26 @@ export async function createListingFeeCheckout(
     payment_id: context.payment_id,
     listing_id: context.listing_id,
   });
+  return runProviderCheckout({
+    paymentId: context.payment_id,
+    amountMinor: Number(context.amount_minor),
+    currency: context.currency,
+    description: `AVTOSH.AZ elan ${context.listing_public_id} yerlesdirme haqqi`,
+  });
+}
 
+/**
+ * The single provider checkout core shared by every payment purpose
+ * (LISTING_FEE and promotion purchases): initiation claim →
+ * at-most-one POST /order → persisted attempt. Never duplicated.
+ */
+export async function runProviderCheckout(
+  context: ProviderCheckoutContext,
+): Promise<CheckoutResult> {
+  const sql = getSql();
   // Phase 1 — atomically obtain the initiation claim (or learn who has it).
   const claim = await withTransaction(async (tx) => {
-    const payment = await lockPayment(tx, context.payment_id);
+    const payment = await lockPayment(tx, context.paymentId);
     if (payment === undefined || !CHECKOUT_ELIGIBLE_STATUSES.includes(payment.status)) {
       throw new ApiError("PAYMENT_NOT_REQUIRED", "The listing has no payable fee right now.");
     }
@@ -170,7 +200,7 @@ export async function createListingFeeCheckout(
     // this request NEVER calls the provider.
     for (let poll = 0; poll < INITIATION_WAIT_POLLS; poll += 1) {
       await delay(INITIATION_WAIT_INTERVAL_MS);
-      const attempt = await findActiveAttempt(sql, context.payment_id);
+      const attempt = await findActiveAttempt(sql, context.paymentId);
       if (attempt === undefined) {
         break; // initiator failed and released — client may retry
       }
@@ -186,10 +216,10 @@ export async function createListingFeeCheckout(
   let order;
   try {
     order = await getPaymentProvider().createOrder({
-      amountMajor: minorToMajorString(Number(context.amount_minor)),
+      amountMajor: minorToMajorString(context.amountMinor),
       currency: context.currency,
       language: "az",
-      description: `AVTOSH.AZ elan ${context.listing_public_id} yerlesdirme haqqi`,
+      description: context.description,
       redirectUrl: `${appOrigin()}/odenis/kapital/netice`,
     });
   } catch (error) {
@@ -205,7 +235,7 @@ export async function createListingFeeCheckout(
       });
     });
     logPaymentEvent("checkout_initiation_failed", {
-      payment_id: context.payment_id,
+      payment_id: context.paymentId,
       kind,
     });
     throw checkoutUnavailable();
@@ -213,16 +243,16 @@ export async function createListingFeeCheckout(
 
   // Phase 3 — persist the created order into the claim.
   return withTransaction(async (tx) => {
-    await lockPayment(tx, context.payment_id);
+    await lockPayment(tx, context.paymentId);
     await completeInitiation(tx, claim.attemptId, {
       providerOrderId: order.providerOrderId,
       hppUrl: order.hppUrl,
       hppSecret: order.hppSecret,
       providerStatus: order.status,
     });
-    await markPaymentPending(tx, context.payment_id, PAYMENT_PROVIDER_CODE, order.providerOrderId);
+    await markPaymentPending(tx, context.paymentId, PAYMENT_PROVIDER_CODE, order.providerOrderId);
     logPaymentEvent("provider_order_created", {
-      payment_id: context.payment_id,
+      payment_id: context.paymentId,
       provider_order_id: order.providerOrderId,
       provider_status: order.status,
     });
@@ -358,7 +388,7 @@ export async function verifyProviderPayment(paymentId: string): Promise<Verifica
           currency: payment.currency,
         },
       });
-      await fulfillListingFee(tx, paymentId, payment.listing_id);
+      await fulfillPayment(tx, payment);
       return { state: "SUCCESS" as const, listingPublicId: summary.listing_public_id };
     }
 
@@ -387,6 +417,92 @@ export async function verifyProviderPayment(paymentId: string): Promise<Verifica
       provider_status: details.status,
     });
     return { state: "PENDING" as const };
+  });
+}
+
+type Tx = Parameters<Parameters<typeof withTransaction>[0]>[0];
+
+/**
+ * Centralized fulfillment dispatch — the ONLY place a verified
+ * payment SUCCESS turns into a business effect, inside the same
+ * transaction as the payment transition. Routes never branch on
+ * business purpose.
+ */
+async function fulfillPayment(tx: Tx, payment: LockedPaymentRowLike): Promise<void> {
+  if (payment.type === "LISTING_FEE") {
+    await fulfillListingFee(tx, payment.id, payment.listing_id);
+    return;
+  }
+  if (payment.type === "PREMIUM" || payment.type === "BOOST") {
+    await fulfillPromotion(tx, payment);
+    return;
+  }
+  // future purposes (e.g. RENEWAL) must be wired explicitly — a
+  // SUCCESS with no fulfillment target is an operations flag
+  logPaymentEvent("verification_failed", {
+    payment_id: payment.id,
+    kind: "NO_FULFILLMENT_TARGET",
+  });
+}
+
+interface LockedPaymentRowLike {
+  id: string;
+  type: string;
+  listing_id: string | null;
+  amount_minor: string;
+  promotion_package_id: string | null;
+  package_duration_days: number | null;
+}
+
+/**
+ * Promotion side of a verified PREMIUM/BOOST success. The listing row
+ * lock (payments → listings order) serializes concurrent same-listing
+ * fulfillments, so two paid extensions queue correctly (the extension
+ * base is computed in SQL inside the insert); the GiST exclusion
+ * constraint is defense in depth. Duration/price come from the
+ * payment's immutable snapshot — never from current package rows.
+ */
+async function fulfillPromotion(tx: Tx, payment: LockedPaymentRowLike): Promise<void> {
+  if (payment.listing_id === null || payment.package_duration_days === null) {
+    logPaymentEvent("verification_failed", {
+      payment_id: payment.id,
+      kind: "PROMOTION_TARGET_INCOMPLETE",
+    });
+    return;
+  }
+  await lockListingForPromotion(tx, payment.listing_id);
+  const period = await insertPromotionPeriod(tx, {
+    listingId: payment.listing_id,
+    type: payment.type,
+    packageId: payment.promotion_package_id,
+    paymentId: payment.id,
+    durationDays: payment.package_duration_days,
+    priceMinor: Number(payment.amount_minor),
+  });
+  await insertOutboxEvent(tx, {
+    eventType: "PROMOTION_ACTIVATED",
+    aggregateId: payment.listing_id,
+    payload: {
+      listing_id: payment.listing_id,
+      payment_id: payment.id,
+      promotion_type: payment.type,
+      starts_at: period.starts_at.toISOString(),
+      ends_at: period.ends_at.toISOString(),
+      queued: period.status === "SCHEDULED",
+    },
+  });
+  await insertPromotionAudit(tx, {
+    listingId: payment.listing_id,
+    paymentId: payment.id,
+    type: payment.type,
+    startsAt: period.starts_at,
+    endsAt: period.ends_at,
+  });
+  logPaymentEvent(period.status === "SCHEDULED" ? "promotion_extended" : "promotion_activated", {
+    payment_id: payment.id,
+    listing_id: payment.listing_id,
+    promotion_type: payment.type,
+    ends_at: period.ends_at.toISOString(),
   });
 }
 
@@ -430,7 +546,13 @@ async function fulfillListingFee(
 }
 
 export type CallbackView =
-  | { view: "OWNER"; outcome: VerificationOutcome; listingId: string | null }
+  | {
+      view: "OWNER";
+      outcome: VerificationOutcome;
+      listingId: string | null;
+      purpose: string;
+      promotionEndsAt: Date | null;
+    }
   | { view: "GENERIC" };
 
 /**
@@ -470,7 +592,17 @@ export async function handleKapitalCallback(
   if (summary === undefined || summary.user_id !== auth.user.id) {
     return { view: "GENERIC" };
   }
-  return { view: "OWNER", outcome, listingId: summary.listing_id };
+  const promotion =
+    (summary.type === "PREMIUM" || summary.type === "BOOST") && outcome.state === "SUCCESS"
+      ? await findPromotionByPayment(sql, attempt.payment_id)
+      : undefined;
+  return {
+    view: "OWNER",
+    outcome,
+    listingId: summary.listing_id,
+    purpose: summary.type,
+    promotionEndsAt: promotion?.ends_at ?? null,
+  };
 }
 
 export interface ReconciliationSummary {

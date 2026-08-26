@@ -278,3 +278,61 @@ export async function failListingCheckout(listingId: string): Promise<void> {
     await sql.end();
   }
 }
+
+/** Latest valid promotion end per type for a listing (or null). */
+export async function promotionEnds(
+  listingId: string,
+  type: "PREMIUM" | "BOOST",
+): Promise<string | null> {
+  const sql = db();
+  try {
+    const [row] = await sql`
+      select max(ends_at)::text as ends_at from listing_promotions
+      where listing_id = ${listingId} and type = ${type}::promotion_type
+        and status in ('SCHEDULED','ACTIVE') and ends_at > now()
+    `;
+    return (row.ends_at as string | null) ?? null;
+  } finally {
+    await sql.end();
+  }
+}
+
+export async function promotionPeriodCount(listingId: string): Promise<number> {
+  const sql = db();
+  try {
+    const [row] = await sql`
+      select count(*)::int as n from listing_promotions where listing_id = ${listingId}
+    `;
+    return row.n as number;
+  } finally {
+    await sql.end();
+  }
+}
+
+/**
+ * Test cleanup: retires a fixture listing's promotions so shared-DB
+ * public specs (seed-count assertions) stay unaffected across specs
+ * and projects. Time-window truth: past ends_at removes all public
+ * promotion behavior.
+ */
+export async function expireListingPromotions(listingId: string): Promise<void> {
+  const sql = db();
+  try {
+    // Each row gets its own disjoint past window: even a blanket
+    // status re-activation elsewhere can never trip the same-type
+    // overlap exclusion constraint on these retired rows.
+    await sql`
+      update listing_promotions lp
+      set starts_at = now() - (rn.n * interval '2 days'),
+          ends_at = now() - (rn.n * interval '2 days') + interval '1 day',
+          status = 'EXPIRED'
+      from (
+        select id, row_number() over (order by id) as n
+        from listing_promotions where listing_id = ${listingId}
+      ) rn
+      where lp.id = rn.id
+    `;
+  } finally {
+    await sql.end();
+  }
+}

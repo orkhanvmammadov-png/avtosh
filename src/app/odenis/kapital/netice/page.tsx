@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
+import { formatDateAz } from "@/lib/format";
 import { SELLER, UI } from "@/lib/marketplace/labels";
 import { handleKapitalCallback } from "@/services/payment-checkout";
 
@@ -57,7 +58,7 @@ export default async function KapitalReturnPage({
     );
   }
 
-  const { outcome, listingId } = result;
+  const { outcome, listingId, purpose, promotionEndsAt } = result;
   const retryHref = listingId !== null ? `/elan-yerlesdir/${listingId}` : "/profil/elanlar";
   const checkAgainHref =
     providerOrderId !== undefined
@@ -66,12 +67,24 @@ export default async function KapitalReturnPage({
 
   const view = (() => {
     switch (outcome.state) {
-      case "SUCCESS":
+      case "SUCCESS": {
+        if (purpose === "PREMIUM" || purpose === "BOOST") {
+          const until =
+            promotionEndsAt !== null
+              ? ` ${formatDateAz(promotionEndsAt)} ${SELLER.promotionUntil}.`
+              : "";
+          return {
+            title: purpose === "PREMIUM" ? SELLER.premiumActivated : SELLER.boostActivated,
+            hint: `${SELLER.promotionActivatedHint}${until}`,
+            actions: [{ href: "/profil/elanlar", label: UI.myListings, testid: "payment-my-listings" }],
+          };
+        }
         return {
           title: SELLER.paySuccessTitle,
           hint: SELLER.paySuccessHint,
           actions: [{ href: "/profil/elanlar", label: UI.myListings, testid: "payment-my-listings" }],
         };
+      }
       case "PENDING":
       case "MISMATCH":
         return {
