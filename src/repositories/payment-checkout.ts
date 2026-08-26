@@ -71,12 +71,14 @@ export interface AttemptRow {
   id: string;
   payment_id: string;
   provider: string;
-  provider_order_id: string;
-  hpp_url: string;
+  /** NULL while the attempt is an initiation claim (no order yet). */
+  provider_order_id: string | null;
+  hpp_url: string | null;
   hpp_secret: string | null;
   provider_status: string;
   is_terminal: boolean;
   succeeded: boolean;
+  created_at: Date;
 }
 
 export async function findActiveAttempt(
@@ -85,7 +87,7 @@ export async function findActiveAttempt(
 ): Promise<AttemptRow | undefined> {
   const rows = await sql<AttemptRow[]>`
     select id, payment_id, provider, provider_order_id, hpp_url, hpp_secret,
-           provider_status, is_terminal, succeeded
+           provider_status, is_terminal, succeeded, created_at
     from payment_provider_attempts
     where payment_id = ${paymentId} and not is_terminal
   `;
@@ -93,33 +95,46 @@ export async function findActiveAttempt(
 }
 
 /**
- * Registers a new active attempt. Returns null when a concurrent
- * request already registered one (partial unique index) — the caller
- * must then reuse the winner and treat its own provider order as an
- * orphan.
+ * The checkout-initiation CLAIM: inserted BEFORE the external
+ * POST /order, in the INITIATING state (no provider order id). The
+ * one-active partial unique index makes this atomic — exactly one
+ * concurrent request obtains the claim and may perform the provider
+ * side effect; every other request sees an existing attempt. Returns
+ * null when a live attempt (claim or active checkout) already exists.
  */
-export async function insertAttempt(
+export async function claimInitiation(
   sql: Sql,
+  paymentId: string,
+  provider: string,
+): Promise<AttemptRow | null> {
+  const rows = await sql<AttemptRow[]>`
+    insert into payment_provider_attempts (payment_id, provider)
+    values (${paymentId}, ${provider})
+    on conflict do nothing
+    returning id, payment_id, provider, provider_order_id, hpp_url, hpp_secret,
+              provider_status, is_terminal, succeeded, created_at
+  `;
+  return rows[0] ?? null;
+}
+
+/** Fills the claim with the created provider order (claim → active). */
+export async function completeInitiation(
+  sql: Sql,
+  attemptId: string,
   input: {
-    paymentId: string;
-    provider: string;
     providerOrderId: string;
     hppUrl: string;
     hppSecret: string;
     providerStatus: string;
   },
-): Promise<AttemptRow | null> {
-  const rows = await sql<AttemptRow[]>`
-    insert into payment_provider_attempts
-      (payment_id, provider, provider_order_id, hpp_url, hpp_secret, provider_status)
-    values
-      (${input.paymentId}, ${input.provider}, ${input.providerOrderId},
-       ${input.hppUrl}, ${input.hppSecret}, ${input.providerStatus})
-    on conflict do nothing
-    returning id, payment_id, provider, provider_order_id, hpp_url, hpp_secret,
-              provider_status, is_terminal, succeeded
+): Promise<void> {
+  await sql`
+    update payment_provider_attempts
+    set provider_order_id = ${input.providerOrderId}, hpp_url = ${input.hppUrl},
+        hpp_secret = ${input.hppSecret}, provider_status = ${input.providerStatus},
+        updated_at = now()
+    where id = ${attemptId} and provider_order_id is null
   `;
-  return rows[0] ?? null;
 }
 
 export async function findAttemptByProviderOrder(
@@ -129,7 +144,7 @@ export async function findAttemptByProviderOrder(
 ): Promise<AttemptRow | undefined> {
   const rows = await sql<AttemptRow[]>`
     select id, payment_id, provider, provider_order_id, hpp_url, hpp_secret,
-           provider_status, is_terminal, succeeded
+           provider_status, is_terminal, succeeded, created_at
     from payment_provider_attempts
     where provider = ${provider} and provider_order_id = ${providerOrderId}
   `;
@@ -196,17 +211,6 @@ export async function markPaymentRefunded(sql: Sql, paymentId: string): Promise<
   await sql`
     update payments set status = 'REFUNDED', refunded_at = now()
     where id = ${paymentId}
-  `;
-}
-
-/**
- * A terminal-failed attempt re-arms the intent: back to CREATED so
- * the seller can start a fresh checkout. The intent snapshot
- * (amount/currency) is untouched; attempt history is preserved.
- */
-export async function resetPaymentToCreated(sql: Sql, paymentId: string): Promise<void> {
-  await sql`
-    update payments set status = 'CREATED' where id = ${paymentId}
   `;
 }
 

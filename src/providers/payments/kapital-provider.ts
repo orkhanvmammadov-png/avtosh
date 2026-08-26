@@ -159,9 +159,29 @@ export function createKapitalProvider(): PaymentProviderClient {
   };
 }
 
-/** Builds the buyer-facing checkout URL from the provider response. */
+/**
+ * Builds the buyer-facing checkout URL from the provider response.
+ *
+ * The official documentation is internally ambiguous about hppUrl:
+ * the flow narrative shows `{{order.hppUrl}}/flex?id=…` while the
+ * create-order sample already returns `https://host/flex`. Both
+ * documented shapes are tolerated: a bare-origin hppUrl gains the
+ * `/flex` path; an hppUrl that already ends in `/flex` is used as-is.
+ * `/flex/flex` can never be produced. Host/HTTPS policy was already
+ * enforced on hppUrl at create time and the host is preserved here.
+ */
 export function buildHppRedirect(hppUrl: string, providerOrderId: string, hppSecret: string): string {
   const url = new URL(hppUrl);
+  const trimmedPath = url.pathname.replace(/\/+$/, "");
+  if (trimmedPath === "") {
+    // bare-origin documented shape → the flow narrative's /flex path
+    url.pathname = "/flex";
+  } else {
+    // any explicit path (the sample response's /flex, or a future
+    // provider-chosen path) is used exactly as returned — never
+    // append again, so /flex/flex is impossible
+    url.pathname = trimmedPath;
+  }
   url.searchParams.set("id", providerOrderId);
   url.searchParams.set("password", hppSecret);
   return url.toString();

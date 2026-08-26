@@ -171,10 +171,45 @@ describe("getOrderDetails", () => {
   });
 });
 
-describe("buildHppRedirect", () => {
-  it("appends id/password to the returned URL without mutating its path", () => {
+describe("buildHppRedirect — tolerates both documented hppUrl shapes", () => {
+  it("keeps an hppUrl that already ends in /flex", () => {
     expect(buildHppRedirect("https://txpgtst.kapitalbank.az/flex", "42", "pw")).toBe(
       "https://txpgtst.kapitalbank.az/flex?id=42&password=pw",
+    );
+  });
+
+  it("adds /flex to a bare-origin hppUrl", () => {
+    expect(buildHppRedirect("https://txpgtst.kapitalbank.az", "42", "pw")).toBe(
+      "https://txpgtst.kapitalbank.az/flex?id=42&password=pw",
+    );
+    expect(buildHppRedirect("https://txpgtst.kapitalbank.az/", "42", "pw")).toBe(
+      "https://txpgtst.kapitalbank.az/flex?id=42&password=pw",
+    );
+  });
+
+  it("never produces /flex/flex, including trailing-slash variants", () => {
+    for (const input of [
+      "https://host.example/flex",
+      "https://host.example/flex/",
+      "https://host.example",
+      "https://host.example/",
+      "https://host.example/pay/flex",
+    ]) {
+      const built = buildHppRedirect(input, "1", "p");
+      expect(built).not.toContain("/flex/flex");
+      expect(new URL(built).pathname.endsWith("/flex")).toBe(true);
+    }
+  });
+
+  it("leaves an explicit non-/flex provider path exactly as returned", () => {
+    expect(buildHppRedirect("https://host.example/hosted/pay", "1", "p")).toBe(
+      "https://host.example/hosted/pay?id=1&password=p",
+    );
+  });
+
+  it("preserves the provider host (policy applied at create time)", () => {
+    expect(new URL(buildHppRedirect("https://txpgtst.kapitalbank.az", "1", "p")).host).toBe(
+      "txpgtst.kapitalbank.az",
     );
   });
 });

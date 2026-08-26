@@ -9,8 +9,8 @@ import {
   type ProviderOrderDetails,
 } from "@/providers/payments/types";
 import {
+  handleKapitalCallback,
   reconcileProviderPayments,
-  verifyKapitalReturn,
   verifyProviderPayment,
 } from "@/services/payment-checkout";
 import { createTestUserSession } from "./helpers/session";
@@ -271,19 +271,56 @@ describe("checkout — provider order creation", () => {
     expect(provider.state.createCalls).toBe(1);
   });
 
-  it("simultaneous checkouts settle on exactly one authoritative attempt", async () => {
+  it("10 simultaneous checkouts: exactly ONE provider createOrder side effect", async () => {
     const provider = installFake();
     const { listingId, paymentId } = await insertPaidListing(seller.userId);
-    const [a, b] = await Promise.all([
-      checkout(listingId, seller.cookie),
-      checkout(listingId, seller.cookie),
-    ]);
-    expect(a.status).toBe(200);
-    expect(b.status).toBe(200);
-    expect(a.body.data?.checkout_url).toBe(b.body.data?.checkout_url);
+    const sql = getSql();
+    const publicationsBefore = (await sql<{ n: string }[]>`
+      select count(*)::text as n from listing_publications where listing_id = ${listingId}
+    `)[0].n;
+    const responses = await Promise.all(
+      Array.from({ length: 10 }, () => checkout(listingId, seller.cookie)),
+    );
+    const urls = new Set<string>();
+    for (const r of responses) {
+      expect(r.status).toBe(200);
+      urls.add(r.body.data?.checkout_url as string);
+    }
+    expect(urls.size).toBe(1); // everyone converges on the single checkout
+    expect(provider.state.createCalls).toBe(1); // the initiation claim held
     const after = await counts(listingId, paymentId);
+    expect(after.attempts).toBe(1); // no orphan attempts either
     expect(after.activeAttempts).toBe(1);
-    expect(provider.state.createCalls).toBeLessThanOrEqual(2); // loser's order is an orphan, never authoritative
+    const publicationsAfter = (await sql<{ n: string }[]>`
+      select count(*)::text as n from listing_publications where listing_id = ${listingId}
+    `)[0].n;
+    expect(publicationsAfter).toBe(publicationsBefore);
+    const payments = (await sql<{ n: string }[]>`
+      select count(*)::text as n from payments where listing_id = ${listingId}
+    `)[0].n;
+    expect(payments).toBe("1");
+  });
+
+  it("a crashed initiation is recovered after the lease, with audit", async () => {
+    const provider = installFake();
+    const { listingId, paymentId } = await insertPaidListing(seller.userId);
+    const sql = getSql();
+    // simulate a claim whose owner died before persisting the order
+    await sql`
+      insert into payment_provider_attempts (payment_id, provider, created_at)
+      values (${paymentId}, 'KAPITAL', now() - interval '10 minutes')
+    `;
+    const r = await checkout(listingId, seller.cookie);
+    expect(r.status).toBe(200);
+    expect(provider.state.createCalls).toBe(1);
+    const after = await counts(listingId, paymentId);
+    expect(after.attempts).toBe(2); // abandoned claim preserved as audit
+    expect(after.activeAttempts).toBe(1);
+    const [abandoned] = await sql<{ provider_status: string }[]>`
+      select provider_status from payment_provider_attempts
+      where payment_id = ${paymentId} and is_terminal
+    `;
+    expect(abandoned.provider_status).toBe("InitiationAbandoned");
   });
 
   it("provider outage returns a safe 503 and leaves the intent untouched", async () => {
@@ -295,7 +332,10 @@ describe("checkout — provider order creation", () => {
     expect(r.body.error?.code).toBe("PAYMENT_CHECKOUT_UNAVAILABLE");
     const after = await counts(listingId, paymentId);
     expect(after.paymentStatus).toBe("CREATED");
-    expect(after.attempts).toBe(0);
+    expect(after.activeAttempts).toBe(0); // claim released…
+    expect(after.attempts).toBe(1); // …but honestly recorded (InitiationAmbiguous)
+    const retry = await checkout(listingId, seller.cookie); // provider still down
+    expect(retry.status).toBe(503);
   });
 
   it("never leaks the provider secret outside the checkout URL", async () => {
@@ -319,9 +359,10 @@ describe("verification — provider truth only", () => {
   it("callback STATUS carries no authority — a Preparing order stays pending", async () => {
     const { provider, paymentId, listingId, orderId } = await checkedOut();
     // the untrusted browser query said FullyPaid; the service ignores it
-    const outcome = await verifyKapitalReturn(makeAuth(seller.userId), orderId);
+    const result = await handleKapitalCallback(makeAuth(seller.userId), orderId);
     expect(provider.state.getCalls).toBe(1); // server-to-server GET is mandatory
-    expect(outcome.outcome.state).toBe("PENDING");
+    expect(result.view).toBe("OWNER");
+    expect(result.view === "OWNER" && result.outcome.state).toBe("PENDING");
     const after = await counts(listingId, paymentId);
     expect(after.paymentStatus).toBe("PENDING");
     expect(after.listingStatus).toBe("PAYMENT_REQUIRED");
@@ -405,23 +446,26 @@ describe("verification — provider truth only", () => {
     expect(after.outboxPaymentSuccess).toBe(1);
   });
 
-  it("declined/cancelled/expired attempts re-arm the intent for a fresh checkout", async () => {
-    const { provider, paymentId, listingId, orderId } = await checkedOut();
-    provider.orders.get(orderId)!.status = "Declined";
-    const outcome = await verifyProviderPayment(paymentId);
-    expect(outcome.state).toBe("RETRYABLE");
-    let after = await counts(listingId, paymentId);
-    expect(after.paymentStatus).toBe("CREATED");
-    expect(after.activeAttempts).toBe(0);
-    expect(after.attempts).toBe(1); // audit preserved
-    // fresh checkout → a NEW provider order, previous attempt untouched
-    const retry = await checkout(listingId, seller.cookie);
-    expect(retry.status).toBe(200);
-    after = await counts(listingId, paymentId);
-    expect(after.attempts).toBe(2);
-    expect(after.activeAttempts).toBe(1);
-    expect(provider.state.createCalls).toBe(2);
-  });
+  it.each(["Cancelled", "Declined", "Expired", "SomethingNew"])(
+    "unconfirmed status %s takes the UNKNOWN path: no success, no fulfillment, no re-arm",
+    async (status) => {
+      const { provider, paymentId, listingId, orderId } = await checkedOut();
+      provider.orders.get(orderId)!.status = status;
+      const outcome = await verifyProviderPayment(paymentId);
+      expect(outcome.state).toBe("PENDING"); // never SUCCESS, never terminal
+      const after = await counts(listingId, paymentId);
+      expect(after.paymentStatus).toBe("PENDING"); // NOT re-armed to CREATED
+      expect(after.listingStatus).toBe("PAYMENT_REQUIRED");
+      expect(after.activeAttempts).toBe(1); // attempt stays open for reconciliation
+      expect(after.outboxModeration).toBe(0);
+      expect(after.outboxPaymentSuccess).toBe(0);
+      const sql = getSql();
+      const [attempt] = await sql<{ provider_status: string }[]>`
+        select provider_status from payment_provider_attempts where payment_id = ${paymentId}
+      `;
+      expect(attempt.provider_status).toBe(status); // observed value recorded
+    },
+  );
 
   it("Refunded maps to REFUNDED without fulfillment", async () => {
     const { provider, paymentId, listingId, orderId } = await checkedOut();
@@ -445,25 +489,62 @@ describe("verification — provider truth only", () => {
   });
 });
 
-describe("callback mapping — privacy", () => {
-  it("unknown, malformed, and foreign provider orders all get the same generic answer", async () => {
-    const { provider, orderId } = await (async () => {
-      const p = installFake();
-      const created = await insertPaidListing(seller.userId);
-      await checkout(created.listingId, seller.cookie);
-      return { provider: p, orderId: [...p.orders.keys()][0] };
-    })();
+describe("callback — session-independent fulfillment and privacy", () => {
+  it("a FullyPaid order fulfills with NO session at all, exactly once across repeats", async () => {
+    const provider = installFake();
+    // dedicated user whose sessions this test destroys
+    const payer = await createTestUserSession("+994519000010");
+    const { listingId, paymentId } = await insertPaidListing(payer.userId);
+    await checkout(listingId, payer.cookie);
+    const orderId = [...provider.orders.keys()][0];
+    provider.orders.get(orderId)!.status = "FullyPaid";
+    const sql = getSql();
+    // the seller's AVTOSH sessions die BEFORE the callback arrives
+    await sql`delete from sessions where user_id = ${payer.userId}`;
+    // completely anonymous callback (auth = null)
+    const first = await handleKapitalCallback(null, orderId);
+    expect(first.view).toBe("GENERIC"); // nothing personal disclosed…
+    let after = await counts(listingId, paymentId);
+    expect(after.paymentStatus).toBe("SUCCESS"); // …but the payment IS fulfilled
+    expect(after.listingStatus).toBe("PENDING_MODERATION");
+    expect(after.outboxModeration).toBe(1);
+    // repeated anonymous callbacks: one fulfillment, forever
+    for (let i = 0; i < 3; i += 1) {
+      const repeat = await handleKapitalCallback(null, orderId);
+      expect(repeat.view).toBe("GENERIC");
+    }
+    after = await counts(listingId, paymentId);
+    expect(after.historyRows).toBe(2);
+    expect(after.outboxModeration).toBe(1);
+    expect(after.outboxPaymentSuccess).toBe(1);
+  });
+
+  it("a foreign session cannot block verification and learns nothing", async () => {
+    const provider = installFake();
+    const { listingId, paymentId } = await insertPaidListing(seller.userId);
+    await checkout(listingId, seller.cookie);
+    const orderId = [...provider.orders.keys()][0];
+    provider.orders.get(orderId)!.status = "FullyPaid";
+    // another user's active session hits the callback
+    const result = await handleKapitalCallback(makeAuth(otherSeller.userId), orderId);
+    expect(result.view).toBe("GENERIC"); // no owner/listing/amount data
+    const after = await counts(listingId, paymentId);
+    expect(after.paymentStatus).toBe("SUCCESS"); // verification still ran
+    expect(after.listingStatus).toBe("PENDING_MODERATION");
+  });
+
+  it("unknown/malformed ids get the identical generic answer with zero provider calls", async () => {
+    const provider = installFake();
+    const created = await insertPaidListing(seller.userId);
+    await checkout(created.listingId, seller.cookie);
     const before = provider.state.getCalls;
     for (const probe of ["does-not-exist", "../../etc", "", undefined]) {
-      const r = await verifyKapitalReturn(makeAuth(otherSeller.userId), probe as string | undefined);
-      expect(r.outcome.state).toBe("UNKNOWN_ORDER");
-      expect(r.listingId).toBeNull();
+      for (const viewer of [null, makeAuth(otherSeller.userId), makeAuth(seller.userId)]) {
+        const r = await handleKapitalCallback(viewer, probe as string | undefined);
+        expect(r.view).toBe("GENERIC"); // indistinguishable from the foreign-id answer
+      }
     }
-    // a REAL order id of another user: same generic answer, no provider call
-    const foreign = await verifyKapitalReturn(makeAuth(otherSeller.userId), orderId);
-    expect(foreign.outcome.state).toBe("UNKNOWN_ORDER");
-    expect(foreign.listingId).toBeNull();
-    expect(provider.state.getCalls).toBe(before); // never became a probing oracle
+    expect(provider.state.getCalls).toBe(before); // never a probing oracle
   });
 });
 

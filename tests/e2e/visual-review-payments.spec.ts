@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { loginAs } from "./auth-helpers";
-import { insertListingFixture, paymentInfoForListing } from "./seller-helpers";
+import { failListingCheckout, insertListingFixture, paymentInfoForListing } from "./seller-helpers";
 
 /**
  * Payment-experience screenshots for human design review (artifacts
@@ -80,13 +80,14 @@ test.describe("payment visual review artifacts", () => {
     );
   });
 
-  test("payment failed / declined state", async ({ page, context }) => {
+  test("payment failed state", async ({ page, context }) => {
     const fixture = await newPaidFixture(context);
     await page.goto(`/elan-yerlesdir/${fixture.id}`);
     await page.getByTestId("pay-button").click();
     await page.waitForURL(/dev-kapital\/hpp/);
-    await page.getByTestId("fake-hpp-decline").click();
-    await page.waitForURL(/odenis\/kapital\/netice/);
+    const info = await paymentInfoForListing(fixture.id);
+    await failListingCheckout(fixture.id);
+    await page.goto(`/odenis/kapital/netice?ID=${info.providerOrderId}&STATUS=Declined`);
     await expect(page.getByTestId("payment-result")).toHaveAttribute("data-state", "RETRYABLE");
     await shootBothWidths(page, "payment-failed", page.url());
   });

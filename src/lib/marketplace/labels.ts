@@ -176,6 +176,8 @@ export const SELLER = {
   payCheckingTitle: "Ödəniş yoxlanılır",
   payUnknownTitle: "Ödəniş məlumatı tapılmadı",
   payUnknownHint: "Bu ödəniş bu hesabla əlaqələndirilməyib və ya keçid düzgün deyil.",
+  payGenericTitle: "Ödəniş statusu yoxlanıldı",
+  payGenericHint: "Hesabınıza daxil olaraq elanınızın vəziyyətinə baxa bilərsiniz.",
   payCheckFailedTitle: "Ödəniş yoxlanıla bilmədi",
   payCheckFailedHint: "Bank ilə əlaqə müvəqqəti mümkün olmadı. Ödəniş vəziyyətiniz dəyişməyib.",
   quotaFreeRemaining: "Pulsuz elan haqqınız:",

@@ -65,19 +65,26 @@ Currency must equal the intent's `AZN` exactly.
 
 ## Status mapping
 
-| Kapital status | Source | Attempt | Internal payment |
-| --- | --- | --- | --- |
-| `Preparing` | official docs | active | `PENDING` |
-| `FullyPaid` | official docs | terminal, succeeded | `SUCCESS` + fulfillment (only after exact amount+currency match) |
-| `Refunded` | official docs | terminal | `REFUNDED` (never fulfills) |
-| `Cancelled` | wrapper-observed contract¹ | terminal | back to `CREATED` (retry available) |
-| `Declined` | wrapper-observed contract¹ | terminal | back to `CREATED` |
-| `Expired` | wrapper-observed contract¹ | terminal | back to `CREATED` |
-| anything else | — | recorded, stays active | unchanged (`PENDING`); logged `unknown_provider_status`; reconciliation retries — **never SUCCESS** |
+**OFFICIALLY DOCUMENTED / DIRECTLY OBSERVED** (the only statuses that
+carry mapped semantics): `Order_SMS`, Basic Auth, the `ID`/`STATUS`
+callback pattern, the warning that callback STATUS may be temporary,
+`GET /order/{ID}` as verification authority, and the statuses
+`Preparing`, `FullyPaid`, `Refunded`.
 
-¹ Confirmed by maintained open-source clients of this API; the
-official SPA docs could not be machine-read (see Ambiguities). To be
-re-confirmed against the owner's documentation access.
+| Kapital status | Evidence | Attempt | Internal payment |
+| --- | --- | --- | --- |
+| `Preparing` | official | active | `PENDING` |
+| `FullyPaid` | official | terminal, succeeded | `SUCCESS` + fulfillment (only after exact amount+currency match) |
+| `Refunded` | official | terminal | `REFUNDED` (never fulfills) |
+| **everything else** — incl. `Cancelled`, `Declined`, `Expired` | **UNCONFIRMED** | recorded, stays active (non-terminal) | unchanged `PENDING` — never SUCCESS, never fulfilled, **no automatic re-arm**; `unknown_provider_status` observability; held for reconciliation/operations |
+
+`Cancelled`/`Declined`/`Expired` appear only in third-party wrappers,
+which are NOT authoritative provider contract; terminal semantics are
+deliberately NOT inferred from their English names. If a captured
+Kapital sandbox response later proves an exact status and its
+semantics, the evidence must be documented here before any mapping is
+added. Regression tests pin the UNKNOWN behavior for all three plus a
+synthetic `SomethingNew`.
 
 `FullyPaid` with an amount or currency mismatch does **not** fulfill:
 the attempt stays open, an `amount_currency_mismatch` operations
@@ -93,19 +100,40 @@ amount — checkout always charges the snapshot, immune to later
 re-tested here). `payment_provider_attempts` (additive migration 017)
 records every provider checkout: `UNIQUE (provider,
 provider_order_id)` plus a **partial unique index allowing one
-non-terminal attempt per payment** — the database-level guarantee
-that double clicks / concurrent requests cannot mint two
-authoritative checkouts (the loser's provider order becomes a
-harmless unpaid orphan that expires). `hpp_secret` (the order
+non-terminal attempt per payment** — the database-level initiation
+claim (next section) that guarantees concurrent requests cannot even
+CALL the provider twice, let alone mint two authoritative checkouts.
+`hpp_secret` (the order
 password needed to reopen the HPP) lives only in this table and is
 cleared the moment an attempt terminalizes; it never appears in DTOs
 or logs — the UI receives one opaque `checkout_url`.
 
+## Checkout initiation claim (no orphan orders)
+
+A durable DB claim precedes every provider call: an INITIATING
+attempt row (`provider_order_id IS NULL`) is inserted under the
+payment row lock, guarded by the one-active partial unique index —
+for N concurrent checkout requests exactly ONE obtains the claim and
+performs `POST /order` (regression: 10 simultaneous requests → 1
+provider call, 1 attempt); the rest wait briefly on the claim filling
+in (bounded 16×250 ms poll of the row, no locks held) and reuse the
+result. No transaction is held across the network call.
+
+**Ambiguous POST recovery:** a crash after claiming (or a NETWORK
+timeout where Kapital may or may not have created an order) leaves an
+INITIATING row whose age is the lease (120 s). The next checkout
+terminalizes it as `InitiationAbandoned`/`InitiationAmbiguous` —
+honest audit, never overwritten — and takes a fresh claim. Creating a
+fresh order is safe because any order the provider may have created
+in the ambiguous window is UNPAYABLE: its HPP password never left the
+failed request, so nobody can open its payment page and it can only
+expire unpaid. Definite create failures release the claim the same
+way (`InitiationFailed`) and surface `PAYMENT_CHECKOUT_UNAVAILABLE`.
+
 ## Idempotency / exactly-once
 
-- Checkout: active attempt → reused; provider create runs OUTSIDE any
-  DB transaction; persistence re-locks the payment and the partial
-  unique index arbitrates races.
+- Checkout: active attempt → reused; the initiation claim (above)
+  makes the provider side effect at-most-once under concurrency.
 - Verification: `GET /order/{id}` runs outside the transaction; the
   transition runs under the payment row lock with a terminal-state
   short-circuit — repeated callbacks, refreshes, concurrent
@@ -115,9 +143,11 @@ or logs — the UI receives one opaque `checkout_url`.
 - Lock order inside payment flows: payments → listings. The submit
   path locks users → listings and only inserts payments, so the
   orders cannot deadlock.
-- Ambiguous create-order network outcome: the payment stays `CREATED`
-  with no attempt row; retry simply creates a fresh order (a possible
-  unpaid orphan on the provider side expires harmlessly).
+- Verification and fulfillment are SESSION-INDEPENDENT: the callback
+  route runs them for any structurally valid order id that maps to
+  one of our attempts, whether or not an AVTOSH session exists — an
+  expired session can never block a legitimate FullyPaid fulfillment.
+  The session only controls result-page personalization (below).
 
 ## Fulfillment
 
@@ -132,12 +162,15 @@ call this same function.
 
 ## Retry & recovery
 
-Terminal non-success attempt → payment returns to `CREATED`; the
-PAYMENT_REQUIRED screen offers "Ödəniş et" again and a fresh provider
-order is created; previous attempts remain as append-only audit. A
-failed VERIFICATION network call changes nothing (`CHECK_FAILED` →
-"Ödəniş yoxlanıla bilmədi" + "Yenidən yoxla"). A browser leaving the
-HPP changes nothing — only provider-confirmed states move state.
+Only initiation failures release the claim and re-offer "Ödəniş et".
+Unconfirmed provider statuses do NOT auto-re-arm the intent — the
+payment stays `PENDING` with its attempt open until reconciliation/
+operations resolve it (a future confirmed terminal mapping, or an
+operations action that terminalizes the attempt and returns the
+intent to `CREATED`). A failed VERIFICATION network call changes
+nothing (`CHECK_FAILED` → "Ödəniş yoxlanıla bilmədi" + "Yenidən
+yoxla"). A browser leaving the HPP changes nothing — only
+provider-confirmed states move state.
 
 ## Reconciliation
 
@@ -156,8 +189,14 @@ then it is service-invocable and integration-tested.
   charged) / tamamlanmadı (+ retry) / yoxlanıla bilmədi (+ yenidən
   yoxla) / generic "tapılmadı" for unknown or foreign order ids (no
   existence disclosure, no provider probing).
-- Session expired during payment → login with `return_to` back to the
-  result URL.
+- **Result-page privacy:** only a session belonging to the payment
+  owner sees the personalized outcome. Anonymous viewers, foreign
+  sessions, unknown ids and malformed ids all receive ONE
+  indistinguishable generic view ("Ödəniş statusu yoxlanıldı…" with a
+  login link back to the result URL) — the callback can never be used
+  to enumerate order ids, and it exposes no seller identity, listing
+  data, amounts, payment/listing UUIDs, or provider internals to
+  non-owners. Unknown ids trigger no provider call.
 
 ## Local fake provider & tests
 

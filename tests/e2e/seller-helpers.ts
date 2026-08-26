@@ -240,3 +240,41 @@ export async function paymentInfoForListing(listingId: string): Promise<ListingP
     await sql.end();
   }
 }
+
+/** Kills every AVTOSH session of a user (expired-cookie scenarios). */
+export async function clearUserSessions(userId: string): Promise<void> {
+  const sql = db();
+  try {
+    await sql`delete from sessions where user_id = ${userId}`;
+  } finally {
+    await sql.end();
+  }
+}
+
+/**
+ * Ops-style fixture: marks the listing's active checkout attempt as
+ * terminally failed and re-arms the intent (what a future operations
+ * resolution of a failed provider attempt would do), so the RETRYABLE
+ * result view and the fresh-checkout path can be exercised.
+ */
+export async function failListingCheckout(listingId: string): Promise<void> {
+  const sql = db();
+  try {
+    await sql`
+      update payment_provider_attempts a
+      set is_terminal = true, succeeded = false, hpp_secret = null,
+          provider_status = 'InitiationFailed', updated_at = now()
+      from listing_publications pub
+      where pub.payment_id = a.payment_id and pub.listing_id = ${listingId}
+        and not a.is_terminal
+    `;
+    await sql`
+      update payments p
+      set status = 'CREATED'
+      from listing_publications pub
+      where pub.payment_id = p.id and pub.listing_id = ${listingId}
+    `;
+  } finally {
+    await sql.end();
+  }
+}

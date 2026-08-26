@@ -5,11 +5,12 @@ import { minorToMajorString } from "@/lib/payments/money";
 import { logPaymentEvent } from "@/lib/payments/log";
 import { getSql, withTransaction } from "@/lib/server/db/client";
 import {
+  claimInitiation,
+  completeInitiation,
   findActiveAttempt,
   findAttemptByProviderOrder,
   findListingFeePayment,
   getPaymentSummary,
-  insertAttempt,
   insertSystemStatusHistory,
   lockPayment,
   listStalePendingPayments,
@@ -17,9 +18,9 @@ import {
   markPaymentRefunded,
   markPaymentSucceeded,
   recordAttemptStatus,
-  resetPaymentToCreated,
   terminalizeAttempt,
   transitionListingPaymentCompleted,
+  type AttemptRow,
 } from "@/repositories/payment-checkout";
 import { insertOutboxEvent } from "@/repositories/listing-publications";
 import { buildHppRedirect } from "@/providers/payments/kapital-provider";
@@ -39,18 +40,61 @@ import {
  * only. The ONLY path to SUCCESS/fulfillment is an authenticated
  * server-to-server Get Order Details whose status is FullyPaid AND
  * whose amount/currency exactly match the immutable intent snapshot.
- * Provider network calls always happen OUTSIDE database transactions;
- * every state move happens under the payment row lock, giving
- * exactly-once fulfillment across callbacks, refreshes, concurrent
- * requests and reconciliation.
+ * Verification and fulfillment are SESSION-INDEPENDENT — a paid order
+ * is fulfilled even when the seller's AVTOSH session is gone; the
+ * session only decides how much the RESULT PAGE may personalize.
+ *
+ * Provider network calls always happen OUTSIDE database transactions.
+ * Checkout initiation uses a durable DB claim (an INITIATING attempt
+ * row guarded by the one-active partial unique index) taken BEFORE
+ * the external POST /order, so N concurrent requests produce at most
+ * ONE provider createOrder side effect — no orphan provider orders.
  */
 
 const CHECKOUT_ELIGIBLE_STATUSES = ["CREATED", "PENDING"];
-/** Documented terminal non-success provider statuses (see docs note). */
-const RETRYABLE_PROVIDER_STATUSES = ["Cancelled", "Declined", "Expired"];
+
+/**
+ * Only statuses with direct official-contract evidence are mapped
+ * (Preparing / FullyPaid / Refunded). Everything else — including
+ * "Cancelled"/"Declined"/"Expired", whose terminal semantics are NOT
+ * confirmed by the official documentation — takes the UNKNOWN path:
+ * recorded, never SUCCESS, never fulfilled, no automatic re-arm,
+ * left pending for reconciliation/operations.
+ */
+
+/** How long an initiation claim may sit unfilled before recovery. */
+const INITIATION_LEASE_SECONDS = 120;
+/** Bounded wait for a concurrent initiation to finish (16 × 250ms). */
+const INITIATION_WAIT_POLLS = 16;
+const INITIATION_WAIT_INTERVAL_MS = 250;
+
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 export interface CheckoutResult {
   checkoutUrl: string;
+}
+
+function checkoutUnavailable(): ApiError {
+  return new ApiError(
+    "PAYMENT_CHECKOUT_UNAVAILABLE",
+    "Payment initiation is temporarily unavailable.",
+  );
+}
+
+function reuseUrl(attempt: AttemptRow): CheckoutResult | null {
+  if (attempt.provider_order_id !== null && attempt.hpp_url !== null && attempt.hpp_secret !== null) {
+    return {
+      checkoutUrl: buildHppRedirect(attempt.hpp_url, attempt.provider_order_id, attempt.hpp_secret),
+    };
+  }
+  return null;
+}
+
+function claimIsStale(attempt: AttemptRow): boolean {
+  return (
+    attempt.provider_order_id === null &&
+    Date.now() - attempt.created_at.getTime() > INITIATION_LEASE_SECONDS * 1000
+  );
 }
 
 export async function createListingFeeCheckout(
@@ -75,18 +119,70 @@ export async function createListingFeeCheckout(
     listing_id: context.listing_id,
   });
 
-  // Reuse the active checkout when one exists — refreshes and repeat
-  // clicks never mint new provider orders.
-  const active = await findActiveAttempt(sql, context.payment_id);
-  if (active !== undefined && active.hpp_secret !== null) {
-    return {
-      checkoutUrl: buildHppRedirect(active.hpp_url, active.provider_order_id, active.hpp_secret),
-    };
+  // Phase 1 — atomically obtain the initiation claim (or learn who has it).
+  const claim = await withTransaction(async (tx) => {
+    const payment = await lockPayment(tx, context.payment_id);
+    if (payment === undefined || !CHECKOUT_ELIGIBLE_STATUSES.includes(payment.status)) {
+      throw new ApiError("PAYMENT_NOT_REQUIRED", "The listing has no payable fee right now.");
+    }
+    const active = await findActiveAttempt(tx, payment.id);
+    if (active !== undefined) {
+      const reusable = reuseUrl(active);
+      if (reusable !== null) {
+        return { kind: "reuse" as const, result: reusable };
+      }
+      if (claimIsStale(active)) {
+        // Recovery: the claim never got an order persisted (crash or
+        // ambiguous POST). Any order Kapital MIGHT have created is
+        // unpayable — its password never left this process — so it can
+        // only expire unpaid. Record the ambiguity honestly, then take
+        // a fresh claim.
+        await terminalizeAttempt(tx, active.id, {
+          providerStatus: "InitiationAbandoned",
+          succeeded: false,
+        });
+        logPaymentEvent("provider_order_orphaned", {
+          payment_id: payment.id,
+          reason: "initiation_lease_expired",
+        });
+        const fresh = await claimInitiation(tx, payment.id, PAYMENT_PROVIDER_CODE);
+        if (fresh === null) {
+          return { kind: "wait" as const };
+        }
+        return { kind: "create" as const, attemptId: fresh.id, payment };
+      }
+      // someone else is initiating right now — wait for their result
+      return { kind: "wait" as const };
+    }
+    const fresh = await claimInitiation(tx, payment.id, PAYMENT_PROVIDER_CODE);
+    if (fresh === null) {
+      return { kind: "wait" as const };
+    }
+    return { kind: "create" as const, attemptId: fresh.id, payment };
+  });
+
+  if (claim.kind === "reuse") {
+    return claim.result;
   }
 
-  // Provider order creation: OUTSIDE any transaction or row lock. The
-  // amount is the immutable intent snapshot — never a current setting,
-  // never browser input.
+  if (claim.kind === "wait") {
+    // Bounded wait on the real signal (the claim row filling in) —
+    // this request NEVER calls the provider.
+    for (let poll = 0; poll < INITIATION_WAIT_POLLS; poll += 1) {
+      await delay(INITIATION_WAIT_INTERVAL_MS);
+      const attempt = await findActiveAttempt(sql, context.payment_id);
+      if (attempt === undefined) {
+        break; // initiator failed and released — client may retry
+      }
+      const reusable = reuseUrl(attempt);
+      if (reusable !== null) {
+        return reusable;
+      }
+    }
+    throw checkoutUnavailable();
+  }
+
+  // Phase 2 — this request owns the claim: ONE provider call, no locks held.
   let order;
   try {
     order = await getPaymentProvider().createOrder({
@@ -97,54 +193,36 @@ export async function createListingFeeCheckout(
       redirectUrl: `${appOrigin()}/odenis/kapital/netice`,
     });
   } catch (error) {
+    const kind = error instanceof PaymentProviderError ? error.kind : "UNKNOWN";
+    // Release the claim with an honest terminal marker. NETWORK
+    // outcomes are ambiguous — Kapital may have created an order —
+    // but that order is unpayable (its password was never received),
+    // so it can only expire; a fresh user-initiated attempt is safe.
+    await withTransaction(async (tx) => {
+      await terminalizeAttempt(tx, claim.attemptId, {
+        providerStatus: kind === "NETWORK" ? "InitiationAmbiguous" : "InitiationFailed",
+        succeeded: false,
+      });
+    });
     logPaymentEvent("checkout_initiation_failed", {
       payment_id: context.payment_id,
-      kind: error instanceof PaymentProviderError ? error.kind : "UNKNOWN",
+      kind,
     });
-    throw new ApiError(
-      "PAYMENT_CHECKOUT_UNAVAILABLE",
-      "Payment initiation is temporarily unavailable.",
-    );
+    throw checkoutUnavailable();
   }
 
+  // Phase 3 — persist the created order into the claim.
   return withTransaction(async (tx) => {
-    const payment = await lockPayment(tx, context.payment_id);
-    if (payment === undefined || !CHECKOUT_ELIGIBLE_STATUSES.includes(payment.status)) {
-      // verified/paid meanwhile — the fresh provider order is an orphan
-      logPaymentEvent("provider_order_orphaned", {
-        payment_id: context.payment_id,
-        provider_order_id: order.providerOrderId,
-        reason: "payment_no_longer_eligible",
-      });
-      throw new ApiError("PAYMENT_NOT_REQUIRED", "The listing has no payable fee right now.");
-    }
-    const inserted = await insertAttempt(tx, {
-      paymentId: payment.id,
-      provider: PAYMENT_PROVIDER_CODE,
+    await lockPayment(tx, context.payment_id);
+    await completeInitiation(tx, claim.attemptId, {
       providerOrderId: order.providerOrderId,
       hppUrl: order.hppUrl,
       hppSecret: order.hppSecret,
       providerStatus: order.status,
     });
-    if (inserted === null) {
-      // a concurrent request won the one-active-attempt race — reuse
-      // the winner; our provider order becomes a harmless unpaid orphan
-      logPaymentEvent("provider_order_orphaned", {
-        payment_id: payment.id,
-        provider_order_id: order.providerOrderId,
-        reason: "concurrent_checkout",
-      });
-      const winner = await findActiveAttempt(tx, payment.id);
-      if (winner !== undefined && winner.hpp_secret !== null) {
-        return {
-          checkoutUrl: buildHppRedirect(winner.hpp_url, winner.provider_order_id, winner.hpp_secret),
-        };
-      }
-      throw new ApiError("PAYMENT_CHECKOUT_UNAVAILABLE", "Payment initiation is temporarily unavailable.");
-    }
-    await markPaymentPending(tx, payment.id, PAYMENT_PROVIDER_CODE, order.providerOrderId);
+    await markPaymentPending(tx, context.payment_id, PAYMENT_PROVIDER_CODE, order.providerOrderId);
     logPaymentEvent("provider_order_created", {
-      payment_id: payment.id,
+      payment_id: context.payment_id,
       provider_order_id: order.providerOrderId,
       provider_status: order.status,
     });
@@ -180,7 +258,7 @@ function outcomeFromPaymentStatus(status: string, listingPublicId: string | null
  * The single verification + fulfillment path used by the callback
  * page, "Yenidən yoxla", and reconciliation. Idempotent: repeated
  * calls for a FullyPaid order settle into the same terminal state
- * with exactly one fulfillment.
+ * with exactly one fulfillment. Requires NO AVTOSH session.
  */
 export async function verifyProviderPayment(paymentId: string): Promise<VerificationOutcome> {
   const sql = getSql();
@@ -191,6 +269,9 @@ export async function verifyProviderPayment(paymentId: string): Promise<Verifica
   const attempt = await findActiveAttempt(sql, paymentId);
   if (attempt === undefined) {
     return outcomeFromPaymentStatus(summary.status, summary.listing_public_id);
+  }
+  if (attempt.provider_order_id === null) {
+    return { state: "PENDING" }; // initiation still in progress
   }
 
   logPaymentEvent("verification_requested", {
@@ -286,15 +367,6 @@ export async function verifyProviderPayment(paymentId: string): Promise<Verifica
       return { state: "PENDING" as const };
     }
 
-    if (RETRYABLE_PROVIDER_STATUSES.includes(details.status)) {
-      await terminalizeAttempt(tx, lockedAttempt.id, {
-        providerStatus: details.status,
-        succeeded: false,
-      });
-      await resetPaymentToCreated(tx, paymentId);
-      return { state: "RETRYABLE" as const };
-    }
-
     if (details.status === "Refunded") {
       await terminalizeAttempt(tx, lockedAttempt.id, {
         providerStatus: details.status,
@@ -304,7 +376,10 @@ export async function verifyProviderPayment(paymentId: string): Promise<Verifica
       return { state: "REFUNDED" as const };
     }
 
-    // Unknown provider status: never SUCCESS — record and reconcile later.
+    // UNKNOWN path — includes "Cancelled"/"Declined"/"Expired", whose
+    // terminal semantics are not confirmed by the official contract:
+    // record, never SUCCESS, never fulfill, no automatic re-arm; the
+    // payment stays PENDING for reconciliation/operations.
     await recordAttemptStatus(tx, lockedAttempt.id, details.status);
     logPaymentEvent("unknown_provider_status", {
       payment_id: paymentId,
@@ -354,39 +429,48 @@ async function fulfillListingFee(
   logPaymentEvent("fulfillment_completed", { payment_id: paymentId, listing_id: listingId });
 }
 
-export interface CallbackVerification {
-  outcome: VerificationOutcome | { state: "UNKNOWN_ORDER" };
-  listingId: string | null;
-}
+export type CallbackView =
+  | { view: "OWNER"; outcome: VerificationOutcome; listingId: string | null }
+  | { view: "GENERIC" };
 
 /**
- * Callback-side verification. The provider order id comes from an
- * untrusted query string: it is sanitized, mapped to OUR attempt
- * records (no provider call for unknown ids — this route is never a
- * probing oracle), and the mapped payment must belong to the session
- * user. Callback STATUS is never read.
+ * Callback handling with PROCESSING separated from PERSONALIZATION.
+ *
+ * Processing (verification + fulfillment) runs for every structurally
+ * valid provider order id that maps to one of OUR attempts —
+ * regardless of session state. A paid seller whose AVTOSH session
+ * expired still gets fulfilled.
+ *
+ * Personalization: only a session belonging to the payment owner sees
+ * the real outcome. Everyone else — anonymous, foreign session,
+ * unknown id, malformed id — receives the SAME generic view, so the
+ * callback can never be used to enumerate order ids or learn whether
+ * an arbitrary id belongs to an AVTOSH user. Unknown ids trigger no
+ * provider call (never a probing oracle).
  */
-export async function verifyKapitalReturn(
-  auth: AuthContext,
+export async function handleKapitalCallback(
+  auth: AuthContext | null,
   providerOrderIdRaw: string | undefined,
-): Promise<CallbackVerification> {
+): Promise<CallbackView> {
   const providerOrderId = (providerOrderIdRaw ?? "").trim();
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(providerOrderId)) {
-    return { outcome: { state: "UNKNOWN_ORDER" }, listingId: null };
+    return { view: "GENERIC" };
   }
   const sql = getSql();
   const attempt = await findAttemptByProviderOrder(sql, PAYMENT_PROVIDER_CODE, providerOrderId);
   if (attempt === undefined) {
-    return { outcome: { state: "UNKNOWN_ORDER" }, listingId: null };
+    return { view: "GENERIC" };
+  }
+  // Session-independent authority: verify + fulfill idempotently.
+  const outcome = await verifyProviderPayment(attempt.payment_id);
+  if (auth === null) {
+    return { view: "GENERIC" };
   }
   const summary = await getPaymentSummary(sql, attempt.payment_id);
   if (summary === undefined || summary.user_id !== auth.user.id) {
-    // foreign/unmapped orders get the same generic answer — no
-    // existence disclosure, no cross-user data
-    return { outcome: { state: "UNKNOWN_ORDER" }, listingId: null };
+    return { view: "GENERIC" };
   }
-  const outcome = await verifyProviderPayment(attempt.payment_id);
-  return { outcome, listingId: summary.listing_id };
+  return { view: "OWNER", outcome, listingId: summary.listing_id };
 }
 
 export interface ReconciliationSummary {

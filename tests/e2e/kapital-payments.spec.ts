@@ -2,7 +2,13 @@ import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { loginAs, testPhone } from "./auth-helpers";
-import { insertListingFixture, listingStatus, paymentInfoForListing } from "./seller-helpers";
+import {
+  clearUserSessions,
+  failListingCheckout,
+  insertListingFixture,
+  listingStatus,
+  paymentInfoForListing,
+} from "./seller-helpers";
 
 /**
  * Kapital Bank checkout against the dev fake provider. The REAL
@@ -117,14 +123,28 @@ test("leaving the HPP keeps a safe pending state and checkout is reused on retur
   expect(after.activeAttempts).toBe(1);
 });
 
-test("declined payment shows retry and a fresh checkout succeeds", async ({ page }, { project }) => {
+test("a Declined provider status is UNCONFIRMED: stays pending, never fulfills, no re-arm", async ({ page }, { project }) => {
   const { fixture } = await paymentRequiredFixture(page, project.name, 65);
   await startCheckout(page);
-  const firstOrder = (await paymentInfoForListing(fixture.id)).providerOrderId;
   await page.getByTestId("fake-hpp-decline").click();
   await page.waitForURL(/\/odenis\/kapital\/netice\?/);
+  // Declined has no official terminal evidence → UNKNOWN path: the
+  // owner sees the safe "not confirmed" view and nothing moves.
+  await expect(page.getByTestId("payment-result")).toHaveAttribute("data-state", "PENDING");
+  const info = await paymentInfoForListing(fixture.id);
+  expect(info.paymentStatus).toBe("PENDING"); // not re-armed, not failed
+  expect(info.activeAttempts).toBe(1); // held for reconciliation
+  expect(info.moderationOutbox).toBe(0);
+  expect(await listingStatus(fixture.id)).toBe("PAYMENT_REQUIRED");
+});
+
+test("ops-failed attempt shows retry and a fresh checkout succeeds", async ({ page }, { project }) => {
+  const { fixture } = await paymentRequiredFixture(page, project.name, 69);
+  await startCheckout(page);
+  const firstOrder = (await paymentInfoForListing(fixture.id)).providerOrderId;
+  await failListingCheckout(fixture.id); // operations resolves the attempt as failed
+  await page.goto(`/odenis/kapital/netice?ID=${firstOrder}&STATUS=Declined`);
   await expect(page.getByTestId("payment-result")).toHaveAttribute("data-state", "RETRYABLE");
-  expect((await paymentInfoForListing(fixture.id)).paymentStatus).toBe("CREATED");
   await page.getByTestId("payment-retry").click();
   await expect(page.getByTestId("wizard-status-payment")).toBeVisible();
   await startCheckout(page);
@@ -133,6 +153,38 @@ test("declined payment shows retry and a fresh checkout succeeds", async ({ page
   await page.waitForURL(/\/odenis\/kapital\/netice\?/);
   await expect(page.getByTestId("payment-result")).toHaveAttribute("data-state", "SUCCESS");
   expect(await listingStatus(fixture.id)).toBe("PENDING_MODERATION");
+});
+
+test("session-expired callback still fulfills a paid order, without disclosure", async ({ page }, { project }) => {
+  const { userId, fixture } = await paymentRequiredFixture(page, project.name, 70);
+  await startCheckout(page);
+  // the AVTOSH session dies while the buyer is on the provider's page
+  await clearUserSessions(userId);
+  await page.getByTestId("fake-hpp-pay").click();
+  await page.waitForURL(/\/odenis\/kapital\/netice\?/);
+  // anonymous viewer: generic page only — no listing/amount/identity
+  const result = page.getByTestId("payment-result");
+  await expect(result).toHaveAttribute("data-state", "GENERIC");
+  await expect(result).toContainText("Ödəniş statusu yoxlanıldı");
+  await expect(result).not.toContainText("AZN");
+  // ...but the payment WAS verified and fulfilled, session or not
+  expect(await listingStatus(fixture.id)).toBe("PENDING_MODERATION");
+  const info = await paymentInfoForListing(fixture.id);
+  expect(info.paymentStatus).toBe("SUCCESS");
+  // repeated anonymous callbacks: still exactly one fulfillment
+  for (let i = 0; i < 3; i += 1) {
+    await page.reload();
+    await expect(page.getByTestId("payment-result")).toHaveAttribute("data-state", "GENERIC");
+  }
+  const after = await paymentInfoForListing(fixture.id);
+  expect(after.moderationOutbox).toBe(1);
+  expect(after.historyRows).toBe(info.historyRows);
+  // logging back in shows the personalized state
+  await loginAs(page.context(), testPhone(project.name, 70));
+  await page.goto("/profil/elanlar");
+  await expect(
+    page.locator('[data-testid="owner-listing-card"][data-status="PENDING_MODERATION"]').first(),
+  ).toBeVisible();
 });
 
 test("provider verification outage shows a safe checking state and changes nothing", async ({ page }, { project }) => {
@@ -157,15 +209,24 @@ test("provider verification outage shows a safe checking state and changes nothi
   await expect(page.getByTestId("payment-result")).toHaveAttribute("data-state", "SUCCESS");
 });
 
-test("a foreign or unknown order id gets one generic answer", async ({ page, context }, { project }) => {
+test("foreign sessions and unknown ids get one indistinguishable generic answer", async ({ page, context }, { project }) => {
   const victim = await paymentRequiredFixture(page, project.name, 67);
   await startCheckout(page);
   const info = await paymentInfoForListing(victim.fixture.id);
   await context.clearCookies();
   await loginAs(context, testPhone(project.name, 68));
-  await page.goto(`/odenis/kapital/netice?ID=${info.providerOrderId}&STATUS=FullyPaid`);
-  await expect(page.getByTestId("payment-result")).toHaveAttribute("data-state", "UNKNOWN_ORDER");
-  await page.goto(`/odenis/kapital/netice?ID=nonexistent-123&STATUS=FullyPaid`);
-  await expect(page.getByTestId("payment-result")).toHaveAttribute("data-state", "UNKNOWN_ORDER");
+  // real foreign order id and a nonexistent id: identical generic view
+  for (const id of [info.providerOrderId, "nonexistent-123"]) {
+    await page.goto(`/odenis/kapital/netice?ID=${id}&STATUS=FullyPaid`);
+    const result = page.getByTestId("payment-result");
+    await expect(result).toHaveAttribute("data-state", "GENERIC");
+    await expect(result).not.toContainText("AZN");
+  }
+  // anonymous with both ids: same view again
+  await context.clearCookies();
+  for (const id of [info.providerOrderId, "nonexistent-123"]) {
+    await page.goto(`/odenis/kapital/netice?ID=${id}&STATUS=FullyPaid`);
+    await expect(page.getByTestId("payment-result")).toHaveAttribute("data-state", "GENERIC");
+  }
   expect((await paymentInfoForListing(victim.fixture.id)).paymentStatus).toBe("PENDING");
 });
