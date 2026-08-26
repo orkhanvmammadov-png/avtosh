@@ -19,7 +19,10 @@ export function logPaymentEvent(
     | "verification_failed"
     | "amount_currency_mismatch"
     | "unknown_provider_status"
-    | "checkout_initiation_failed",
+    | "checkout_initiation_failed"
+    | "promotion_purchase_created"
+    | "promotion_activated"
+    | "promotion_extended",
   fields: Record<string, SafeValue>,
 ): void {
   console.info(JSON.stringify({ evt: `payment.${event}`, ...fields }));

@@ -82,8 +82,8 @@ async function insertListing(spec: Spec) {
 async function promote(listingId: string, type: "BOOST" | "PREMIUM", startOffsetMin: number, endOffsetMin: number, status = "ACTIVE") {
   const sql = getSql();
   const [pay] = await sql<{ id: string }[]>`
-    insert into payments (user_id, listing_id, type, amount_minor, idempotency_key, status)
-    values (${ownerId}, ${listingId}, ${type}::payment_type, 0, ${`promo:${listingId}:${type}:${startOffsetMin}:${endOffsetMin}`}, 'CREATED')
+    insert into payments (user_id, listing_id, type, amount_minor, idempotency_key, status, provider)
+    values (${ownerId}, ${listingId}, ${type}::payment_type, 0, ${`promo:${listingId}:${type}:${startOffsetMin}:${endOffsetMin}`}, 'SUCCESS', 'KAPITAL')
     returning id
   `;
   await sql`

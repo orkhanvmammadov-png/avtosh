@@ -26,6 +26,8 @@ export interface OwnerCardRow {
   submitted_at: Date | null;
   published_at: Date | null;
   current_expires_at: Date | null;
+  premium_until: Date | null;
+  boost_until: Date | null;
   review_decision: string | null;
   review_reason_code: string | null;
   review_note: string | null;
@@ -47,6 +49,12 @@ export async function listOwnerListings(
       (select li.storage_path from listing_images li
         where li.listing_id = l.id and li.is_primary limit 1) as primary_image_path,
       l.created_at, l.updated_at, l.submitted_at, l.published_at, l.current_expires_at,
+      (select max(lp.ends_at) from listing_promotions lp
+        where lp.listing_id = l.id and lp.type = 'PREMIUM'
+          and lp.status in ('SCHEDULED','ACTIVE') and lp.ends_at > now()) as premium_until,
+      (select max(lp.ends_at) from listing_promotions lp
+        where lp.listing_id = l.id and lp.type = 'BOOST'
+          and lp.status in ('SCHEDULED','ACTIVE') and lp.ends_at > now()) as boost_until,
       r.decision as review_decision, r.reason_code as review_reason_code,
       r.note as review_note, r.reviewed_at as review_reviewed_at
     from listings l

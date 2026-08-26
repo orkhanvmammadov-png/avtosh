@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatMileage, formatPriceMinor, vehicleTitle } from "@/lib/format";
+import { formatDateAz, formatMileage, formatPriceMinor, vehicleTitle } from "@/lib/format";
 import { SELLER } from "@/lib/marketplace/labels";
 import { REASON_LABELS, statusPresentation } from "@/lib/seller/status";
 import type { OwnerCardDto } from "@/services/my-listings";
@@ -53,6 +53,20 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
           {formatMileage(listing.mileage)}
           {listing.city !== null ? ` · ${listing.city}` : ""}
         </p>
+        {listing.premiumUntil !== null || listing.boostUntil !== null ? (
+          <p className="mt-1 text-xs font-medium text-navy" data-testid="owner-promotions">
+            {listing.premiumUntil !== null ? (
+              <span className="mr-3 text-amber-700" data-testid="owner-premium-until">
+                {SELLER.premiumActive} — {formatDateAz(listing.premiumUntil)} {SELLER.promotionUntil}
+              </span>
+            ) : null}
+            {listing.boostUntil !== null ? (
+              <span className="text-primary" data-testid="owner-boost-until">
+                {SELLER.boostActive} — {formatDateAz(listing.boostUntil)} {SELLER.promotionUntil}
+              </span>
+            ) : null}
+          </p>
+        ) : null}
         {listing.moderationFeedback !== null ? (
           <p className="mt-1 text-xs text-navy" data-testid="owner-feedback">
             <span className="font-semibold">{SELLER.moderationFeedback}: </span>
@@ -64,14 +78,23 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
         ) : null}
       </div>
       {href !== null && presentation.action.kind !== "none" ? (
-        <div className="flex shrink-0 items-center">
+        <div className="flex shrink-0 flex-col items-stretch justify-center gap-2">
           <Link
             href={href}
-            className="inline-flex min-h-12 items-center rounded-lg border border-line px-3 text-sm font-semibold text-primary hover:bg-surface"
+            className="inline-flex min-h-12 items-center justify-center rounded-lg border border-line px-3 text-sm font-semibold text-primary hover:bg-surface"
             data-testid="owner-action"
           >
             {presentation.action.label}
           </Link>
+          {listing.status === "ACTIVE" ? (
+            <Link
+              href={`/profil/elanlar/${listing.id}/tesviq`}
+              className="inline-flex min-h-12 items-center justify-center rounded-lg bg-primary px-3 text-sm font-semibold text-white hover:bg-primary-hover"
+              data-testid="owner-promote"
+            >
+              {SELLER.promote}
+            </Link>
+          ) : null}
         </div>
       ) : null}
     </article>

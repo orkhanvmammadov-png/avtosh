@@ -52,6 +52,8 @@ export interface LockedPaymentRow {
   currency: string;
   status: string;
   provider: string | null;
+  promotion_package_id: string | null;
+  package_duration_days: number | null;
 }
 
 export async function lockPayment(
@@ -60,7 +62,8 @@ export async function lockPayment(
 ): Promise<LockedPaymentRow | undefined> {
   const rows = await sql<LockedPaymentRow[]>`
     select id, user_id, listing_id, type::text as type,
-           amount_minor::text as amount_minor, currency, status::text as status, provider
+           amount_minor::text as amount_minor, currency, status::text as status, provider,
+           promotion_package_id, package_duration_days
     from payments where id = ${paymentId}
     for update
   `;
@@ -262,6 +265,7 @@ export async function listStalePendingPayments(
 export interface PaymentSummaryRow {
   id: string;
   user_id: string;
+  type: string;
   status: string;
   amount_minor: string;
   currency: string;
@@ -275,7 +279,7 @@ export async function getPaymentSummary(
   paymentId: string,
 ): Promise<PaymentSummaryRow | undefined> {
   const rows = await sql<PaymentSummaryRow[]>`
-    select p.id, p.user_id, p.status::text as status,
+    select p.id, p.user_id, p.type::text as type, p.status::text as status,
            p.amount_minor::text as amount_minor, p.currency,
            l.id as listing_id, l.public_id::text as listing_public_id,
            l.status::text as listing_status

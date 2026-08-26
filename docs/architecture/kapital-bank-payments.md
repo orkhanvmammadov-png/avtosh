@@ -1,8 +1,9 @@
 # AVTOSH.AZ — Kapital Bank Payment Integration (Phase 4.12)
 
 Date: 2026-08-26
-Status: implemented (LISTING_FEE checkout only; Boost/Premium/renewal
-purchases and refund workflows are later phases)
+Status: implemented (LISTING_FEE + PREMIUM/BOOST promotion checkouts
+share this foundation since Phase 4.13 — see promotion-purchases.md;
+renewal purchases and refund workflows are later phases)
 
 Provider contract: the official Kapital Bank e-commerce API
 (https://pg.kapitalbank.az/docs).
