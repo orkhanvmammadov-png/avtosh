@@ -281,6 +281,8 @@ export const STAFF = {
   decisionAlready: "Bu elan üzrə qərar artıq verilib.",
   refresh: "Yenilə",
   actionFailed: "Əməliyyat alınmadı. Yenidən cəhd edin.",
+  backToQueue: "Moderasiya növbəsinə qayıt",
+  viewCurrent: "Cari vəziyyətə bax",
   history: "Moderasiya tarixçəsi",
   historyEmpty: "Əvvəlki yoxlama yoxdur.",
   decisionApproved: "Təsdiqlənib",

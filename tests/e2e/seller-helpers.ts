@@ -371,3 +371,15 @@ export async function claimListingAs(listingId: string, moderatorUserId: string)
     await sql.end();
   }
 }
+
+export async function moderationReviewCount(listingId: string): Promise<number> {
+  const sql = db();
+  try {
+    const [row] = await sql`
+      select count(*)::int as n from moderation_reviews where listing_id = ${listingId}
+    `;
+    return row.n as number;
+  } finally {
+    await sql.end();
+  }
+}

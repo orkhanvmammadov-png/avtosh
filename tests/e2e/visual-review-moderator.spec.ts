@@ -104,12 +104,14 @@ test.describe("moderator visual review artifacts", () => {
     await page.getByTestId("decision-submit").click();
     await expect(page.getByTestId("decision-conflict")).toBeVisible();
     await page.screenshot({ path: `${OUT}/moderator-stale-conflict-desktop-1440.png`, fullPage: false });
-    await page.getByTestId("conflict-refresh").click();
+    await Promise.all([page.waitForLoadState("load"), page.getByTestId("conflict-refresh").click()]);
+    await expect(page.getByTestId("claim-state")).toHaveAttribute("data-claim", "mine");
     // complete a correction so history has an entry
     await page.getByTestId("action-correction").click();
     await page.getByTestId("decision-note").fill("Şəkilləri yeniləyin.");
     await page.getByTestId("decision-submit").click();
     await expect(page.getByTestId("decision-done")).toBeVisible();
+    await page.screenshot({ path: `${OUT}/moderator-decision-success-desktop-1440.png`, fullPage: false });
     await shootBothWidths(page, "moderator-history", `/moderator/elanlar/${reviewListingId}`);
     // suspension of an ACTIVE listing
     await page.setViewportSize({ width: 1440, height: 900 });

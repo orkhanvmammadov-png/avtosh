@@ -8,6 +8,7 @@ import {
   insertListingFixture,
   listingPeriodCount,
   listingStatus,
+  moderationReviewCount,
 } from "./seller-helpers";
 
 /**
@@ -18,6 +19,17 @@ import {
 
 async function moderatorLogin(page: Page, project: string, slot: number) {
   return loginAs(page.context(), testPhone(project, slot), { roles: ["MODERATOR"] });
+}
+
+/** Submits the open confirmation and returns the decision API status. */
+async function submitDecision(page: Page, endpoint: string): Promise<number> {
+  const [response] = await Promise.all([
+    page.waitForResponse(
+      (r) => r.request().method() === "POST" && r.url().includes(`/moderator/listings/`) && r.url().endsWith(`/${endpoint}`),
+    ),
+    page.getByTestId("decision-submit").click(),
+  ]);
+  return response.status();
 }
 
 async function pendingFixture(project: string, slot: number, options: { images?: number } = {}) {
@@ -105,10 +117,13 @@ test("approve round-trip: claim → confirm → ACTIVE with exactly one period, 
   await expect(page.getByTestId("claim-state")).toHaveAttribute("data-claim", "mine");
   await page.getByTestId("action-approve").click();
   await expect(page.getByTestId("decision-confirm")).toBeVisible(); // deliberate two-step
-  await page.getByTestId("decision-submit").click();
+  expect(await submitDecision(page, "approve")).toBe(200);
+  // durable success panel with explicit next actions — no auto-refresh
   await expect(page.getByTestId("decision-done")).toContainText("təsdiqləndi");
+  await expect(page.getByTestId("done-back-to-queue")).toBeVisible();
   expect(await listingStatus(fixture.id)).toBe("ACTIVE");
   expect(await listingPeriodCount(fixture.id)).toBe(1); // backend-created initial period
+  expect(await moderationReviewCount(fixture.id)).toBe(1); // exactly one review
   // public page is live — the backend computed validity, not the UI
   await page.goto(`/elan/${fixture.publicId}`);
   await expect(page.getByTestId("listing-detail")).toBeVisible();
@@ -124,9 +139,10 @@ test("correction round-trip: seller-safe note reaches the seller, escaped as pla
   await page.getByTestId("decision-reason").selectOption("INVALID_PHOTOS");
   const hostileNote = "Şəkilləri dəyişin <script>alert(1)</script>";
   await page.getByTestId("decision-note").fill(hostileNote);
-  await page.getByTestId("decision-submit").click();
+  expect(await submitDecision(page, "request-correction")).toBe(200);
   await expect(page.getByTestId("decision-done")).toContainText("Düzəliş tələbi");
   expect(await listingStatus(fixture.id)).toBe("CORRECTION_REQUIRED");
+  expect(await moderationReviewCount(fixture.id)).toBe(1);
   // the SELLER now sees the accepted Phase 4.11 projection — nothing more
   await context.clearCookies();
   await loginAs(context, testPhone(project.name, sellerSlot));
@@ -149,10 +165,12 @@ test("reject requires a reason and lands in history", async ({ page }, { project
   await page.getByTestId("claim-button").click();
   await page.getByTestId("action-reject").click();
   await page.getByTestId("decision-reason").selectOption("PROHIBITED_ITEM");
-  await page.getByTestId("decision-submit").click();
+  expect(await submitDecision(page, "reject")).toBe(200);
   await expect(page.getByTestId("decision-done")).toContainText("rədd edildi");
   expect(await listingStatus(fixture.id)).toBe("REJECTED");
-  await page.goto(`/moderator/elanlar/${fixture.id}`);
+  expect(await moderationReviewCount(fixture.id)).toBe(1);
+  // the durable panel's own navigation shows the current state
+  await page.getByTestId("done-view-current").click();
   await expect(page.getByTestId("moderation-history")).toContainText("Rədd edilib");
   await expect(page.getByTestId("moderation-history")).toContainText("Qadağan olunmuş məhsul");
 });
@@ -212,17 +230,25 @@ test("stale revision: decision refused with explicit reload UX", async ({ page }
   await expect(page.getByTestId("claim-state")).toHaveAttribute("data-claim", "mine");
   await bumpListingRevision(fixture.id); // the listing changed under review
   await page.getByTestId("action-approve").click();
-  await page.getByTestId("decision-submit").click();
+  // the stale decision is refused by the SERVER, creating nothing
+  expect(await submitDecision(page, "approve")).toBe(409);
   const conflict = page.getByTestId("decision-conflict");
   await expect(conflict).toContainText("Elan dəyişdirilib. Son versiyanı yeniləyin.");
   expect(await listingStatus(fixture.id)).toBe("PENDING_MODERATION"); // nothing overwritten
-  await page.getByTestId("conflict-refresh").click();
-  await expect(page.getByTestId("claim-state")).toHaveAttribute("data-claim", "mine");
-  // the refreshed revision now approves cleanly
+  expect(await moderationReviewCount(fixture.id)).toBe(0); // no review from the stale request
+  // explicit recovery = full document reload → current server revision
+  await Promise.all([page.waitForLoadState("load"), page.getByTestId("conflict-refresh").click()]);
+  await expect(page.getByTestId("claim-state")).toHaveAttribute("data-claim", "mine"); // claim survived
   await page.getByTestId("action-approve").click();
-  await page.getByTestId("decision-submit").click();
-  await expect(page.getByTestId("decision-done")).toBeVisible();
+  expect(await submitDecision(page, "approve")).toBe(200);
+  // durable success — remains observable until the moderator moves on
+  await expect(page.getByTestId("decision-done")).toContainText("təsdiqləndi");
+  await expect(page.getByTestId("done-back-to-queue")).toBeVisible();
   expect(await listingStatus(fixture.id)).toBe("ACTIVE");
+  expect(await moderationReviewCount(fixture.id)).toBe(1); // exactly one review
+  expect(await listingPeriodCount(fixture.id)).toBe(1); // exactly one initial period
+  await page.getByTestId("done-view-current").click();
+  await expect(page.getByTestId("review-status")).toHaveText("ACTIVE");
 });
 
 test("suspension: ACTIVE listing hidden publicly with reasoned confirmation", async ({ page }, { project }) => {
@@ -233,8 +259,9 @@ test("suspension: ACTIVE listing hidden publicly with reasoned confirmation", as
   await expect(page.getByTestId("review-status")).toHaveText("ACTIVE");
   await page.getByTestId("action-suspend").click();
   await page.getByTestId("decision-reason").selectOption("MISLEADING_INFO");
-  await page.getByTestId("decision-submit").click();
+  expect(await submitDecision(page, "suspend")).toBe(200);
   await expect(page.getByTestId("decision-done")).toContainText("dayandırıldı");
+  await expect(page.getByTestId("done-back-to-queue")).toBeVisible();
   expect(await listingStatus(fixture.id)).toBe("SUSPENDED");
   const publicResponse = await page.goto(`/elan/${fixture.publicId}`);
   expect(publicResponse?.status()).toBe(404);

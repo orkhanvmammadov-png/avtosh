@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import Link from "next/link";
+import { useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { STAFF } from "@/lib/marketplace/labels";
 import { publicFetch, PublicApiError } from "@/lib/marketplace/public-api";
@@ -23,6 +23,12 @@ const ACTION_META: Record<ActionKind, { label: string; done: string; needsReason
  * renders the safe conflict states. Two-step confirmation prevents
  * accidental one-click final decisions.
  */
+const emptySubscribe = () => () => {};
+/** False during SSR/pre-hydration, true the moment React is live. */
+function useHydrated(): boolean {
+  return useSyncExternalStore(emptySubscribe, () => true, () => false);
+}
+
 export function ModerationActions({
   listingId,
   status,
@@ -38,7 +44,11 @@ export function ModerationActions({
   claimOther: boolean;
   claimExpiresAt: string | null;
 }) {
-  const router = useRouter();
+  // The portal recovers via FULL page reloads; a click on a freshly
+  // loaded page must never land before React's handlers exist.
+  // Buttons stay disabled until hydration — an honest state (a
+  // pre-hydration click would silently do nothing otherwise).
+  const hydrated = useHydrated();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [conflict, setConflict] = useState<"stale" | "decided" | "claim" | null>(null);
@@ -68,10 +78,14 @@ export function ModerationActions({
     setConflict(null);
     try {
       await publicFetch(`${base}/claim`, { method: "POST" });
-      router.refresh();
+      // Full document reload: the portal deliberately uses no
+      // router.refresh at all — an in-flight RSC refresh stream can
+      // race the moderator's next interaction on slow runners
+      // (swallowed clicks / stale-revision submissions). A document
+      // load renders every state fresh and leaves nothing in flight.
+      window.location.reload();
     } catch (error) {
       handleError(error);
-    } finally {
       setBusy(false);
     }
   }
@@ -91,9 +105,12 @@ export function ModerationActions({
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
+      // Durable success state: NO automatic refresh/navigation — the
+      // panel stays until the moderator explicitly moves on, so the
+      // outcome is always user-observable (an immediate RSC refresh
+      // here raced subsequent interactions and could strand the UI).
       setDone(ACTION_META[kind].done);
       setPendingAction(null);
-      router.refresh();
     } catch (error) {
       handleError(error);
     } finally {
@@ -105,6 +122,22 @@ export function ModerationActions({
     return (
       <div className="rounded-card border border-primary/30 bg-primary/5 p-4" role="status" data-testid="decision-done">
         <p className="font-semibold text-navy">{done}</p>
+        <div className="mt-4 flex flex-col gap-2">
+          <Link
+            href="/moderator/elanlar"
+            className="inline-flex min-h-12 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:bg-primary-hover"
+            data-testid="done-back-to-queue"
+          >
+            {STAFF.backToQueue}
+          </Link>
+          <a
+            href={`/moderator/elanlar/${listingId}`}
+            className="inline-flex min-h-12 items-center justify-center rounded-lg border border-line bg-white px-4 text-sm font-semibold text-navy hover:bg-surface"
+            data-testid="done-view-current"
+          >
+            {STAFF.viewCurrent}
+          </a>
+        </div>
       </div>
     );
   }
@@ -115,7 +148,11 @@ export function ModerationActions({
         <p className="font-semibold text-danger">
           {conflict === "stale" ? STAFF.staleConflict : conflict === "decided" ? STAFF.decisionAlready : STAFF.claimTaken}
         </p>
-        <Button className="mt-3" onClick={() => { setConflict(null); router.refresh(); }} data-testid="conflict-refresh">
+        {/* FULL document reload: guarantees the next decision carries the
+            current server revision, with no in-flight RSC refresh for
+            subsequent interactions to race (a router.refresh here left
+            stale client state interactive on slow runners). */}
+        <Button className="mt-3" onClick={() => window.location.reload()} disabled={!hydrated} data-testid="conflict-refresh">
           {STAFF.refresh}
         </Button>
       </div>
@@ -136,12 +173,12 @@ export function ModerationActions({
           ) : claimOther ? (
             <div className="rounded-lg bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-800">
               {STAFF.claimOther}
-              <Button variant="secondary" className="ml-3" onClick={() => void claim()} disabled={busy} data-testid="claim-button">
+              <Button variant="secondary" className="ml-3" onClick={() => void claim()} disabled={busy || !hydrated} data-testid="claim-button">
                 {STAFF.claim}
               </Button>
             </div>
           ) : (
-            <Button onClick={() => void claim()} disabled={busy} data-testid="claim-button">
+            <Button onClick={() => void claim()} disabled={busy || !hydrated} data-testid="claim-button">
               {STAFF.claim}
             </Button>
           )}
@@ -152,19 +189,19 @@ export function ModerationActions({
         <div className="flex flex-wrap gap-2" data-testid="decision-buttons">
           {isPending ? (
             <>
-              <Button onClick={() => setPendingAction("approve")} disabled={busy} data-testid="action-approve">
+              <Button onClick={() => setPendingAction("approve")} disabled={busy || !hydrated} data-testid="action-approve">
                 {STAFF.approve}
               </Button>
-              <Button variant="secondary" onClick={() => setPendingAction("request-correction")} disabled={busy} data-testid="action-correction">
+              <Button variant="secondary" onClick={() => setPendingAction("request-correction")} disabled={busy || !hydrated} data-testid="action-correction">
                 {STAFF.correction}
               </Button>
-              <Button variant="secondary" onClick={() => setPendingAction("reject")} disabled={busy} data-testid="action-reject">
+              <Button variant="secondary" onClick={() => setPendingAction("reject")} disabled={busy || !hydrated} data-testid="action-reject">
                 {STAFF.reject}
               </Button>
             </>
           ) : null}
           {isActive ? (
-            <Button variant="secondary" onClick={() => setPendingAction("suspend")} disabled={busy} data-testid="action-suspend">
+            <Button variant="secondary" onClick={() => setPendingAction("suspend")} disabled={busy || !hydrated} data-testid="action-suspend">
               {STAFF.suspend}
             </Button>
           ) : null}
@@ -218,10 +255,10 @@ export function ModerationActions({
             </p>
           ) : null}
           <div className="mt-4 flex gap-2">
-            <Button onClick={() => void execute(pendingAction)} disabled={busy} data-testid="decision-submit">
+            <Button onClick={() => void execute(pendingAction)} disabled={busy || !hydrated} data-testid="decision-submit">
               {STAFF.confirm}
             </Button>
-            <Button variant="secondary" onClick={() => setPendingAction(null)} disabled={busy} data-testid="decision-cancel">
+            <Button variant="secondary" onClick={() => setPendingAction(null)} disabled={busy || !hydrated} data-testid="decision-cancel">
               {STAFF.cancel}
             </Button>
           </div>

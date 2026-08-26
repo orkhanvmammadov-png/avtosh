@@ -62,6 +62,18 @@ leave the server), submission time, and the moderation history
 (decision + Azerbaijani reason label + seller-safe note + time — no
 moderator identity, claim rows, or internal ids rendered).
 
+**Deterministic post-decision UX:** a successful decision renders a
+DURABLE success panel ("… təsdiqləndi/rədd edildi/…") with explicit
+next actions — "Moderasiya növbəsinə qayıt" and "Cari vəziyyətə bax"
+— and performs NO automatic refresh or navigation, so the outcome is
+always user-observable. The portal deliberately contains no
+`router.refresh` at all: claim success and conflict recovery use FULL
+document reloads (an in-flight RSC refresh stream raced the
+moderator's next interaction on loaded runners — swallowed clicks or
+stale-revision submissions), and every workbench control is disabled
+until hydration so a click on a freshly loaded page can only land on
+a live handler.
+
 Commands — the only mutations the UI can perform:
 
 | Action | Endpoint | Requirements |
