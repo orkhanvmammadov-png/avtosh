@@ -55,7 +55,7 @@ export async function forceOtpCode(phone: string, code = KNOWN_OTP): Promise<voi
 export async function loginAs(
   context: BrowserContext,
   phone: string,
-  options: { blocked?: boolean } = {},
+  options: { blocked?: boolean; roles?: string[] } = {},
 ): Promise<{ userId: string }> {
   const sql = db();
   try {
@@ -67,6 +67,13 @@ export async function loginAs(
     `;
     if (options.blocked === true) {
       await sql`update users set status = 'BLOCKED', blocked_at = now() where id = ${user.id}`;
+    }
+    for (const role of options.roles ?? []) {
+      await sql`
+        insert into user_roles (user_id, role_id)
+        select ${user.id}, id from roles where code = ${role}
+        on conflict do nothing
+      `;
     }
     await sql`
       insert into user_roles (user_id, role_id)

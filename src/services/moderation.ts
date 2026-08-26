@@ -7,6 +7,7 @@ import { getSql, withTransaction, type Sql } from "@/lib/server/db/client";
 import { getStorageProvider } from "@/providers/storage/factory";
 import { listListingImages } from "@/repositories/listing-images";
 import { insertOutboxEvent, insertStatusHistory } from "@/repositories/listing-publications";
+import { insertModerationAudit } from "@/repositories/moderation-audit";
 import { getListingFeatureIds } from "@/repositories/listings";
 import {
   activateListing,
@@ -451,4 +452,67 @@ export function requestCorrection(
   input: { expectedRevision: number; reasonCode: string; note: string | null },
 ) {
   return decide(auth, listingId, { ...input, decision: "CORRECTION_REQUESTED" });
+}
+
+export interface SuspensionResultDto {
+  listing: { id: string; status: string; revision: number };
+}
+
+/**
+ * Staff suspension of a publicly ACTIVE listing (accepted moderator
+ * capability; Phase 4.14 adds the missing command). Queue claims are
+ * PENDING_MODERATION coordination and do not apply here — the guards
+ * are staff RBAC, the listing row lock, and expected_revision.
+ * Effects: listing hidden publicly (status alone removes it from
+ * every publicVisible() read), MODERATOR status history, append-only
+ * audit entry, outbox event. Paid listing/promotion time is NOT
+ * touched and nothing is refunded — promotion periods simply stop
+ * being publicly effective while hidden (accepted lifecycle rules).
+ * Idempotent retry: an already SUSPENDED listing returns the current
+ * state instead of double-writing history.
+ */
+export async function suspendListing(
+  auth: AuthContext,
+  listingId: string,
+  input: { expectedRevision: number; reasonCode: string; note: string | null },
+): Promise<SuspensionResultDto> {
+  return withTransaction(async (tx) => {
+    const listing = await lockListingForModeration(tx, listingId);
+    if (listing === undefined) {
+      throw new ApiError("LISTING_NOT_FOUND", "Listing not found.");
+    }
+    if (listing.status === "SUSPENDED") {
+      return { listing: { id: listing.id, status: listing.status, revision: listing.revision } };
+    }
+    if (listing.status !== "ACTIVE") {
+      throw new ApiError("MODERATION_INVALID_STATE", "Only active listings can be suspended.", {
+        details: { current_status: listing.status },
+      });
+    }
+    if (listing.revision !== input.expectedRevision) {
+      throw new ApiError("LISTING_REVISION_CONFLICT", "The listing changed during review.", {
+        details: { current_revision: listing.revision },
+      });
+    }
+    await tx`update listings set status = 'SUSPENDED' where id = ${listingId}`;
+    await insertStatusHistory(tx, {
+      listingId,
+      fromStatus: "ACTIVE",
+      toStatus: "SUSPENDED",
+      actorUserId: auth.user.id,
+      reasonCode: input.reasonCode,
+    });
+    await insertModerationAudit(tx, {
+      actorUserId: auth.user.id,
+      action: "LISTING_SUSPENDED",
+      entityId: listingId,
+      afterData: { status: "SUSPENDED", reason_code: input.reasonCode, note: input.note },
+    });
+    await insertOutboxEvent(tx, {
+      eventType: "LISTING_SUSPENDED",
+      aggregateId: listingId,
+      payload: { listing_id: listingId, reason_code: input.reasonCode },
+    });
+    return { listing: { id: listingId, status: "SUSPENDED", revision: listing.revision } };
+  });
 }

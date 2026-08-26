@@ -346,3 +346,28 @@ export async function setPromotionPackagesActive(active: boolean): Promise<void>
     await sql.end();
   }
 }
+
+export async function listingPeriodCount(listingId: string): Promise<number> {
+  const sql = db();
+  try {
+    const [row] = await sql`
+      select count(*)::int as n from listing_periods where listing_id = ${listingId}
+    `;
+    return row.n as number;
+  } finally {
+    await sql.end();
+  }
+}
+
+/** Registers a live moderation claim directly (claimed-by-other fixtures). */
+export async function claimListingAs(listingId: string, moderatorUserId: string): Promise<void> {
+  const sql = db();
+  try {
+    await sql`
+      insert into moderation_claims (listing_id, moderator_id, expires_at)
+      values (${listingId}, ${moderatorUserId}, now() + interval '10 minutes')
+    `;
+  } finally {
+    await sql.end();
+  }
+}
