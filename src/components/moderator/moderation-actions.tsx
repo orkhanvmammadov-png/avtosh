@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { Button } from "@/components/ui/button";
 import { STAFF } from "@/lib/marketplace/labels";
 import { publicFetch, PublicApiError } from "@/lib/marketplace/public-api";
@@ -23,12 +24,6 @@ const ACTION_META: Record<ActionKind, { label: string; done: string; needsReason
  * renders the safe conflict states. Two-step confirmation prevents
  * accidental one-click final decisions.
  */
-const emptySubscribe = () => () => {};
-/** False during SSR/pre-hydration, true the moment React is live. */
-function useHydrated(): boolean {
-  return useSyncExternalStore(emptySubscribe, () => true, () => false);
-}
-
 export function ModerationActions({
   listingId,
   status,

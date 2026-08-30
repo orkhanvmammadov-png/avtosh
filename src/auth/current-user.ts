@@ -90,6 +90,29 @@ export const STAFF_ROLES = ["MODERATOR", "ADMIN", "SUPER_ADMIN"] as const;
  * staff role. The actor is always the session user — never a body
  * field. Normal USERs receive STAFF_ROLE_REQUIRED.
  */
+export const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"] as const;
+
+/** Admin-tier authorization: active (not blocked) ADMIN/SUPER_ADMIN. */
+export async function requireAdmin(request: Request): Promise<AuthContext> {
+  const auth = await requireActiveSeller(request);
+  const isAdmin = auth.roles.some((role) =>
+    (ADMIN_ROLES as readonly string[]).includes(role),
+  );
+  if (!isAdmin) {
+    throw new ApiError("STAFF_ROLE_REQUIRED", "Admin role required.");
+  }
+  return auth;
+}
+
+/** SUPER_ADMIN-only operations (e.g. ADMIN role management). */
+export async function requireSuperAdmin(request: Request): Promise<AuthContext> {
+  const auth = await requireAdmin(request);
+  if (!auth.roles.includes("SUPER_ADMIN")) {
+    throw new ApiError("STAFF_ROLE_REQUIRED", "Super admin role required.");
+  }
+  return auth;
+}
+
 export async function requireStaff(request: Request): Promise<AuthContext> {
   const auth = await requireActiveSeller(request);
   const isStaff = auth.roles.some((role) =>
