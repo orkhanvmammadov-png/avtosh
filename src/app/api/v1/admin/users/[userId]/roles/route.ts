@@ -1,0 +1,24 @@
+import { z } from "zod";
+import { requireAdmin } from "@/auth/current-user";
+import { createApiHandler, parseBody, requireUuidParam } from "@/lib/api/handler";
+import { apiSuccess } from "@/lib/api/response";
+import { assertSameOrigin } from "@/lib/security/origin";
+import { changeUserRole } from "@/services/admin";
+
+export const dynamic = "force-dynamic";
+
+const bodySchema = z
+  .object({
+    role: z.enum(["MODERATOR", "ADMIN"]),
+    action: z.enum(["GRANT", "REVOKE"]),
+  })
+  .strict();
+
+export const POST = createApiHandler(async ({ request, requestId, params }) => {
+  assertSameOrigin(request);
+  const auth = await requireAdmin(request); // ADMIN-role changes re-checked in the service (SUPER_ADMIN only)
+  const userId = requireUuidParam(params, "userId");
+  const body = await parseBody(request, bodySchema);
+  const user = await changeUserRole(auth, userId, body);
+  return apiSuccess({ user }, { requestId });
+});
