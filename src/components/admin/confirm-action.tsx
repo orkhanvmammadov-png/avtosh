@@ -88,7 +88,7 @@ export function ConfirmAction({
   }
 
   return (
-    <section aria-label={title} className="rounded-lg border border-line bg-white p-3" data-testid={`${testid}-confirm`}>
+    <section aria-label={title} className="rounded-control border border-line bg-raised p-3" data-testid={`${testid}-confirm`}>
       <p className="text-sm font-semibold text-navy">{title}</p>
       {description !== undefined ? <p className="mt-1 text-xs text-muted">{description}</p> : null}
       {reasonField !== null ? (
@@ -97,7 +97,7 @@ export function ConfirmAction({
           <textarea
             id={`${testid}-reason`}
             data-testid={`${testid}-reason`}
-            className="mt-1 min-h-16 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-navy"
+            className="mt-1 min-h-16 w-full rounded-control border border-line bg-raised px-3 py-2 text-sm text-navy"
             maxLength={500}
             value={reason}
             onChange={(e) => setReason(e.target.value)}

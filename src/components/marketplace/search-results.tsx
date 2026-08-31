@@ -57,8 +57,11 @@ export function SearchResults({
   return (
     <div>
       {promoted.length > 0 ? (
-        <section aria-labelledby="promoted-title" className="mb-6" data-testid="promoted-section">
-          <h2 id="promoted-title" className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">{UI.promoted}</h2>
+        <section aria-labelledby="promoted-title" className="mb-6 rounded-card border border-boost-line bg-boost-soft/40 p-3" data-testid="promoted-section">
+          <h2 id="promoted-title" className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-boost-deep">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" /></svg>
+            {UI.promoted}
+          </h2>
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {promoted.map((item, index) => (
               <li key={item.publicId} className={boostSlotClass(index)} data-testid="promoted-card">

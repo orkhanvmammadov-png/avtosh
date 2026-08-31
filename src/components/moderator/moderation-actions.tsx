@@ -121,14 +121,14 @@ export function ModerationActions({
         <div className="mt-4 flex flex-col gap-2">
           <Link
             href="/moderator/elanlar"
-            className="inline-flex min-h-12 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:bg-primary-hover"
+            className="inline-flex min-h-12 items-center justify-center rounded-control bg-primary px-4 text-sm font-semibold text-white hover:bg-primary-hover"
             data-testid="done-back-to-queue"
           >
             {STAFF.backToQueue}
           </Link>
           <a
             href={`/moderator/elanlar/${listingId}`}
-            className="inline-flex min-h-12 items-center justify-center rounded-lg border border-line bg-white px-4 text-sm font-semibold text-navy hover:bg-surface"
+            className="inline-flex min-h-12 items-center justify-center rounded-control border border-line bg-raised px-4 text-sm font-semibold text-navy transition-colors hover:border-line-strong hover:bg-surface"
             data-testid="done-view-current"
           >
             {STAFF.viewCurrent}
@@ -160,14 +160,14 @@ export function ModerationActions({
       {isPending ? (
         <div aria-live="polite" data-testid="claim-state" data-claim={claimMine ? "mine" : claimOther ? "other" : "free"}>
           {claimMine ? (
-            <p className="rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800">
+            <p className="rounded-control bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800">
               {STAFF.claimMine}
               {claimExpiresAt !== null
                 ? ` (${formatTimeAz(claimExpiresAt)} ${STAFF.claimUntil})`
                 : null}
             </p>
           ) : claimOther ? (
-            <div className="rounded-lg bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-800">
+            <div className="rounded-control border border-warning-line bg-warning-soft px-3 py-2 text-sm font-semibold text-warning-deep">
               {STAFF.claimOther}
               <Button variant="secondary" className="ml-3" onClick={() => void claim()} disabled={busy || !hydrated} data-testid="claim-button">
                 {STAFF.claim}
@@ -207,7 +207,7 @@ export function ModerationActions({
       {pendingAction !== null ? (
         <section
           aria-label={STAFF.confirmAction}
-          className="rounded-card border border-line bg-white p-4"
+          className="rounded-card border border-line bg-raised p-4 shadow-card"
           data-testid="decision-confirm"
         >
           <h3 className="text-sm font-semibold text-navy">
@@ -220,7 +220,7 @@ export function ModerationActions({
                 <select
                   id="decision-reason"
                   data-testid="decision-reason"
-                  className="mt-1 min-h-12 w-full rounded-lg border border-line bg-white px-3 text-base text-navy"
+                  className="mt-1 min-h-12 w-full rounded-control border border-line bg-raised px-3 text-base text-navy"
                   value={reasonCode}
                   onChange={(e) => setReasonCode(e.target.value)}
                 >
@@ -236,7 +236,7 @@ export function ModerationActions({
                 <textarea
                   id="decision-note"
                   data-testid="decision-note"
-                  className="mt-1 min-h-24 w-full rounded-lg border border-line bg-white px-3 py-2 text-base text-navy"
+                  className="mt-1 min-h-24 w-full rounded-control border border-line bg-raised px-3 py-2 text-base text-navy"
                   maxLength={1000}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}

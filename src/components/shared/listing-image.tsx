@@ -33,7 +33,7 @@ export function ListingImage({
       fetchPriority={priority ? "high" : "auto"}
       decoding="async"
       onError={() => setFailed(true)}
-      className={`h-full w-full object-cover ${className}`}
+      className={`h-full w-full object-cover text-transparent ${className}`}
     />
   );
 }

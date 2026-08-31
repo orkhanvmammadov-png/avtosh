@@ -13,7 +13,7 @@ interface ChallengeState {
   resendAfter: number;
 }
 
-const field = "min-h-12 w-full rounded-lg border border-line bg-white px-3 text-base text-navy";
+const field = "block w-full min-h-12 rounded-control border border-line bg-raised px-3 text-sm text-navy placeholder:text-faint transition-colors hover:border-line-strong";
 
 function errorMessage(error: unknown): string {
   if (error instanceof PublicApiError) {
@@ -121,8 +121,13 @@ export function LoginFlow({ returnTo }: { returnTo: string | null }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-md rounded-card border border-line bg-white p-6 shadow-sm" data-testid="login-flow">
-      <h1 className="text-xl font-bold text-navy">{UI.loginTitle}</h1>
+    <div className="mx-auto w-full max-w-md rounded-card border border-line bg-raised p-6 shadow-raised md:p-8" data-testid="login-flow">
+      <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 13l1.6-4a2 2 0 0 1 1.9-1.3h7a2 2 0 0 1 1.9 1.3L19 13v4h-1.5a1.7 1.7 0 0 1-3.4 0H9.9a1.7 1.7 0 0 1-3.4 0H5v-4z" />
+        </svg>
+      </span>
+      <h1 className="mt-4 text-2xl font-bold tracking-tight text-navy">{UI.loginTitle}</h1>
       {challenge === null ? (
         <form onSubmit={requestOtp} className="mt-4 space-y-4" aria-label={UI.loginTitle}>
           <p className="text-sm text-muted">{UI.loginHint}</p>
@@ -172,7 +177,7 @@ export function LoginFlow({ returnTo }: { returnTo: string | null }) {
             {busy ? UI.loading : UI.verify}
           </Button>
           <div className="flex items-center justify-between text-sm">
-            <button type="button" onClick={() => { setChallenge(null); setError(null); }} className="min-h-12 rounded-lg px-2 text-muted hover:text-navy" data-testid="login-change-phone">
+            <button type="button" onClick={() => { setChallenge(null); setError(null); }} className="min-h-12 rounded-control px-2 text-muted transition-colors hover:text-navy" data-testid="login-change-phone">
               {UI.changePhone}
             </button>
             <button
@@ -180,7 +185,7 @@ export function LoginFlow({ returnTo }: { returnTo: string | null }) {
               onClick={() => void resend()}
               disabled={countdown > 0 || busy}
               aria-live="polite"
-              className="min-h-12 rounded-lg px-2 font-medium text-primary disabled:text-muted"
+              className="min-h-12 rounded-control px-2 font-medium text-primary transition-colors disabled:text-muted"
               data-testid="login-resend"
             >
               {countdown > 0 ? `${UI.resendIn} ${countdown}s` : UI.resend}

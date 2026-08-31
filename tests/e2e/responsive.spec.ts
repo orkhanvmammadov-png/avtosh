@@ -20,7 +20,8 @@ test.describe("Responsive layout invariants", () => {
 
       await page.goto("/elanlar?category=CAR");
       await expectNoHorizontalOverflow(page);
-      if (width >= 1200) await expect(page.getByTestId("filters-desktop")).toBeVisible();
+      // Phase 4.17: the desk (1024) tier shows the persistent filter rail.
+      if (width >= 1024) await expect(page.getByTestId("filters-desktop")).toBeVisible();
       else await expect(page.getByTestId("filters-open")).toBeVisible();
       await expect(page.getByTestId("sort-select")).toBeVisible();
       const card = page.getByTestId("listing-card").first();

@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 /** Shared, accessible form primitives for the seller wizard. */
 
 export const fieldClass =
-  "min-h-12 w-full rounded-lg border border-line bg-white px-3 text-base text-navy disabled:bg-surface disabled:text-muted";
+  "min-h-12 w-full rounded-control border border-line bg-raised px-3 text-base text-navy transition-colors hover:border-line-strong disabled:bg-sunken disabled:text-muted disabled:hover:border-line";
 
 export function Field({
   label,
@@ -134,7 +134,7 @@ export function CheckboxField({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label htmlFor={id} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border border-line bg-white px-3">
+    <label htmlFor={id} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-control border border-line bg-raised px-3 transition-colors hover:border-line-strong">
       <input
         id={id}
         data-testid={id}

@@ -25,7 +25,7 @@ export interface FilterCatalog {
   features: FeatureDto[];
 }
 
-const field = "min-h-12 w-full rounded-lg border border-line bg-white px-3 text-sm text-navy disabled:bg-surface disabled:text-muted";
+const field = "min-h-12 w-full rounded-control border border-line bg-raised px-3 text-sm text-navy transition-colors hover:border-line-strong disabled:bg-sunken disabled:text-muted disabled:hover:border-line";
 
 function FilterForm({ state, catalog, onApplied }: { state: SearchFilterState; catalog: FilterCatalog; onApplied?: () => void }) {
   const router = useRouter();
@@ -81,7 +81,7 @@ function FilterForm({ state, catalog, onApplied }: { state: SearchFilterState; c
               href={searchHref(filtersForCategoryChange(state, c.code))}
               aria-current={category === c.code ? "page" : undefined}
               data-testid={`filter-category-${c.code}`}
-              className={`min-h-12 flex-1 rounded-lg border px-3 text-center text-sm font-semibold leading-[46px] ${category === c.code ? "border-primary bg-primary text-white" : "border-line bg-white text-navy"}`}
+              className={`min-h-12 flex-1 rounded-control border px-3 text-center text-sm font-semibold leading-[46px] transition-colors ${category === c.code ? "border-primary bg-primary text-white" : "border-line bg-raised text-navy hover:bg-surface"}`}
             >
               {CATEGORY_LABELS[c.code] ?? c.name}
             </Link>
@@ -166,31 +166,38 @@ function FilterForm({ state, catalog, onApplied }: { state: SearchFilterState; c
   );
 }
 
-/** Desktop: persistent sidebar. Tablet/mobile: button + native <dialog> drawer (focus trapped, Esc closes). */
-export function SearchFilters({ state, catalog, activeCount }: { state: SearchFilterState; catalog: FilterCatalog; activeCount: number }) {
+/**
+ * Desktop/laptop (desk:, 1024+): persistent sidebar rail. Below that:
+ * a native <dialog> drawer (focus trapped, Esc closes) opened by the
+ * toolbar's FiltersTrigger via the element id.
+ */
+export function SearchFilters({ state, catalog }: { state: SearchFilterState; catalog: FilterCatalog }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   return (
     <>
-      <aside aria-label={UI.filters} className="hidden lg:block lg:w-72 lg:shrink-0" data-testid="filters-desktop">
-        <div className="sticky top-20 rounded-card border border-line bg-white p-4">
+      <aside aria-label={UI.filters} className="hidden desk:block desk:w-64 desk:shrink-0 lg:w-72" data-testid="filters-desktop">
+        <div className="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-card border border-line bg-raised p-4 shadow-card">
           <h2 className="mb-3 text-base font-semibold text-navy">{UI.filters}</h2>
           <FilterForm state={state} catalog={catalog} />
         </div>
       </aside>
-      <div className="lg:hidden">
-        <button type="button" className={buttonClasses("secondary", "w-full md:w-auto")} aria-haspopup="dialog" onClick={() => dialogRef.current?.showModal()} data-testid="filters-open">
-          {UI.filters}{activeCount > 0 ? ` (${activeCount})` : ""}
-        </button>
-        <dialog ref={dialogRef} aria-label={UI.filters} className="m-0 h-dvh max-h-none w-full max-w-md bg-white p-0 backdrop:bg-navy/40 md:ml-auto" data-testid="filters-drawer">
-          <div className="flex items-center justify-between border-b border-line px-4 py-3">
-            <h2 className="text-base font-semibold text-navy">{UI.filters}</h2>
-            <button type="button" aria-label="Filterləri bağla" className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-lg" onClick={() => dialogRef.current?.close()} data-testid="filters-close">✕</button>
-          </div>
-          <div className="max-h-[calc(100dvh-64px)] overflow-y-auto p-4">
-            <FilterForm state={state} catalog={catalog} onApplied={() => dialogRef.current?.close()} />
-          </div>
-        </dialog>
-      </div>
+      <dialog
+        id="search-filters-drawer"
+        ref={dialogRef}
+        aria-label={UI.filters}
+        className="m-0 h-dvh max-h-none w-full max-w-md bg-raised p-0 backdrop:bg-navy/40 md:ml-auto desk:hidden"
+        data-testid="filters-drawer"
+      >
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <h2 className="text-base font-semibold text-navy">{UI.filters}</h2>
+          <button type="button" aria-label="Filterləri bağla" className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-control hover:bg-surface" onClick={() => dialogRef.current?.close()} data-testid="filters-close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </div>
+        <div className="max-h-[calc(100dvh-64px)] overflow-y-auto p-4">
+          <FilterForm state={state} catalog={catalog} onApplied={() => dialogRef.current?.close()} />
+        </div>
+      </dialog>
     </>
   );
 }

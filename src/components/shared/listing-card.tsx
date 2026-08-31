@@ -28,10 +28,10 @@ export function ListingCard({
     <article
       data-testid="listing-card"
       data-public-id={listing.publicId}
-      className="group relative flex h-full flex-col overflow-hidden rounded-card border border-line bg-white transition-shadow hover:shadow-md"
+      className="group relative flex h-full flex-col overflow-hidden rounded-card border border-line bg-raised shadow-card transition-shadow hover:shadow-raised"
     >
       <Link href={`/elan/${listing.publicId}`} className="flex h-full flex-col focus-visible:outline-offset-[-2px]">
-        <div className="relative aspect-vehicle w-full overflow-hidden bg-line/40">
+        <div className="relative aspect-vehicle w-full overflow-hidden bg-sunken">
           <ListingImage src={listing.primaryImageUrl} alt={`${title} — ${UI.photoOf.toLowerCase()}`} priority={priority} />
           {(promotedLabel || listing.badges.premium || listing.badges.boosted) && (
             <div className="absolute left-2 top-2 flex gap-1">
@@ -41,14 +41,18 @@ export function ListingCard({
             </div>
           )}
         </div>
-        <div className="flex flex-1 flex-col gap-1 p-4">
-          <h3 className="line-clamp-1 text-base font-semibold text-navy">{title}</h3>
-          <p className="text-lg font-bold text-primary">{formatPriceMinor(listing.priceMinor, listing.currency)}</p>
-          <p className="text-sm text-muted">
+        <div className="flex flex-1 flex-col gap-1 p-3.5">
+          <p className="text-lg font-extrabold tracking-tight text-primary">
+            {formatPriceMinor(listing.priceMinor, listing.currency)}
+          </p>
+          <h3 className="line-clamp-1 text-sm font-semibold text-navy">{title}</h3>
+          <p className="text-xs text-muted">
             {formatMileage(listing.mileage)}
             {listing.city ? ` · ${listing.city}` : ""}
           </p>
-          <p className="mt-auto pt-2 text-xs text-muted" data-testid="card-freshness">{formatFreshness(listing.publishedAt, nowMs)}</p>
+          <p className="mt-auto pt-2 text-xs text-faint" data-testid="card-freshness">
+            {formatFreshness(listing.publishedAt, nowMs)}
+          </p>
         </div>
       </Link>
       <div className="absolute right-2 top-2">

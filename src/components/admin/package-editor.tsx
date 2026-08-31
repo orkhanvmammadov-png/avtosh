@@ -81,7 +81,7 @@ export function PackageEditor({
           inputMode="numeric"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
-          className="min-h-12 w-24 rounded-lg border border-line bg-white px-2 text-sm text-navy"
+          className="min-h-12 w-24 rounded-control border border-line bg-raised px-2 text-sm text-navy"
           data-testid="pkg-price-input"
           aria-label={ADMIN.priceAzn}
         />
@@ -91,7 +91,7 @@ export function PackageEditor({
         {ADMIN.save}
       </Button>
       {confirming !== null ? (
-        <span className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2 py-1 text-xs" data-testid="pkg-confirm">
+        <span className="flex items-center gap-2 rounded-control border border-line bg-sunken px-2 py-1 text-xs" data-testid="pkg-confirm">
           {confirming === "activate" ? ADMIN.activateConfirm : ADMIN.deactivateConfirm}
           <Button
             onClick={() => void patch({ is_active: confirming === "activate" })}

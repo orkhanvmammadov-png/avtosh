@@ -6,6 +6,7 @@
  * (bg-primary, text-muted, border-line, lg: = 1200px, …).
  */
 @theme {
+  /* --- Accepted Phase 2 tokens (backward-compatible, unchanged) --- */
   --color-primary: #2563eb;
   --color-primary-hover: #1d4ed8;
   --color-navy: #0f172a;
@@ -16,6 +17,55 @@
   --color-warning: #d97706;
   --color-danger: #dc2626;
 
+  /* --- Phase 4.17 semantic system (additive) ---------------------
+     Surfaces: surface (page) → raised (cards) → sunken (wells).
+     Text: navy (primary) → slate-strong (secondary) → muted → faint.
+     Borders: line → line-strong.
+     Feedback tones (info/success/warning/danger) and promotion
+     accents (premium gold / boost blue) each ship a triad:
+       -soft (background) / -line (border) / -deep (foreground).
+     Application components use ONLY these — raw Tailwind palette
+     classes (amber-*, emerald-*, …) are forbidden after migration. */
+  --color-raised: #ffffff;
+  --color-sunken: #f1f5f9;
+  --color-slate-strong: #334155;
+  --color-faint: #94a3b8;
+  --color-line-strong: #cbd5e1;
+
+  --color-info-soft: #eff6ff;
+  --color-info-line: #bfdbfe;
+  --color-info-deep: #1d4ed8;
+  --color-success-soft: #f0fdf4;
+  --color-success-line: #bbf7d0;
+  --color-success-deep: #15803d;
+  --color-warning-soft: #fffbeb;
+  --color-warning-line: #fde68a;
+  --color-warning-deep: #b45309;
+  --color-danger-soft: #fef2f2;
+  --color-danger-line: #fecaca;
+  --color-danger-deep: #b91c1c;
+
+  /* Promotion accents: Premium = gold, Boost = blue. */
+  --color-premium: #eab308;
+  --color-premium-soft: #fefce8;
+  --color-premium-line: #fde68a;
+  --color-premium-deep: #854d0e;
+  --color-boost: #0284c7;
+  --color-boost-soft: #e0f2fe;
+  --color-boost-line: #bae6fd;
+  --color-boost-deep: #075985;
+
+  /* Staff-shell role accents (navy shell + accent per portal). */
+  --color-staff-moderation: #38bdf8;
+  --color-staff-admin: #fbbf24;
+
+  --radius-control: 0.5rem;
+  --radius-pill: 9999px;
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
+  --shadow-raised: 0 4px 14px rgb(15 23 42 / 0.08);
+  --shadow-overlay: 0 12px 32px rgb(15 23 42 / 0.16);
+
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   /* Accepted breakpoints: mobile <768, tablet 768–1199, desktop ≥1200.
@@ -25,6 +75,10 @@
      grids). 1rem = 16px → 48rem=768, 75rem=1200, 90rem=1440. */
   --breakpoint-sm: 40rem;
   --breakpoint-md: 48rem;
+  /* Targeted 1024 tier (`desk:`) — laptops get desktop-grade layout
+     on the surfaces that opt in, without moving the accepted lg=1200
+     boundary globally. rem-based like the rest of the scale. */
+  --breakpoint-desk: 64rem;
   --breakpoint-lg: 75rem;
   --breakpoint-xl: 90rem;
   --breakpoint-2xl: 96rem;
@@ -47,6 +101,19 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
+
+/*
+ * Type hierarchy conventions (consumed by the ui/ primitives; keep
+ * pages on these combinations rather than inventing sizes):
+ *   display        text-3xl md:text-4xl font-extrabold tracking-tight
+ *   page title     text-2xl font-bold text-navy         (PageHeading)
+ *   section title  text-lg font-semibold text-navy      (SectionCard)
+ *   card title     text-base font-semibold text-navy
+ *   body           text-sm leading-6 text-navy
+ *   supporting     text-sm text-muted
+ *   metadata       text-xs text-muted
+ *   label          text-xs font-medium text-slate-strong
+ */
 
 /* Visible, consistent focus for keyboard users everywhere. */
 :focus-visible {

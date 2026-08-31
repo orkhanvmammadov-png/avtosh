@@ -11,44 +11,61 @@ import { UI } from "@/lib/marketplace/labels";
 export async function SiteHeader() {
   const auth = await getCurrentAuthFromCookies();
   const authed = auth !== null;
+  // no display value here — call sites choose inline-flex vs hidden lg:inline-flex
+  const navLink =
+    "min-h-12 items-center rounded-control px-3 text-sm font-medium text-slate-strong transition-colors hover:bg-surface hover:text-navy";
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-line bg-raised/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-(--container-content) items-center justify-between gap-4 px-4">
-        <Link href="/" className="text-xl font-extrabold tracking-tight text-primary" aria-label={`${UI.brand} — ana səhifə`}>
-          {UI.brand}
+        <Link href="/" className="flex items-center gap-2" aria-label={`${UI.brand} — ana səhifə`}>
+          <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 13l1.6-4a2 2 0 0 1 1.9-1.3h7a2 2 0 0 1 1.9 1.3L19 13v4h-1.5a1.7 1.7 0 0 1-3.4 0H9.9a1.7 1.7 0 0 1-3.4 0H5v-4z" />
+            </svg>
+          </span>
+          <span className="text-xl font-extrabold tracking-tight text-navy">
+            AVTOSH<span className="text-primary">.AZ</span>
+          </span>
         </Link>
         <nav aria-label="Əsas naviqasiya" className="hidden items-center gap-1 md:flex">
-          <Link href="/elanlar?category=CAR" className="rounded-lg px-3 py-3 text-sm font-medium text-navy hover:bg-surface">
+          <Link href="/elanlar?category=CAR" className={`inline-flex ${navLink}`}>
             {UI.cars}
           </Link>
-          <Link href="/elanlar?category=MOTORCYCLE" className="rounded-lg px-3 py-3 text-sm font-medium text-navy hover:bg-surface">
+          <Link href="/elanlar?category=MOTORCYCLE" className={`inline-flex ${navLink}`}>
             {UI.motorcycles}
           </Link>
         </nav>
-        <div className="flex items-center gap-2" data-testid={authed ? "header-authed" : "header-anonymous"}>
+        <div className="flex items-center gap-1.5" data-testid={authed ? "header-authed" : "header-anonymous"}>
           {authed ? (
             <>
-              <Link href="/profil/elanlar" className="hidden rounded-lg px-3 py-3 text-sm font-medium text-navy hover:bg-surface lg:inline-flex" data-testid="header-my-listings">
+              <Link href="/profil/elanlar" className={`hidden lg:inline-flex ${navLink}`} data-testid="header-my-listings">
                 {UI.myListings}
               </Link>
-              <Link href="/profil/secilmisler" className="hidden rounded-lg px-3 py-3 text-sm font-medium text-navy hover:bg-surface lg:inline-flex" data-testid="header-favorites">
+              <Link href="/profil/secilmisler" className={`hidden lg:inline-flex ${navLink} gap-1.5`} data-testid="header-favorites">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M12 21s-7.5-4.6-10-9.2C.4 8.6 2.3 5 5.7 5c2 0 3.4 1.1 4.3 2.6h4C14.9 6.1 16.3 5 18.3 5c3.4 0 5.3 3.6 3.7 6.8C19.5 16.4 12 21 12 21z" />
+                </svg>
                 {UI.favorites}
               </Link>
-              <Link href="/profil" className="hidden rounded-lg px-3 py-3 text-sm font-medium text-navy hover:bg-surface lg:inline-flex" data-testid="header-profile">
+              <Link href="/profil" className={`hidden lg:inline-flex ${navLink}`} data-testid="header-profile">
                 {UI.profile}
               </Link>
               <LogoutButton className="hidden lg:inline-flex" />
             </>
           ) : (
-            <Link href="/giris" className="hidden rounded-lg px-3 py-3 text-sm font-medium text-navy hover:bg-surface md:inline-flex" data-testid="header-login">
+            <Link href="/giris" className={`hidden md:inline-flex ${navLink}`} data-testid="header-login">
               {UI.login}
             </Link>
           )}
           <Link
             href={authed ? "/elan-yerlesdir" : "/giris?return_to=%2Felan-yerlesdir"}
-            className="hidden min-h-12 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-hover md:inline-flex"
+            aria-label={UI.postListing}
+            className="hidden min-h-12 w-12 items-center justify-center gap-1.5 rounded-control bg-primary px-0 text-sm font-semibold text-white shadow-card transition-colors hover:bg-primary-hover md:inline-flex lg:w-auto lg:px-4"
           >
-            {UI.postListing}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            <span className="hidden lg:inline">{UI.postListing}</span>
           </Link>
           <MobileNav authed={authed} buttonClassName={authed ? "lg:hidden" : "md:hidden"} />
         </div>

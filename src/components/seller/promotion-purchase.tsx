@@ -57,7 +57,7 @@ export function PromotionPurchase({
 
   return (
     <div className="space-y-5" data-testid="promotion-purchase">
-      <div role="tablist" aria-label={SELLER.promotionService} className="flex gap-1 rounded-lg border border-line bg-white p-1">
+      <div role="tablist" aria-label={SELLER.promotionService} className="flex gap-1 rounded-control border border-line bg-raised p-1 shadow-card">
         {(["PREMIUM", "BOOST"] as const).map((candidate) => (
           <button
             key={candidate}
@@ -82,14 +82,14 @@ export function PromotionPurchase({
       </p>
 
       {activeUntil !== null ? (
-        <p className="rounded-lg border border-line bg-white px-4 py-3 text-sm text-navy" data-testid="promo-active-note">
+        <p className="rounded-control border border-line bg-raised px-4 py-3 text-sm text-navy" data-testid="promo-active-note">
           {type === "PREMIUM" ? SELLER.premiumActive : SELLER.boostActive} —{" "}
           {formatDateAz(activeUntil)} {SELLER.promotionUntil}. {SELLER.promotionQueuedHint}
         </p>
       ) : null}
 
       {typed.length === 0 ? (
-        <p className="rounded-lg border border-line bg-white px-4 py-3 text-sm text-muted" data-testid="promo-type-unavailable">
+        <p className="rounded-control border border-line bg-raised px-4 py-3 text-sm text-muted" data-testid="promo-type-unavailable">
           {SELLER.promotionPackagesUnavailable}
         </p>
       ) : null}
@@ -100,8 +100,8 @@ export function PromotionPurchase({
           {typed.map((pkg) => (
             <label
               key={pkg.id}
-              className={`flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-lg border px-4 ${
-                selected?.id === pkg.id ? "border-primary bg-primary/5" : "border-line bg-white"
+              className={`flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-control border px-4 ${
+                selected?.id === pkg.id ? "border-primary bg-primary/5" : "border-line bg-raised"
               }`}
             >
               <span className="flex items-center gap-3">
@@ -128,7 +128,7 @@ export function PromotionPurchase({
       {selected !== undefined ? (
         <section
           aria-label={SELLER.promotionConfirmTitle}
-          className="rounded-card border border-line bg-white p-4"
+          className="rounded-card border border-line bg-raised p-4"
           data-testid="promo-confirmation"
         >
           <h2 className="text-sm font-semibold text-navy">{SELLER.promotionConfirmTitle}</h2>

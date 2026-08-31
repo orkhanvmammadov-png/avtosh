@@ -3,7 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
+import { ResultPanel } from "@/components/ui/result-panel";
 import { formatPriceMinor } from "@/lib/format";
 import { SELLER, UI } from "@/lib/marketplace/labels";
 import { PublicApiError } from "@/lib/marketplace/public-api";
@@ -134,10 +135,10 @@ export function ListingWizard({
       {editor.conflict ? (
         <div
           role="alert"
-          className="mb-4 rounded-card border border-danger/40 bg-danger/5 p-4"
+          className="mb-4 rounded-card border border-danger-line bg-danger-soft p-4"
           data-testid="wizard-conflict"
         >
-          <p className="font-semibold text-danger">{SELLER.conflictTitle}</p>
+          <p className="font-semibold text-danger-deep">{SELLER.conflictTitle}</p>
           <p className="mt-1 text-sm text-navy">{SELLER.conflictHint}</p>
           <Button className="mt-3" onClick={() => void editor.reloadFromServer()} data-testid="wizard-conflict-reload">
             {SELLER.conflictReload}
@@ -147,7 +148,7 @@ export function ListingWizard({
 
       {feedback !== null ? (
         <div
-          className="mb-4 rounded-card border border-warning/50 bg-white p-4"
+          className="mb-4 rounded-card border border-warning-line bg-warning-soft p-4"
           style={{ borderColor: "#f59e0b66" }}
           data-testid="wizard-feedback"
         >
@@ -164,18 +165,33 @@ export function ListingWizard({
           {SELLER.steps.map((label, index) => {
             const number = index + 1;
             const current = number === step;
+            const completed = number < step;
             return (
-              <li key={label}>
+              <li key={label} className="flex items-center">
+                {index > 0 ? (
+                  <span aria-hidden="true" className={`mx-0.5 hidden h-px w-4 md:block ${completed || current ? "bg-primary" : "bg-line"}`} />
+                ) : null}
                 <button
                   type="button"
                   aria-current={current ? "step" : undefined}
-                  className={`inline-flex min-h-12 items-center gap-1.5 rounded-lg px-3 text-sm font-medium ${
-                    current ? "bg-primary text-white" : "text-navy hover:bg-surface"
+                  className={`inline-flex min-h-12 items-center gap-2 rounded-full px-2 pr-3 text-sm font-medium transition-colors ${
+                    current ? "text-navy" : "text-muted hover:text-navy"
                   }`}
                   onClick={() => void navigate(number)}
                   data-testid={`wizard-step-${number}`}
                 >
-                  <span aria-hidden="true">{number}.</span>
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                      current
+                        ? "bg-primary text-white"
+                        : completed
+                          ? "bg-success-soft text-success-deep"
+                          : "bg-sunken text-muted"
+                    }`}
+                  >
+                    {completed ? "✓" : number}
+                  </span>
                   <span className="hidden sm:inline">{label}</span>
                 </button>
               </li>
@@ -195,7 +211,7 @@ export function ListingWizard({
         </p>
       </div>
 
-      <div key={`${editor.resetKey}-${step}`} className="rounded-card border border-line bg-white p-4 md:p-6">
+      <div key={`${editor.resetKey}-${step}`} className="rounded-card border border-line bg-raised p-4 shadow-card md:p-6">
         {step === 1 ? <VehicleStep editor={editor} catalog={catalog} /> : null}
         {step === 2 ? <DetailsStep editor={editor} catalog={catalog} /> : null}
         {step === 3 ? <PhotosStep editor={editor} /> : null}
@@ -204,8 +220,8 @@ export function ListingWizard({
       </div>
 
       {submitError !== null ? (
-        <div role="alert" className="mt-4 rounded-card border border-danger/40 bg-danger/5 p-4" data-testid="wizard-submit-error">
-          <p className="font-semibold text-danger">{submitError.title}</p>
+        <div role="alert" className="mt-4 rounded-card border border-danger-line bg-danger-soft p-4" data-testid="wizard-submit-error">
+          <p className="font-semibold text-danger-deep">{submitError.title}</p>
           {submitError.items.length > 0 ? (
             <ul className="mt-2 list-inside list-disc text-sm text-navy">
               {submitError.items.map((item) => (
@@ -246,16 +262,21 @@ export function ListingWizard({
 function SubmitResultScreen({ result }: { result: SubmitResult }) {
   const paid = result.nextAction === "PAYMENT";
   return (
-    <div className="mx-auto max-w-xl py-16 text-center" data-testid="wizard-result" data-outcome={result.nextAction}>
-      <h1 className="text-2xl font-bold text-navy">
-        {paid ? SELLER.paymentRequired : SELLER.submittedFree}
-      </h1>
-      <p className="mt-3 text-sm text-muted">
-        {paid ? SELLER.paymentRequiredHint : SELLER.submittedFreeHint}
-      </p>
+    <ResultPanel
+      tone={paid ? "pending" : "success"}
+      title={paid ? SELLER.paymentRequired : SELLER.submittedFree}
+      hint={paid ? SELLER.paymentRequiredHint : SELLER.submittedFreeHint}
+      data-testid="wizard-result"
+      data-outcome={result.nextAction}
+      actions={
+        <Link href="/profil/elanlar" className={buttonClasses(paid ? "secondary" : "primary", "px-6")}>
+          {UI.myListings}
+        </Link>
+      }
+    >
       {paid && result.payment !== null ? (
         <>
-          <p className="mt-4 text-3xl font-extrabold text-primary" data-testid="wizard-payment-amount">
+          <p className="mt-5 text-3xl font-extrabold tracking-tight text-primary" data-testid="wizard-payment-amount">
             {formatPriceMinor(result.payment.amountMinor, result.payment.currency)}
           </p>
           <p className="mt-2 text-sm text-muted">{SELLER.paymentAfterHint}</p>
@@ -264,12 +285,6 @@ function SubmitResultScreen({ result }: { result: SubmitResult }) {
           </div>
         </>
       ) : null}
-      <Link
-        href="/profil/elanlar"
-        className="mt-8 inline-flex min-h-12 items-center rounded-lg bg-primary px-6 text-sm font-semibold text-white hover:bg-primary-hover"
-      >
-        {UI.myListings}
-      </Link>
-    </div>
+    </ResultPanel>
   );
 }
