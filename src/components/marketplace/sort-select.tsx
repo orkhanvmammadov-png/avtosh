@@ -17,7 +17,7 @@ export function SortSelect() {
       <select
         value={current}
         data-testid="sort-select"
-        className="min-h-12 rounded-lg border border-line bg-white px-3 text-sm"
+        className="min-h-12 rounded-control border border-line bg-raised px-3 text-sm transition-colors hover:border-line-strong"
         onChange={(e) => {
           const state = filtersFromSearchParams(new URLSearchParams(params.toString()));
           state.sort = e.target.value;

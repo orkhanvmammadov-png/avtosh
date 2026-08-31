@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AppliedFilters } from "@/components/marketplace/applied-filters";
+import { BackToTop } from "@/components/marketplace/back-to-top";
+import { FiltersTrigger } from "@/components/marketplace/filters-trigger";
 import { SearchFilters, type FilterCatalog } from "@/components/marketplace/search-filters";
 import { SearchResults } from "@/components/marketplace/search-results";
 import { SortSelect } from "@/components/marketplace/sort-select";
@@ -67,12 +70,19 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="py-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-navy">{categoryLabel} {UI.listings.toLowerCase()}</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-navy">
+        {categoryLabel} {UI.listings.toLowerCase()}
+      </h1>
+      <div className="mt-3 empty:hidden">
+        <AppliedFilters state={state} catalog={catalog} />
+      </div>
+      {/* Results toolbar: sticky under the header until the rail appears at desk (1024). */}
+      <div className="sticky top-16 z-30 -mx-4 mt-3 flex items-center justify-between gap-3 border-b border-line bg-surface/95 px-4 py-2 backdrop-blur desk:static desk:mx-0 desk:justify-end desk:border-0 desk:bg-transparent desk:p-0">
+        <FiltersTrigger activeCount={activeCount} />
         <SortSelect />
       </div>
-      <div className="flex flex-col gap-6 lg:flex-row">
-        <SearchFilters state={state} catalog={catalog} activeCount={activeCount} />
+      <div className="mt-4 flex flex-col gap-6 desk:flex-row">
+        <SearchFilters state={state} catalog={catalog} />
         <section aria-label="Axtarış nəticələri" className="min-w-0 flex-1">
           {errorCode !== null ? (
             <EmptyState
@@ -99,6 +109,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           ) : null}
         </section>
       </div>
+      <BackToTop />
     </div>
   );
 }
