@@ -58,7 +58,7 @@ export default async function KapitalReturnPage({
     );
   }
 
-  const { outcome, listingId, purpose, promotionEndsAt } = result;
+  const { outcome, listingId, purpose, promotionEndsAt, renewalExpiresAt } = result;
   const retryHref = listingId !== null ? `/elan-yerlesdir/${listingId}` : "/profil/elanlar";
   const checkAgainHref =
     providerOrderId !== undefined
@@ -68,6 +68,17 @@ export default async function KapitalReturnPage({
   const view = (() => {
     switch (outcome.state) {
       case "SUCCESS": {
+        if (purpose === "RENEWAL") {
+          const until =
+            renewalExpiresAt !== null
+              ? ` ${SELLER.renewalNewExpiry}: ${formatDateAz(renewalExpiresAt)}.`
+              : "";
+          return {
+            title: SELLER.renewalSuccessTitle,
+            hint: `${SELLER.renewalSuccessHint}${until}`,
+            actions: [{ href: "/profil/elanlar", label: UI.myListings, testid: "payment-my-listings" }],
+          };
+        }
         if (purpose === "PREMIUM" || purpose === "BOOST") {
           const until =
             promotionEndsAt !== null

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ContactCard } from "@/components/marketplace/contact-card";
 import { FavoriteButton } from "@/components/shared/favorite-button";
 import { Gallery } from "@/components/marketplace/gallery";
+import { ReportListing } from "@/components/marketplace/report-listing";
 import { Badge } from "@/components/ui/badge";
 import { ApiError } from "@/lib/api/errors";
 import { formatMileage, formatPriceMinor, formatYear, vehicleTitle } from "@/lib/format";
@@ -108,6 +109,9 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               </ul>
             </section>
           ) : null}
+          <div className="pt-2">
+            <ReportListing publicId={listing.publicId} />
+          </div>
         </div>
         <div className="lg:sticky lg:top-20 lg:self-start">
           {!limited && listing.seller ? (

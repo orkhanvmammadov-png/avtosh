@@ -304,14 +304,15 @@ export async function insertListingPeriod(
     source: "INITIAL" | "RENEWAL";
     startsAt: Date;
     endsAt: Date;
+    paymentId?: string | null;
   },
 ): Promise<string> {
   const rows = await sql<{ id: string }[]>`
     insert into listing_periods
-      (listing_id, period_number, source, starts_at, ends_at, status)
+      (listing_id, period_number, source, starts_at, ends_at, status, payment_id)
     values
       (${input.listingId}, ${input.periodNumber}, ${input.source}::listing_period_source,
-       ${input.startsAt}, ${input.endsAt}, 'ACTIVE')
+       ${input.startsAt}, ${input.endsAt}, 'ACTIVE', ${input.paymentId ?? null})
     returning id
   `;
   return rows[0].id;

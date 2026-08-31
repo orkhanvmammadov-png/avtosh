@@ -1,0 +1,8 @@
+{
+  "crons": [
+    { "path": "/api/jobs/reconcile-payments", "schedule": "*/5 * * * *" },
+    { "path": "/api/jobs/send-reminders", "schedule": "*/10 * * * *" },
+    { "path": "/api/jobs/expire-listings", "schedule": "*/15 * * * *" },
+    { "path": "/api/jobs/promotion-housekeeping", "schedule": "*/15 * * * *" }
+  ]
+}
