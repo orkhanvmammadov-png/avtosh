@@ -30,14 +30,28 @@ export function formatYear(year: number | null): string {
   return year === null ? "—" : String(year);
 }
 
-/** "bugün", "dünən", "3 gün əvvəl", else a short date. */
-export function formatFreshness(iso: string, now: Date = new Date()): string {
+/**
+ * "bugün", "dünən", "3 gün əvvəl", else DD.MM.YYYY in Asia/Baku.
+ *
+ * HYDRATION CONTRACT: this renders in server HTML AND during client
+ * hydration, so both inputs must be identical on both sides.
+ * - `nowMs` is REQUIRED and must be a server-supplied reference
+ *   timestamp threaded through props (never an implicit `new Date()`
+ *   evaluated separately on each runtime — that flips "dünən"/day
+ *   counts across render moments and midnight boundaries).
+ * - The absolute branch reuses formatDateAz (parts-assembled, fixed
+ *   Asia/Baku). `toLocaleDateString("az-AZ", …)` is FORBIDDEN here:
+ *   Node's full ICU formats it as "22.07.2026" while Chromium's az
+ *   data resolves the same skeleton to the root pattern
+ *   "2026-07-22" — a byte-level SSR/client mismatch.
+ */
+export function formatFreshness(iso: string, nowMs: number): string {
   const published = new Date(iso);
-  const days = Math.floor((now.getTime() - published.getTime()) / 86_400_000);
+  const days = Math.floor((nowMs - published.getTime()) / 86_400_000);
   if (days <= 0) return "bugün";
   if (days === 1) return "dünən";
   if (days < 30) return `${days} gün əvvəl`;
-  return published.toLocaleDateString("az-AZ", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return formatDateAz(published);
 }
 
 export function vehicleTitle(input: { brand: string | null; model: string | null; year: number | null }): string {
@@ -71,4 +85,21 @@ export function formatDateAz(value: string | Date): string {
   }).formatToParts(date);
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
   return `${get("day")}.${get("month")}.${get("year")}`;
+}
+
+/**
+ * HH:MM in Asia/Baku — parts-assembled for the same reason as
+ * formatDateAz: locale-pattern lookups differ between Node's and
+ * Chromium's ICU data, and this renders inside hydrating components.
+ */
+export function formatTimeAz(value: string | Date): string {
+  const date = typeof value === "string" ? new Date(value) : value;
+  const parts = new Intl.DateTimeFormat("az-Latn-AZ", {
+    timeZone: "Asia/Baku",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("hour")}:${get("minute")}`;
 }

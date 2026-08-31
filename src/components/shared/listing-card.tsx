@@ -6,13 +6,20 @@ import { formatFreshness, formatMileage, formatPriceMinor, vehicleTitle } from "
 import { UI } from "@/lib/marketplace/labels";
 import type { PublicCardDto } from "@/services/marketplace";
 
-/** The one public listing card. Reflects the public DTO only. */
+/**
+ * The one public listing card. Reflects the public DTO only.
+ * `nowMs` is the server-supplied render reference for the freshness
+ * label — the SAME value reaches SSR and hydration via props, so the
+ * first client render is byte-identical to the server HTML.
+ */
 export function ListingCard({
   listing,
+  nowMs,
   priority = false,
   promotedLabel,
 }: {
   listing: PublicCardDto;
+  nowMs: number;
   priority?: boolean;
   promotedLabel?: string;
 }) {
@@ -41,7 +48,7 @@ export function ListingCard({
             {formatMileage(listing.mileage)}
             {listing.city ? ` · ${listing.city}` : ""}
           </p>
-          <p className="mt-auto pt-2 text-xs text-muted">{formatFreshness(listing.publishedAt)}</p>
+          <p className="mt-auto pt-2 text-xs text-muted" data-testid="card-freshness">{formatFreshness(listing.publishedAt, nowMs)}</p>
         </div>
       </Link>
       <div className="absolute right-2 top-2">

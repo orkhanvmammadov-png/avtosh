@@ -20,12 +20,15 @@ export function SearchResults({
   initialItems,
   initialCursor,
   initialHasMore,
+  renderedAtMs,
 }: {
   queryString: string;
   promoted: PublicCardDto[];
   initialItems: PublicCardDto[];
   initialCursor: string | null;
   initialHasMore: boolean;
+  /** Server render timestamp — hydration-safe freshness reference. */
+  renderedAtMs: number;
 }) {
   const [items, setItems] = useState(initialItems);
   const [cursor, setCursor] = useState(initialCursor);
@@ -59,7 +62,7 @@ export function SearchResults({
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {promoted.map((item, index) => (
               <li key={item.publicId} className={boostSlotClass(index)} data-testid="promoted-card">
-                <ListingCard listing={item} priority promotedLabel={UI.promoted} />
+                <ListingCard listing={item} nowMs={renderedAtMs} priority promotedLabel={UI.promoted} />
               </li>
             ))}
           </ul>
@@ -67,7 +70,7 @@ export function SearchResults({
       ) : null}
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4" data-testid="results-grid">
         {items.map((item, index) => (
-          <li key={item.publicId} data-testid="organic-card"><ListingCard listing={item} priority={promoted.length === 0 && index < 4} /></li>
+          <li key={item.publicId} data-testid="organic-card"><ListingCard listing={item} nowMs={renderedAtMs} priority={promoted.length === 0 && index < 4} /></li>
         ))}
         {loading ? Array.from({ length: 4 }, (_, i) => <li key={`s-${i}`}><CardSkeleton /></li>) : null}
       </ul>

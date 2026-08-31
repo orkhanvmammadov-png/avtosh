@@ -94,6 +94,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
               initialItems={result.items}
               initialCursor={result.nextCursor}
               initialHasMore={result.hasMore}
+              renderedAtMs={result.generatedAtMs}
             />
           ) : null}
         </section>

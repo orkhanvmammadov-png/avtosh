@@ -1,5 +1,8 @@
+import postgres from "postgres";
 import { expect, test } from "@playwright/test";
 import { expectNoHorizontalOverflow, isMobile, seed } from "./helpers";
+import { testPhone } from "./auth-helpers";
+import { insertListingFixture } from "./seller-helpers";
 
 test.describe("Search", () => {
   test("anonymous car search shows Boost first, then organic, without duplicates", async ({ page }, testInfo) => {
@@ -78,14 +81,99 @@ test.describe("Search", () => {
     await expect(page.getByTestId("organic-card").first()).toBeVisible();
   });
 
-  test("back navigation from a listing restores the search URL state", async ({ page }) => {
+  test("back navigation from a listing restores the search URL state", async ({ page }, { project }) => {
     const s = seed();
+    // Include a ≥30-day-old ACTIVE listing so the card set exercises
+    // the absolute-date freshness branch (the Phase 4.16 renewal data
+    // shape that exposed the hydration defect on CI).
+    await insertOldPublishedListing(project.name, 170);
     await page.goto(`/elanlar?category=CAR&brand_id=${s.toyotaBrandId}&sort=PRICE_DESC`);
-    await page.getByTestId("organic-card").first().getByRole("link").click();
+    const firstCard = page.getByTestId("organic-card").first();
+    // Real hydration/interactivity signal — the card heart leaves its
+    // server-rendered "unknown" state only after client JS is live.
+    // No sleeps, no timeout changes: a hydration-crashed subtree would
+    // keep this attribute at "unknown" and fail here, loudly.
+    await expect(firstCard.getByTestId("favorite-button")).not.toHaveAttribute(
+      "data-favorited",
+      "unknown",
+    );
+    await firstCard.getByRole("link").click();
     await page.waitForURL(/\/elan\/\d+/);
     await page.goBack();
     await page.waitForURL(/sort=PRICE_DESC/);
-    expect(new URL(page.url()).searchParams.get("brand_id")).toBe(s.toyotaBrandId);
+    const restored = new URL(page.url());
+    expect(restored.pathname).toBe("/elanlar");
+    expect(restored.searchParams.get("category")).toBe("CAR");
+    expect(restored.searchParams.get("brand_id")).toBe(s.toyotaBrandId);
+    expect(restored.searchParams.get("sort")).toBe("PRICE_DESC");
     await expect(page.getByTestId("organic-card").first()).toBeVisible();
   });
+
+  test("listing card dates hydrate byte-identically — no hydration errors, stable text, working link", async ({ page }, { project }) => {
+    const { publicId, expectedDate } = await insertOldPublishedListing(project.name, 171);
+    // Capture EVERY console error and page error from before navigation —
+    // nothing is filtered out or silenced.
+    const consoleErrors: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error") consoleErrors.push(message.text());
+    });
+    page.on("pageerror", (error) => consoleErrors.push(String(error)));
+
+    // exact-price filter guarantees THIS card is on page 1
+    await page.goto(`/elanlar?category=CAR&price_min=1234500&price_max=1234500`);
+    const card = page.locator(`[data-testid="listing-card"][data-public-id="${publicId}"]`);
+    await expect(card).toBeVisible();
+    const dateLocator = card.getByTestId("card-freshness");
+    // server-rendered text is the deterministic Baku DD.MM.YYYY
+    await expect(dateLocator).toHaveText(expectedDate);
+    // wait for REAL hydration (heart leaves the unknown state)…
+    await expect(card.getByTestId("favorite-button")).not.toHaveAttribute(
+      "data-favorited",
+      "unknown",
+    );
+    // …and the hydrated client render produced byte-identical text
+    await expect(dateLocator).toHaveText(expectedDate);
+    // React emitted no hydration failure and no JS error. The ONLY
+    // messages excluded are the browser's network-resource log lines
+    // ("Failed to load resource" — e.g. the expected anonymous 401 on
+    // the favorites lookup) and Google-Fonts CORS noise caused by this
+    // harness's own injected x-forwarded-for header breaking font
+    // preflights. Every React warning/error (hydration mismatches
+    // arrive here with full text) and every pageerror still fails.
+    const appErrors = consoleErrors.filter(
+      (message) =>
+        !/^Failed to load resource/.test(message) && !/^Access to font at /.test(message),
+    );
+    expect(appErrors).toEqual([]);
+    // the SSR-rendered link survived hydration and navigates
+    await card.getByRole("link").click();
+    await page.waitForURL(new RegExp(`/elan/${publicId}$`));
+    await expect(page.getByTestId("listing-detail")).toBeVisible();
+  });
 });
+
+/** ACTIVE listing published 40 days ago (still 20 days of validity left). */
+async function insertOldPublishedListing(
+  project: string,
+  slot: number,
+): Promise<{ publicId: string; expectedDate: string }> {
+  const sql = postgres(seed().databaseUrl, { prepare: false, max: 1 });
+  try {
+    const [owner] = await sql`
+      insert into users (phone_e164) values (${testPhone(project, slot)})
+      on conflict (phone_e164) do update set last_login_at = now() returning id
+    `;
+    const fixture = await insertListingFixture(owner.id as string, { status: "ACTIVE", images: 1 });
+    const [row] = await sql`
+      update listings
+      set published_at = now() - interval '40 days',
+          current_expires_at = now() + interval '20 days',
+          price_minor = 1234500
+      where id = ${fixture.id}
+      returning to_char(published_at at time zone 'Asia/Baku', 'DD.MM.YYYY') as expected
+    `;
+    return { publicId: fixture.publicId, expectedDate: row.expected as string };
+  } finally {
+    await sql.end();
+  }
+}

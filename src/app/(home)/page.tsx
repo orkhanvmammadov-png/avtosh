@@ -38,6 +38,7 @@ export default async function HomePage() {
             initialItems={home.premium.items}
             initialCursor={home.premium.nextCursor}
             initialHasMore={home.premium.hasMore}
+            renderedAtMs={home.generatedAtMs}
           />
         </section>
       ) : null}

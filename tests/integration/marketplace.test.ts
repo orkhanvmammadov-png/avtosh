@@ -364,7 +364,7 @@ describe("Premium feed & Home", () => {
     expect(home.newListingsLast24h).toBe(Number(count));
     expect((home.categories as unknown[]).length).toBe(2);
     expect((home.premium as { items: unknown[] }).items).toEqual([]);
-    expect(Object.keys(home).sort()).toEqual(["categories", "newListingsLast24h", "premium"]); // no New-feed / Popular Brands
+    expect(Object.keys(home).sort()).toEqual(["categories", "generatedAtMs", "newListingsLast24h", "premium"]); // no New-feed / Popular Brands
   });
 
   it("premium feed lists all current premium listings once, newest activation first, with cursor", async () => {

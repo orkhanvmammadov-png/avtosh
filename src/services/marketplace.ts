@@ -290,6 +290,13 @@ export interface SearchResultDto {
   nextCursor: string | null;
   hasMore: boolean;
   cacheControl: string;
+  /**
+   * Snapshot timestamp for this result set — the hydration-safe
+   * reference the card freshness labels are computed against (the
+   * SAME value serializes into the client tree, so SSR and hydration
+   * render byte-identical text).
+   */
+  generatedAtMs: number;
 }
 
 export async function searchMarketplace(query: SearchQuery): Promise<SearchResultDto> {
@@ -331,6 +338,7 @@ export async function searchMarketplace(query: SearchQuery): Promise<SearchResul
     cacheControl: publicCacheControl(
       earliestDeadline([...cardDeadlines(promotedRows), ...cardDeadlines(page)]),
     ),
+    generatedAtMs: Date.now(),
   };
 }
 
@@ -378,6 +386,8 @@ export interface HomeDto {
   newListingsLast24h: number;
   categories: CategoryDto[];
   premium: { items: PublicCardDto[]; nextCursor: string | null; hasMore: boolean };
+  /** Snapshot timestamp — hydration-safe freshness reference (see SearchResultDto). */
+  generatedAtMs: number;
 }
 
 export async function homeData(): Promise<{ home: HomeDto; cacheControl: string }> {
@@ -388,7 +398,10 @@ export async function homeData(): Promise<{ home: HomeDto; cacheControl: string 
     premiumFeed({}),
   ]);
   const { cacheControl, ...premium } = premiumPage;
-  return { home: { newListingsLast24h, categories, premium }, cacheControl };
+  return {
+    home: { newListingsLast24h, categories, premium, generatedAtMs: Date.now() },
+    cacheControl,
+  };
 }
 
 // --- detail -----------------------------------------------------------------
