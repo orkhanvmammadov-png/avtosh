@@ -3,7 +3,12 @@
 Azerbaijan-focused responsive **web** marketplace for cars and
 motorcycles. Web only — no native iOS/Android applications.
 
-**Current phase: Phase 4.16 — Renewal, Expiry & Background Operations.**
+**Current phase: Phase 4.17 — Final UI/UX Refresh — COMPLETE**
+(technical + owner visual acceptance). **Next step: Local Full UAT**
+— a complete end-to-end user-acceptance pass on a local environment —
+before Production Readiness (launch checkpoints: WhatsApp BSP
+integration/template approval, Kapital production credentials,
+CRON_SECRET provisioning, production origin configuration).
 Implemented so far: the MVP database schema (Supabase migrations),
 the public read-only Catalog API (`/api/v1/catalog/*`), passwordless
 WhatsApp-OTP authentication with opaque cookie sessions
