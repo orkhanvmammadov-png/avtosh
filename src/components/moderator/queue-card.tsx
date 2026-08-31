@@ -40,7 +40,7 @@ export function QueueCard({ item }: { item: QueueCardItem }) {
       <div className="h-14 w-20 shrink-0 overflow-hidden rounded-md bg-sunken">
         {item.primaryImageUrl !== null ? (
           // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
-          <img src={item.primaryImageUrl} alt="" className="h-full w-full object-cover" />
+          <img src={item.primaryImageUrl} alt="" className="h-full w-full object-cover text-transparent" />
         ) : (
           <div
             className="flex h-full w-full items-center justify-center text-[10px] font-medium text-muted"

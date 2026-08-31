@@ -57,7 +57,7 @@ export function ContactCard({ publicId, displayName, maskedPhone }: { publicId: 
               </svg>
               {loading ? UI.loading : UI.showPhone}
             </Button>
-            {maskedPhone === null ? <p className="mt-2 hidden text-sm text-muted desk:block">{UI.contactUnavailable}</p> : null}
+            {maskedPhone === null ? <p className="mt-1 text-xs text-muted desk:mt-2 desk:text-sm">{UI.contactUnavailable}</p> : null}
             {error ? <p role="alert" className="mt-1 text-xs text-danger desk:mt-2 desk:text-sm">{error}</p> : null}
           </div>
         ) : (

@@ -56,7 +56,12 @@ test.describe("Listing detail", () => {
       const response = await page.goto(`/elan/${id}`);
       expect(response?.status()).toBe(404);
       await expect(page.getByText("Elan tapılmadı")).toBeVisible();
-      const text = await page.textContent("body");
+      // Leak check scoped to the 404 CONTENT: the global footer now
+      // legitimately carries static marketing copy ("təhlükəsiz onlayn
+      // ödəniş") on every page, which can never disclose per-listing
+      // state — the assertion still forbids any lifecycle/payment hint
+      // in what the 404 itself says.
+      const text = await page.locator("main").textContent();
       expect(text).not.toMatch(/suspend|moderasiya|ödəniş|payment/i);
     }
   });

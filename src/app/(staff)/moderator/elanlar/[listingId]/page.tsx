@@ -129,7 +129,7 @@ export default async function ModerationReviewPage({
                       <img
                         src={image.url}
                         alt={`${title} — ${index + 1}`}
-                        className="aspect-vehicle w-full object-cover"
+                        className="aspect-vehicle w-full object-cover text-transparent"
                         loading={index < 3 ? "eager" : "lazy"}
                       />
                     ) : (
