@@ -14,7 +14,9 @@
     "db:validate": "./scripts/db/validate.sh",
     "test:integration:db": "./scripts/db/with-temp-postgres.sh pnpm exec vitest run --config vitest.integration.config.mts",
     "catalog:import": "node scripts/catalog/import.mts",
-    "db:explain": "./scripts/db/with-temp-postgres.sh node scripts/db/explain-search.mjs"
+    "db:explain": "./scripts/db/with-temp-postgres.sh node scripts/db/explain-search.mjs",
+    "uat:dev": "AVTOSH_UAT=1 OTP_PEPPER=uat-local-pepper-0123456789abcdef OTP_RESEND_COOLDOWN_SECONDS=15 OTP_MIN_INTERVAL_SECONDS=5 OTP_PHONE_MAX_PER_HOUR=30 OTP_IP_MAX_PER_HOUR=200 STORAGE_DRIVER=local LOCAL_STORAGE_SUBDIR=uat PAYMENT_FAKE_KAPITAL=1 KAPITAL_API_BASE_URL=http://localhost:3000/api/dev-kapital KAPITAL_USERNAME=uat-merchant KAPITAL_PASSWORD=uat-not-a-real-secret CRON_SECRET=uat-cron-secret-0123456789abcdef ./scripts/db/with-temp-postgres.sh sh -c 'node scripts/uat/seed.mjs && next dev'",
+    "uat:reminder-due": "AVTOSH_UAT=1 node scripts/uat/make-reminder-due.mjs"
   },
   "engines": {
     "node": ">=24"
