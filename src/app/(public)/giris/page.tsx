@@ -27,7 +27,7 @@ export default async function LoginPage({
     redirect(returnTo ?? "/profil");
   }
   return (
-    <div className="py-10">
+    <div className="py-10 md:py-16">
       <LoginFlow returnTo={returnTo} />
     </div>
   );
