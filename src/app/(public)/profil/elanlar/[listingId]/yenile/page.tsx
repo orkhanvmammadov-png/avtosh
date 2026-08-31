@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
 import { RenewalPurchase } from "@/components/seller/renewal-purchase";
+import { buttonClasses } from "@/components/ui/button";
+import { ResultPanel } from "@/components/ui/result-panel";
 import { isApiError } from "@/lib/api/errors";
 import { formatDateAz } from "@/lib/format";
 import { SELLER, UI } from "@/lib/marketplace/labels";
@@ -38,10 +40,7 @@ export default async function RenewalPage({
   }
   if (auth.user.status === "BLOCKED") {
     return (
-      <div className="py-16 text-center" data-testid="seller-blocked">
-        <h1 className="text-2xl font-bold text-navy">{SELLER.blockedTitle}</h1>
-        <p className="mt-2 text-sm text-muted">{SELLER.blockedHint}</p>
-      </div>
+      <ResultPanel tone="danger" title={SELLER.blockedTitle} hint={SELLER.blockedHint} data-testid="seller-blocked" />
     );
   }
 
@@ -57,16 +56,13 @@ export default async function RenewalPage({
 
   if (!renewal.eligible) {
     return (
-      <div className="py-16 text-center" data-testid="renewal-unavailable">
-        <h1 className="text-2xl font-bold text-navy">{SELLER.renewalNotAvailable}</h1>
-        <p className="mt-2 text-sm text-muted">{SELLER.renewalOnlyExpiredHint}</p>
-        <Link
-          href="/profil/elanlar"
-          className="mt-8 inline-flex min-h-12 items-center rounded-lg bg-primary px-6 text-sm font-semibold text-white hover:bg-primary-hover"
-        >
-          {UI.myListings}
-        </Link>
-      </div>
+      <ResultPanel
+        tone="neutral"
+        title={SELLER.renewalNotAvailable}
+        hint={SELLER.renewalOnlyExpiredHint}
+        data-testid="renewal-unavailable"
+        actions={<Link href="/profil/elanlar" className={buttonClasses("primary", "px-6")}>{UI.myListings}</Link>}
+      />
     );
   }
 

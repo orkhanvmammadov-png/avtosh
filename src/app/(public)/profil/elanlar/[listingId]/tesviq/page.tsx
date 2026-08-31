@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
 import { PromotionPurchase } from "@/components/seller/promotion-purchase";
+import { buttonClasses } from "@/components/ui/button";
+import { ResultPanel } from "@/components/ui/result-panel";
 import { isApiError } from "@/lib/api/errors";
 import { vehicleTitle } from "@/lib/format";
 import { SELLER, UI } from "@/lib/marketplace/labels";
@@ -43,10 +45,7 @@ export default async function PromotionPage({
   }
   if (auth.user.status === "BLOCKED") {
     return (
-      <div className="py-16 text-center" data-testid="seller-blocked">
-        <h1 className="text-2xl font-bold text-navy">{SELLER.blockedTitle}</h1>
-        <p className="mt-2 text-sm text-muted">{SELLER.blockedHint}</p>
-      </div>
+      <ResultPanel tone="danger" title={SELLER.blockedTitle} hint={SELLER.blockedHint} data-testid="seller-blocked" />
     );
   }
 
@@ -62,16 +61,13 @@ export default async function PromotionPage({
 
   if (!state.promotable) {
     return (
-      <div className="py-16 text-center" data-testid="promotion-unavailable">
-        <h1 className="text-2xl font-bold text-navy">{SELLER.promotionNotAvailable}</h1>
-        <p className="mt-2 text-sm text-muted">{SELLER.promotionOnlyActiveHint}</p>
-        <Link
-          href="/profil/elanlar"
-          className="mt-8 inline-flex min-h-12 items-center rounded-lg bg-primary px-6 text-sm font-semibold text-white hover:bg-primary-hover"
-        >
-          {UI.myListings}
-        </Link>
-      </div>
+      <ResultPanel
+        tone="neutral"
+        title={SELLER.promotionNotAvailable}
+        hint={SELLER.promotionOnlyActiveHint}
+        data-testid="promotion-unavailable"
+        actions={<Link href="/profil/elanlar" className={buttonClasses("primary", "px-6")}>{UI.myListings}</Link>}
+      />
     );
   }
 

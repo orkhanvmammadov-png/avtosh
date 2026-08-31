@@ -60,7 +60,7 @@ export function RenewalPurchase({ renewal }: { renewal: RenewalStateDto }) {
 
   return (
     <div className="space-y-4" data-testid="renewal-purchase">
-      <dl className="rounded-card border border-line bg-white p-4 text-sm">
+      <dl className="rounded-card border border-line bg-raised p-4 text-sm shadow-card">
         <div className="flex justify-between py-1">
           <dt className="text-muted">{SELLER.promotionPrice}</dt>
           <dd className="font-semibold text-navy" data-testid="renewal-price">
@@ -80,7 +80,7 @@ export function RenewalPurchase({ renewal }: { renewal: RenewalStateDto }) {
         {SELLER.renewalAfterPaymentTail}
       </p>
       {renewal.openIntent !== null && renewal.openIntent.status === "PENDING" ? (
-        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900" data-testid="renewal-pending-note">
+        <p className="rounded-control border border-warning-line bg-warning-soft px-3 py-2 text-xs text-warning-deep" data-testid="renewal-pending-note">
           {SELLER.renewalPendingIntent}
         </p>
       ) : null}

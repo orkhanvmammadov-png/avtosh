@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
 import { formatDateAz } from "@/lib/format";
+import { buttonClasses } from "@/components/ui/button";
 import { SELLER, UI } from "@/lib/marketplace/labels";
+import { ResultPanel, type ResultTone } from "@/components/ui/result-panel";
 import { handleKapitalCallback } from "@/services/payment-checkout";
 
 export const metadata: Metadata = {
@@ -42,19 +44,18 @@ export default async function KapitalReturnPage({
         ? `/giris?return_to=${encodeURIComponent(`/odenis/kapital/netice?ID=${providerOrderId}`)}`
         : "/giris";
     return (
-      <div className="mx-auto max-w-xl py-16 text-center" data-testid="payment-result" data-state="GENERIC">
-        <h1 className="text-2xl font-bold text-navy">{SELLER.payGenericTitle}</h1>
-        <p className="mt-3 text-sm text-muted">{SELLER.payGenericHint}</p>
-        <div className="mt-8 flex justify-center gap-3">
-          <Link
-            href={loginBack}
-            data-testid="payment-login"
-            className="inline-flex min-h-12 items-center rounded-lg bg-primary px-6 text-sm font-semibold text-white hover:bg-primary-hover"
-          >
+      <ResultPanel
+        tone="neutral"
+        title={SELLER.payGenericTitle}
+        hint={SELLER.payGenericHint}
+        data-testid="payment-result"
+        data-state="GENERIC"
+        actions={
+          <Link href={loginBack} data-testid="payment-login" className={buttonClasses("primary", "px-6")}>
             {UI.login}
           </Link>
-        </div>
-      </div>
+        }
+      />
     );
   }
 
@@ -124,22 +125,29 @@ export default async function KapitalReturnPage({
     }
   })();
 
+  const tone: ResultTone =
+    outcome.state === "SUCCESS"
+      ? "success"
+      : outcome.state === "PENDING" || outcome.state === "MISMATCH"
+        ? "pending"
+        : outcome.state === "RETRYABLE"
+          ? "danger"
+          : outcome.state === "REFUNDED"
+            ? "info"
+            : "warning";
+
   return (
-    <div className="mx-auto max-w-xl py-16 text-center" data-testid="payment-result" data-state={outcome.state}>
-      <h1 className="text-2xl font-bold text-navy">{view.title}</h1>
-      <p className="mt-3 text-sm text-muted">{view.hint}</p>
-      <div className="mt-8 flex justify-center gap-3">
-        {view.actions.map((action) => (
-          <Link
-            key={action.href}
-            href={action.href}
-            data-testid={action.testid}
-            className="inline-flex min-h-12 items-center rounded-lg bg-primary px-6 text-sm font-semibold text-white hover:bg-primary-hover"
-          >
-            {action.label}
-          </Link>
-        ))}
-      </div>
-    </div>
+    <ResultPanel
+      tone={tone}
+      title={view.title}
+      hint={view.hint}
+      data-testid="payment-result"
+      data-state={outcome.state}
+      actions={view.actions.map((action) => (
+        <Link key={action.href} href={action.href} data-testid={action.testid} className={buttonClasses("primary", "px-6")}>
+          {action.label}
+        </Link>
+      ))}
+    />
   );
 }
