@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { Button } from "@/components/ui/button";
+import { formatTimeAz } from "@/lib/format";
 import { STAFF } from "@/lib/marketplace/labels";
 import { publicFetch, PublicApiError } from "@/lib/marketplace/public-api";
 import { REASON_LABELS } from "@/lib/seller/status";
@@ -162,7 +163,7 @@ export function ModerationActions({
             <p className="rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800">
               {STAFF.claimMine}
               {claimExpiresAt !== null
-                ? ` (${new Date(claimExpiresAt).toLocaleTimeString("az-Latn-AZ", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Baku" })} ${STAFF.claimUntil})`
+                ? ` (${formatTimeAz(claimExpiresAt)} ${STAFF.claimUntil})`
                 : null}
             </p>
           ) : claimOther ? (

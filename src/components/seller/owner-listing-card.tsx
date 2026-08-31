@@ -21,13 +21,16 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
       ? `/elan-yerlesdir/${listing.id}`
       : presentation.action.kind === "public"
         ? `/elan/${listing.publicId}`
-        : null;
+        : presentation.action.kind === "renew"
+          ? `/profil/elanlar/${listing.id}/yenile`
+          : null;
 
   return (
     <article
       className="flex gap-3 rounded-card border border-line bg-white p-3"
       data-testid="owner-listing-card"
       data-status={listing.status}
+      data-listing-id={listing.id}
     >
       <div className="h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-line/40">
         {listing.primaryImageUrl !== null ? (

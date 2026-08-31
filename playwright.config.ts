@@ -47,6 +47,8 @@ export default defineConfig({
       KAPITAL_API_BASE_URL: "http://localhost:3000/api/dev-kapital",
       KAPITAL_USERNAME: "e2e-merchant",
       KAPITAL_PASSWORD: "e2e-not-a-real-secret",
+      // Scheduled-job endpoints (Phase 4.16) — test-only cron secret.
+      CRON_SECRET: "e2e-cron-secret-0123456789abcdef",
     },
     url: "http://localhost:3000/api/v1/health",
     reuseExistingServer: false,

@@ -220,6 +220,19 @@ export const SELLER = {
   filterCorrection: "Düzəliş",
   photosCount: "şəkil",
   unsavedLeaveWarning: "Yadda saxlanmamış dəyişikliklər var.",
+  renew: "Yenilə",
+  renewalTitle: "Elanı yenilə",
+  renewalHint: "Yeniləmə eyni elanı yenidən aktivləşdirir — elan nömrəsi, keçmiş və statistika dəyişmir.",
+  renewalExpiredAt: "Bitmə tarixi",
+  renewalAfterPayment: "Ödəniş bank tərəfindən təsdiqləndikdən sonra elanınız",
+  renewalAfterPaymentTail: "gün müddətinə yenidən aktiv olacaq.",
+  renewalPendingIntent: "Bu elan üzrə yeniləmə ödənişi artıq başladılıb — ödənişi tamamlayın.",
+  renewalNotAvailable: "Bu elan üçün yeniləmə mümkün deyil.",
+  renewalOnlyExpiredHint: "Yeniləmə yalnız müddəti bitmiş elanlar üçün mümkündür.",
+  renewalPay: "Ödənişə keç",
+  renewalSuccessTitle: "Elan yeniləndi",
+  renewalSuccessHint: "Elanınız yenidən aktivdir.",
+  renewalNewExpiry: "Yeni bitmə tarixi",
 } as const;
 
 export const SPEC_LABELS = {
@@ -369,4 +382,25 @@ export const ADMIN = {
   all: "Hamısı",
   logoutLabel: "Çıxış",
   moderatorPortal: "Moderasiya",
+} as const;
+
+/** Buyer-side listing report intake (Phase 4.16). */
+export const REPORT = {
+  action: "Şikayət et",
+  title: "Elan barədə şikayət",
+  reason: "Səbəb",
+  note: "Qeyd (istəyə bağlı)",
+  submit: "Göndər",
+  cancel: "İmtina",
+  success: "Şikayətiniz qəbul edildi. Təşəkkür edirik.",
+  rateLimited: "Bu elan üzrə şikayət artıq qeydə alınıb və ya limit keçilib.",
+  failed: "Şikayət göndərilə bilmədi. Yenidən cəhd edin.",
+  reasons: {
+    WRONG_INFORMATION: "Yanlış məlumat",
+    DUPLICATE: "Təkrar elan",
+    FRAUD_SUSPECTED: "Fırıldaqçılıq şübhəsi",
+    SOLD_OR_UNAVAILABLE: "Satılıb və ya mövcud deyil",
+    PROHIBITED_CONTENT: "Qadağan olunmuş məzmun",
+    OTHER: "Digər",
+  } as Record<string, string>,
 } as const;

@@ -29,6 +29,8 @@ import {
   insertPromotionPeriod,
   lockListingForPromotion,
 } from "@/repositories/promotions";
+import { insertListingPeriod, nextPeriodNumber } from "@/repositories/moderation";
+import { findRenewalPeriodByPayment, lockListingForRenewal } from "@/repositories/renewals";
 import { buildHppRedirect } from "@/providers/payments/kapital-provider";
 import {
   getPaymentProvider,
@@ -437,8 +439,12 @@ async function fulfillPayment(tx: Tx, payment: LockedPaymentRowLike): Promise<vo
     await fulfillPromotion(tx, payment);
     return;
   }
-  // future purposes (e.g. RENEWAL) must be wired explicitly — a
-  // SUCCESS with no fulfillment target is an operations flag
+  if (payment.type === "RENEWAL") {
+    await fulfillRenewal(tx, payment);
+    return;
+  }
+  // future purposes must be wired explicitly — a SUCCESS with no
+  // fulfillment target is an operations flag
   logPaymentEvent("verification_failed", {
     payment_id: payment.id,
     kind: "NO_FULFILLMENT_TARGET",
@@ -452,6 +458,90 @@ interface LockedPaymentRowLike {
   amount_minor: string;
   promotion_package_id: string | null;
   package_duration_days: number | null;
+  renewal_duration_days: number | null;
+}
+
+/**
+ * Renewal side of a verified RENEWAL success (inside the same tx as
+ * the payment transition, which runs at most once per payment — that
+ * is the exactly-once guarantee: callbacks ×20 and concurrent
+ * verifications can never create a second period). Grants the NEXT
+ * sequential listing_period from the payment's immutable duration
+ * snapshot, keeps the same listing/publication identity, consumes no
+ * publication quota, and transitions EXPIRED → ACTIVE. If the listing
+ * left EXPIRED through another path meanwhile (operations edge), the
+ * paid time is still recorded — current_expires_at only ever grows —
+ * and the status is left alone with an operations flag.
+ */
+async function fulfillRenewal(tx: Tx, payment: LockedPaymentRowLike): Promise<void> {
+  if (payment.listing_id === null || payment.renewal_duration_days === null) {
+    logPaymentEvent("verification_failed", {
+      payment_id: payment.id,
+      kind: "RENEWAL_TARGET_INCOMPLETE",
+    });
+    return;
+  }
+  const listing = await lockListingForRenewal(tx, payment.listing_id);
+  if (listing === undefined) {
+    logPaymentEvent("verification_failed", {
+      payment_id: payment.id,
+      kind: "RENEWAL_TARGET_INCOMPLETE",
+    });
+    return;
+  }
+  const startsAt = new Date();
+  const endsAt = new Date(startsAt.getTime() + payment.renewal_duration_days * 86_400_000);
+  const periodNumber = await nextPeriodNumber(tx, payment.listing_id);
+  await insertListingPeriod(tx, {
+    listingId: payment.listing_id,
+    periodNumber,
+    source: "RENEWAL",
+    startsAt,
+    endsAt,
+    paymentId: payment.id,
+  });
+  if (listing.status === "EXPIRED") {
+    await tx`
+      update listings set status = 'ACTIVE', current_expires_at = ${endsAt}
+      where id = ${payment.listing_id} and status = 'EXPIRED'
+    `;
+    await insertSystemStatusHistory(tx, {
+      listingId: payment.listing_id,
+      fromStatus: "EXPIRED",
+      toStatus: "ACTIVE",
+      reasonCode: "RENEWAL",
+    });
+  } else {
+    // paid time is never lost, but a non-EXPIRED status (e.g. an
+    // operations transition raced the payment) is not overridden
+    await tx`
+      update listings
+      set current_expires_at = greatest(coalesce(current_expires_at, ${endsAt}), ${endsAt})
+      where id = ${payment.listing_id}
+    `;
+    logPaymentEvent("verification_failed", {
+      payment_id: payment.id,
+      kind: "RENEWAL_NON_EXPIRED_STATUS",
+      listing_status: listing.status,
+    });
+  }
+  await insertOutboxEvent(tx, {
+    eventType: "LISTING_RENEWED",
+    aggregateId: payment.listing_id,
+    payload: {
+      listing_id: payment.listing_id,
+      payment_id: payment.id,
+      period_number: periodNumber,
+      ends_at: endsAt.toISOString(),
+    },
+  });
+  logPaymentEvent("fulfillment_completed", {
+    payment_id: payment.id,
+    listing_id: payment.listing_id,
+    purpose: "RENEWAL",
+    period_number: periodNumber,
+    ends_at: endsAt.toISOString(),
+  });
 }
 
 /**
@@ -552,6 +642,7 @@ export type CallbackView =
       listingId: string | null;
       purpose: string;
       promotionEndsAt: Date | null;
+      renewalExpiresAt: Date | null;
     }
   | { view: "GENERIC" };
 
@@ -596,12 +687,17 @@ export async function handleKapitalCallback(
     (summary.type === "PREMIUM" || summary.type === "BOOST") && outcome.state === "SUCCESS"
       ? await findPromotionByPayment(sql, attempt.payment_id)
       : undefined;
+  const renewalPeriod =
+    summary.type === "RENEWAL" && outcome.state === "SUCCESS"
+      ? await findRenewalPeriodByPayment(sql, attempt.payment_id)
+      : undefined;
   return {
     view: "OWNER",
     outcome,
     listingId: summary.listing_id,
     purpose: summary.type,
     promotionEndsAt: promotion?.ends_at ?? null,
+    renewalExpiresAt: renewalPeriod?.ends_at ?? null,
   };
 }
 

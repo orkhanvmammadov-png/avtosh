@@ -54,6 +54,7 @@ export interface LockedPaymentRow {
   provider: string | null;
   promotion_package_id: string | null;
   package_duration_days: number | null;
+  renewal_duration_days: number | null;
 }
 
 export async function lockPayment(
@@ -63,7 +64,7 @@ export async function lockPayment(
   const rows = await sql<LockedPaymentRow[]>`
     select id, user_id, listing_id, type::text as type,
            amount_minor::text as amount_minor, currency, status::text as status, provider,
-           promotion_package_id, package_duration_days
+           promotion_package_id, package_duration_days, renewal_duration_days
     from payments where id = ${paymentId}
     for update
   `;

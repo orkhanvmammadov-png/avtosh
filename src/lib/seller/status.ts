@@ -3,6 +3,7 @@
 export type OwnerAction =
   | { kind: "wizard"; label: string }
   | { kind: "public"; label: string }
+  | { kind: "renew"; label: string }
   | { kind: "none" };
 
 export interface StatusPresentation {
@@ -21,7 +22,7 @@ export const STATUS_PRESENTATION: Record<string, StatusPresentation> = {
   ACTIVE: { label: "Aktiv", tone: "success", action: { kind: "public", label: "Elana bax" } },
   SUSPENDED: { label: "Dayandırılıb", tone: "danger", action: { kind: "none" } },
   SOLD: { label: "Satılıb", tone: "neutral", action: { kind: "public", label: "Elana bax" } },
-  EXPIRED: { label: "Müddəti bitib", tone: "neutral", action: { kind: "public", label: "Elana bax" } },
+  EXPIRED: { label: "Müddəti bitib", tone: "warning", action: { kind: "renew", label: "Yenilə" } },
 };
 
 export function statusPresentation(status: string): StatusPresentation {

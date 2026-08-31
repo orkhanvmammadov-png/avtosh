@@ -24,7 +24,7 @@ test("owner sees every lifecycle state with Azerbaijani labels and matching acti
     ["CORRECTION_REQUIRED", "Düzəliş tələb olunur", "Düzəliş et"],
     ["REJECTED", "Rədd edilib", "Redaktə et"],
     ["SOLD", "Satılıb", "Elana bax"],
-    ["EXPIRED", "Müddəti bitib", "Elana bax"],
+    ["EXPIRED", "Müddəti bitib", "Yenilə"], // Phase 4.16: renewal action
     ["SUSPENDED", "Dayandırılıb", null],
   ];
   for (const [status] of fixtures) {

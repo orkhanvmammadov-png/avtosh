@@ -8,6 +8,9 @@ const schema = z.object({
   CONTACT_REVEAL_PER_LISTING_PER_WINDOW: z.coerce.number().int().positive().default(3),
   CONTACT_REVEAL_PER_SOURCE_PER_WINDOW: z.coerce.number().int().positive().default(15),
   CONTACT_REVEAL_WINDOW_SECONDS: z.coerce.number().int().positive().default(3600),
+  REPORT_PER_LISTING_PER_WINDOW: z.coerce.number().int().positive().default(1),
+  REPORT_PER_SOURCE_PER_WINDOW: z.coerce.number().int().positive().default(20),
+  REPORT_WINDOW_SECONDS: z.coerce.number().int().positive().default(86400),
 });
 
 export interface MarketplaceConfig {
@@ -20,6 +23,10 @@ export interface MarketplaceConfig {
   contactRevealPerListing: number;
   contactRevealPerSource: number;
   contactRevealWindowSeconds: number;
+  /** Technical anti-abuse windows for anonymous listing reports. */
+  reportPerListing: number;
+  reportPerSource: number;
+  reportWindowSeconds: number;
 }
 
 export function marketplaceConfig(): MarketplaceConfig {
@@ -31,6 +38,9 @@ export function marketplaceConfig(): MarketplaceConfig {
     CONTACT_REVEAL_PER_LISTING_PER_WINDOW: process.env.CONTACT_REVEAL_PER_LISTING_PER_WINDOW,
     CONTACT_REVEAL_PER_SOURCE_PER_WINDOW: process.env.CONTACT_REVEAL_PER_SOURCE_PER_WINDOW,
     CONTACT_REVEAL_WINDOW_SECONDS: process.env.CONTACT_REVEAL_WINDOW_SECONDS,
+    REPORT_PER_LISTING_PER_WINDOW: process.env.REPORT_PER_LISTING_PER_WINDOW,
+    REPORT_PER_SOURCE_PER_WINDOW: process.env.REPORT_PER_SOURCE_PER_WINDOW,
+    REPORT_WINDOW_SECONDS: process.env.REPORT_WINDOW_SECONDS,
   });
   return {
     pageSize: parsed.MARKETPLACE_PAGE_SIZE,
@@ -40,6 +50,9 @@ export function marketplaceConfig(): MarketplaceConfig {
     contactRevealPerListing: parsed.CONTACT_REVEAL_PER_LISTING_PER_WINDOW,
     contactRevealPerSource: parsed.CONTACT_REVEAL_PER_SOURCE_PER_WINDOW,
     contactRevealWindowSeconds: parsed.CONTACT_REVEAL_WINDOW_SECONDS,
+    reportPerListing: parsed.REPORT_PER_LISTING_PER_WINDOW,
+    reportPerSource: parsed.REPORT_PER_SOURCE_PER_WINDOW,
+    reportWindowSeconds: parsed.REPORT_WINDOW_SECONDS,
   };
 }
 

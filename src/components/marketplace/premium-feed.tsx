@@ -14,10 +14,13 @@ export function PremiumFeed({
   initialItems,
   initialCursor,
   initialHasMore,
+  renderedAtMs,
 }: {
   initialItems: PublicCardDto[];
   initialCursor: string | null;
   initialHasMore: boolean;
+  /** Server render timestamp — hydration-safe freshness reference. */
+  renderedAtMs: number;
 }) {
   const [items, setItems] = useState(initialItems);
   const [cursor, setCursor] = useState(initialCursor);
@@ -47,7 +50,7 @@ export function PremiumFeed({
     <div>
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" data-testid="premium-grid">
         {items.map((item, index) => (
-          <li key={item.publicId}><ListingCard listing={item} priority={index < 4} /></li>
+          <li key={item.publicId}><ListingCard listing={item} nowMs={renderedAtMs} priority={index < 4} /></li>
         ))}
         {loading ? Array.from({ length: 4 }, (_, i) => <li key={`s-${i}`}><CardSkeleton /></li>) : null}
       </ul>
