@@ -11,8 +11,9 @@ import { UI } from "@/lib/marketplace/labels";
 export async function SiteHeader() {
   const auth = await getCurrentAuthFromCookies();
   const authed = auth !== null;
+  // no display value here — call sites choose inline-flex vs hidden lg:inline-flex
   const navLink =
-    "inline-flex min-h-12 items-center rounded-control px-3 text-sm font-medium text-slate-strong transition-colors hover:bg-surface hover:text-navy";
+    "min-h-12 items-center rounded-control px-3 text-sm font-medium text-slate-strong transition-colors hover:bg-surface hover:text-navy";
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-raised/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-(--container-content) items-center justify-between gap-4 px-4">
@@ -27,10 +28,10 @@ export async function SiteHeader() {
           </span>
         </Link>
         <nav aria-label="Əsas naviqasiya" className="hidden items-center gap-1 md:flex">
-          <Link href="/elanlar?category=CAR" className={navLink}>
+          <Link href="/elanlar?category=CAR" className={`inline-flex ${navLink}`}>
             {UI.cars}
           </Link>
-          <Link href="/elanlar?category=MOTORCYCLE" className={navLink}>
+          <Link href="/elanlar?category=MOTORCYCLE" className={`inline-flex ${navLink}`}>
             {UI.motorcycles}
           </Link>
         </nav>
@@ -58,12 +59,13 @@ export async function SiteHeader() {
           )}
           <Link
             href={authed ? "/elan-yerlesdir" : "/giris?return_to=%2Felan-yerlesdir"}
-            className="hidden min-h-12 items-center justify-center gap-1.5 rounded-control bg-primary px-4 text-sm font-semibold text-white shadow-card transition-colors hover:bg-primary-hover md:inline-flex"
+            aria-label={UI.postListing}
+            className="hidden min-h-12 w-12 items-center justify-center gap-1.5 rounded-control bg-primary px-0 text-sm font-semibold text-white shadow-card transition-colors hover:bg-primary-hover md:inline-flex lg:w-auto lg:px-4"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
               <path d="M12 5v14M5 12h14" />
             </svg>
-            {UI.postListing}
+            <span className="hidden lg:inline">{UI.postListing}</span>
           </Link>
           <MobileNav authed={authed} buttonClassName={authed ? "lg:hidden" : "md:hidden"} />
         </div>

@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
+import { AccountNav } from "@/components/seller/account-nav";
 import { OwnerListingCard } from "@/components/seller/owner-listing-card";
+import { buttonClasses } from "@/components/ui/button";
 import { SELLER, UI } from "@/lib/marketplace/labels";
 import {
   MY_LISTINGS_FILTERS,
@@ -43,24 +45,25 @@ export default async function MyListingsPage({
   const items = await myListings(auth, filter);
 
   return (
-    <div className="py-8" data-testid="my-listings-page">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-navy">{UI.myListings}</h1>
-        <Link
-          href="/elan-yerlesdir"
-          className="inline-flex min-h-12 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:bg-primary-hover"
-        >
+    <div className="py-6" data-testid="my-listings-page">
+      <AccountNav active="listings" />
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold tracking-tight text-navy">{UI.myListings}</h1>
+        <Link href="/elan-yerlesdir" className={buttonClasses("primary", "gap-1.5")}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
           {UI.postListing}
         </Link>
       </div>
-      <nav aria-label="Filtr" className="mt-4 flex flex-wrap gap-1">
+      <nav aria-label="Filtr" className="mt-4 flex flex-wrap gap-1.5">
         {(Object.keys(FILTER_LABELS) as MyListingsFilter[]).map((key) => (
           <Link
             key={key}
             href={key === "all" ? "/profil/elanlar" : `/profil/elanlar?filter=${key}`}
             aria-current={key === filter ? "page" : undefined}
-            className={`inline-flex min-h-12 items-center rounded-lg px-3 text-sm font-medium ${
-              key === filter ? "bg-primary text-white" : "text-navy hover:bg-surface"
+            className={`inline-flex min-h-12 items-center rounded-full border px-4 text-sm font-medium transition-colors ${
+              key === filter
+                ? "border-primary bg-primary text-white"
+                : "border-line bg-raised text-navy hover:border-line-strong hover:bg-surface"
             }`}
             data-testid={`filter-${key}`}
           >
@@ -69,7 +72,7 @@ export default async function MyListingsPage({
         ))}
       </nav>
       {items.length === 0 ? (
-        <div className="mt-10 rounded-card border border-line bg-white px-6 py-12 text-center" data-testid="my-listings-empty">
+        <div className="mt-10 rounded-card border border-dashed border-line bg-raised px-6 py-12 text-center" data-testid="my-listings-empty">
           <p className="text-lg font-semibold text-navy">{SELLER.emptyMyListings}</p>
           <p className="mt-2 text-sm text-muted">{SELLER.emptyMyListingsHint}</p>
         </div>
