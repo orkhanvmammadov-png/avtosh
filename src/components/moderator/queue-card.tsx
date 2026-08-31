@@ -33,11 +33,11 @@ export function QueueCard({ item }: { item: QueueCardItem }) {
   const title = vehicleTitle({ brand: item.brandName, model: item.modelName, year: item.year });
   return (
     <article
-      className="flex items-center gap-3 rounded-card border border-line bg-white p-2.5 transition-shadow hover:shadow-md"
+      className="flex items-center gap-3 rounded-card border border-line bg-raised p-2.5 shadow-card transition-shadow hover:shadow-raised"
       data-testid="queue-item"
       data-listing-id={item.id}
     >
-      <div className="h-14 w-20 shrink-0 overflow-hidden rounded-md bg-line/50">
+      <div className="h-14 w-20 shrink-0 overflow-hidden rounded-md bg-sunken">
         {item.primaryImageUrl !== null ? (
           // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
           <img src={item.primaryImageUrl} alt="" className="h-full w-full object-cover" />
@@ -63,7 +63,7 @@ export function QueueCard({ item }: { item: QueueCardItem }) {
       </div>
       {item.claim !== null ? (
         <span
-          className="shrink-0 rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800"
+          className="shrink-0 rounded-md border border-warning-line bg-warning-soft px-2 py-1 text-xs font-semibold text-warning-deep"
           data-testid="queue-claimed"
         >
           Nəzarətdə

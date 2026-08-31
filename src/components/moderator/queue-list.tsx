@@ -42,7 +42,7 @@ export function ModeratorQueueList({
 
   if (items.length === 0) {
     return (
-      <div className="mt-10 rounded-card border border-line bg-white px-6 py-12 text-center" data-testid="queue-empty">
+      <div className="mt-10 rounded-card border border-dashed border-line bg-raised px-6 py-12 text-center" data-testid="queue-empty">
         <p className="text-lg font-semibold text-navy">{STAFF.queueEmpty}</p>
       </div>
     );

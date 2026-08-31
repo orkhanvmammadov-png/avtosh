@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ModerationActions } from "@/components/moderator/moderation-actions";
+import { chipFor, LISTING_STATUS_CHIPS } from "@/components/ui/status-chip";
 import { isApiError } from "@/lib/api/errors";
 import { formatDateAz, formatMileage, formatPriceMinor, vehicleTitle } from "@/lib/format";
 import { STAFF } from "@/lib/marketplace/labels";
@@ -9,6 +10,16 @@ import { REASON_LABELS } from "@/lib/seller/status";
 import { getModerationDetail } from "@/services/moderation";
 
 export const dynamic = "force-dynamic";
+
+const CHIP_TONE_CLASSES: Record<string, string> = {
+  neutral: "border-line bg-sunken text-slate-strong",
+  info: "border-info-line bg-info-soft text-info-deep",
+  success: "border-success-line bg-success-soft text-success-deep",
+  warning: "border-warning-line bg-warning-soft text-warning-deep",
+  danger: "border-danger-line bg-danger-soft text-danger-deep",
+  premium: "border-premium-line bg-premium-soft text-premium-deep",
+  boost: "border-boost-line bg-boost-soft text-boost-deep",
+};
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -80,6 +91,12 @@ export default async function ModerationReviewPage({
     [STAFF.submittedAt, detail.submittedAt === null ? null : formatDateTime(detail.submittedAt)],
   ];
 
+  const chipSpec = chipFor(LISTING_STATUS_CHIPS, detail.status);
+  const statusChip = {
+    label: chipSpec.label,
+    toneClasses: CHIP_TONE_CLASSES[chipSpec.tone],
+  };
+
   return (
     <div className="py-6" data-testid="moderation-review" data-status={detail.status}>
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -87,7 +104,10 @@ export default async function ModerationReviewPage({
           <h1 className="text-xl font-bold text-navy">{title}</h1>
           <p className="mt-1 text-sm text-muted">
             {STAFF.review} · №{detail.publicId} ·{" "}
-            <span className="font-semibold text-navy" data-testid="review-status">{detail.status}</span>
+            <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-semibold ${statusChip.toneClasses}`}>
+              {statusChip.label}
+              <span className="font-mono text-[10px] font-normal opacity-70" data-testid="review-status">{detail.status}</span>
+            </span>
             {" · "}
             {formatPriceMinor(detail.priceMinor, detail.currency)}
           </p>
@@ -96,14 +116,14 @@ export default async function ModerationReviewPage({
 
       <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-5">
-          <section aria-label={STAFF.images} className="rounded-card border border-line bg-white p-3">
+          <section aria-label={STAFF.images} className="rounded-card border border-line bg-raised p-3 shadow-card">
             <h2 className="mb-2 text-sm font-semibold text-navy">{STAFF.images}</h2>
             {detail.images.length === 0 ? (
               <p className="text-sm text-muted">{STAFF.noImage}</p>
             ) : (
               <ul className="grid grid-cols-2 gap-2 md:grid-cols-3" data-testid="moderation-gallery">
                 {detail.images.map((image, index) => (
-                  <li key={image.id} className="relative overflow-hidden rounded-lg bg-line/40">
+                  <li key={image.id} className="relative overflow-hidden rounded-lg bg-sunken">
                     {image.url !== null ? (
                       // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
                       <img
@@ -131,7 +151,7 @@ export default async function ModerationReviewPage({
             )}
           </section>
 
-          <section aria-label={STAFF.specs} className="rounded-card border border-line bg-white p-4">
+          <section aria-label={STAFF.specs} className="rounded-card border border-line bg-raised p-4 shadow-card">
             <h2 className="text-sm font-semibold text-navy">{STAFF.specs}</h2>
             <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2" data-testid="review-specs">
               {specs
@@ -146,7 +166,7 @@ export default async function ModerationReviewPage({
           </section>
 
           {detail.description !== null ? (
-            <section aria-label={STAFF.descriptionTitle} className="rounded-card border border-line bg-white p-4">
+            <section aria-label={STAFF.descriptionTitle} className="rounded-card border border-line bg-raised p-4 shadow-card">
               <h2 className="text-sm font-semibold text-navy">{STAFF.descriptionTitle}</h2>
               <p className="mt-2 whitespace-pre-line text-sm leading-6 text-navy" data-testid="review-description">
                 {detail.description}
@@ -154,7 +174,7 @@ export default async function ModerationReviewPage({
             </section>
           ) : null}
 
-          <section aria-label={STAFF.history} className="rounded-card border border-line bg-white p-4">
+          <section aria-label={STAFF.history} className="rounded-card border border-line bg-raised p-4 shadow-card">
             <h2 className="text-sm font-semibold text-navy">{STAFF.history}</h2>
             {detail.reviews.length === 0 ? (
               <p className="mt-2 text-sm text-muted" data-testid="history-empty">{STAFF.historyEmpty}</p>
