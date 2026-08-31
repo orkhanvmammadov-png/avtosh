@@ -63,7 +63,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   ];
 
   return (
-    <article className="py-6" data-testid="listing-detail" data-status={listing.status}>
+    <article className={`py-6 ${!limited && listing.seller ? "pb-28 desk:pb-6" : ""}`} data-testid="listing-detail" data-status={listing.status}>
       <header className="mb-4">
         <div className="flex flex-wrap items-center gap-2">
           {listing.status === "SOLD" ? <Badge tone="sold">{STATUS_LABELS.SOLD}</Badge> : null}
@@ -75,17 +75,17 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           <h1 className="text-2xl font-bold text-navy md:text-3xl">{title}</h1>
           <FavoriteButton publicId={listing.publicId} size="lg" autoIntent />
         </div>
-        <p className="mt-1 text-2xl font-extrabold text-primary" data-testid="detail-price">{formatPriceMinor(listing.priceMinor, listing.currency)}</p>
+        <p className="mt-2 text-3xl font-extrabold tracking-tight text-primary" data-testid="detail-price">{formatPriceMinor(listing.priceMinor, listing.currency)}</p>
         {limited ? (
-          <p role="status" className="mt-3 rounded-lg bg-line/60 px-4 py-3 text-sm text-navy" data-testid="limited-notice">
+          <p role="status" className="mt-3 rounded-control border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning-deep" data-testid="limited-notice">
             Bu elan artıq aktiv deyil. Satıcı ilə əlaqə mümkün deyil.
           </p>
         ) : null}
       </header>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div className="grid gap-6 desk:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-6">
           <Gallery images={listing.images} title={title} />
-          <section aria-labelledby="specs-title" className="rounded-card border border-line bg-white p-4 md:p-6">
+          <section aria-labelledby="specs-title" className="rounded-card border border-line bg-raised p-4 shadow-card md:p-6">
             <h2 id="specs-title" className="text-lg font-semibold text-navy">{UI.specs}</h2>
             <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2" data-testid="specs">
               {specs.filter(([, v]) => v !== null && v !== "—").map(([k, v]) => (
@@ -96,13 +96,13 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             </dl>
           </section>
           {!limited && listing.description ? (
-            <section aria-labelledby="desc-title" className="rounded-card border border-line bg-white p-4 md:p-6">
+            <section aria-labelledby="desc-title" className="rounded-card border border-line bg-raised p-4 shadow-card md:p-6">
               <h2 id="desc-title" className="text-lg font-semibold text-navy">{UI.description}</h2>
               <p className="mt-3 whitespace-pre-line text-sm leading-6 text-navy" data-testid="description">{listing.description}</p>
             </section>
           ) : null}
           {!limited && listing.features.length > 0 ? (
-            <section aria-labelledby="feat-title" className="rounded-card border border-line bg-white p-4 md:p-6">
+            <section aria-labelledby="feat-title" className="rounded-card border border-line bg-raised p-4 shadow-card md:p-6">
               <h2 id="feat-title" className="text-lg font-semibold text-navy">{UI.features}</h2>
               <ul className="mt-3 flex flex-wrap gap-2" data-testid="features">
                 {listing.features.map((f) => <li key={f.code} className="rounded-md bg-surface px-3 py-1.5 text-sm text-navy">{f.name}</li>)}
@@ -113,7 +113,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             <ReportListing publicId={listing.publicId} />
           </div>
         </div>
-        <div className="lg:sticky lg:top-20 lg:self-start">
+        <div className="desk:sticky desk:top-20 desk:self-start">
           {!limited && listing.seller ? (
             <ContactCard publicId={listing.publicId} displayName={listing.seller.displayName} maskedPhone={listing.seller.contactPhoneMasked} />
           ) : null}

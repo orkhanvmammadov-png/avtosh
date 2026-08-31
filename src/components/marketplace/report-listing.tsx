@@ -81,14 +81,14 @@ export function ReportListing({ publicId }: { publicId: string }) {
   }
 
   return (
-    <div className="rounded-card border border-line bg-white p-4" data-testid="report-form">
+    <div className="rounded-card border border-line bg-raised p-4 shadow-card" data-testid="report-form">
       <h2 className="text-sm font-semibold text-navy">{REPORT.title}</h2>
       <label className="mt-3 block text-xs font-medium text-muted">
         {REPORT.reason}
         <select
           value={reason}
           onChange={(e) => setReason(e.target.value as (typeof REASONS)[number])}
-          className="mt-1 block min-h-12 w-full rounded-lg border border-line bg-white px-2 text-sm text-navy"
+          className="mt-1 block min-h-12 w-full rounded-control border border-line bg-raised px-3 text-sm text-navy"
           data-testid="report-reason"
         >
           {REASONS.map((code) => (
@@ -105,7 +105,7 @@ export function ReportListing({ publicId }: { publicId: string }) {
           onChange={(e) => setNote(e.target.value)}
           maxLength={500}
           rows={3}
-          className="mt-1 block w-full rounded-lg border border-line bg-white px-2 py-2 text-sm text-navy"
+          className="mt-1 block w-full rounded-control border border-line bg-raised px-3 py-2 text-sm text-navy"
           data-testid="report-note"
         />
       </label>
