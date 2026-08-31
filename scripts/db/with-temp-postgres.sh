@@ -62,5 +62,8 @@ for f in "$ROOT"/supabase/migrations/*.sql; do
 done
 
 export DATABASE_URL="postgres://$PGUSER@127.0.0.1:$PORT/$DB"
+# Marker consumed by UAT tooling to prove it runs against THIS
+# ephemeral instance (scripts/uat/seed.mjs refuses without it).
+export TEMP_PG_EPHEMERAL=1
 
 "$@"
