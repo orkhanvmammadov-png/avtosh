@@ -1,10 +1,17 @@
-import Link from "next/link";
+import { PageHeading } from "@/components/ui/page-heading";
+import { PaginationLink } from "@/components/ui/pagination-link";
+import { StatusChip } from "@/components/ui/status-chip";
+import { StaffCell, StaffRow, StaffTable } from "@/components/staff/staff-table";
+import { controlClasses } from "@/components/ui/controls";
+import { buttonClasses } from "@/components/ui/button";
 import { formatDateAz } from "@/lib/format";
 import { ADMIN } from "@/lib/marketplace/labels";
 import { requireAdminPage } from "@/lib/admin/admin-page";
 import { adminUsers } from "@/services/admin";
 
 export const dynamic = "force-dynamic";
+
+const GRID = "grid-cols-[10rem_1fr_8rem_12rem_11rem]";
 
 /** User administration list: scoped search, keyset pagination. */
 export default async function AdminUsersPage({
@@ -21,62 +28,61 @@ export default async function AdminUsersPage({
   });
   return (
     <div className="py-6" data-testid="admin-users-page">
-      <h1 className="text-xl font-bold text-navy">{ADMIN.users}</h1>
-      <form method="get" className="mt-3 flex gap-2" role="search">
+      <PageHeading title={ADMIN.users} />
+      <form method="get" className="mt-4 flex gap-2" role="search">
         <input
           type="search"
           name="phone"
           defaultValue={phone ?? ""}
           placeholder={ADMIN.phoneSearch}
-          className="min-h-12 w-64 max-w-full rounded-lg border border-line bg-white px-3 text-sm text-navy"
+          className={controlClasses("w-64 max-w-full")}
           data-testid="user-phone-search"
         />
-        <button type="submit" className="min-h-12 rounded-lg bg-primary px-4 text-sm font-semibold text-white">
-          {ADMIN.search}
-        </button>
+        <button type="submit" className={buttonClasses("primary")}>{ADMIN.search}</button>
       </form>
       {result.items.length === 0 ? (
         <p className="mt-8 text-sm text-muted" data-testid="users-empty">{ADMIN.empty}</p>
       ) : (
-        <ul className="mt-4 space-y-1.5" data-testid="admin-users">
-          {result.items.map((user) => (
-            <li key={user.id}>
-              <Link
-                href={`/admin/istifadeciler/${user.id}`}
-                className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-line bg-white px-3 py-2 text-sm hover:shadow-sm"
-                data-testid="admin-user-row"
-              >
-                <span className="font-semibold text-navy">{user.phoneMasked}</span>
-                <span className="text-muted">{user.displayName ?? "—"}</span>
-                <span
-                  className={`rounded px-1.5 py-0.5 text-xs font-semibold ${
-                    user.status === "BLOCKED" ? "bg-danger/10 text-danger" : "bg-emerald-100 text-emerald-800"
-                  }`}
-                >
-                  {user.status === "BLOCKED" ? ADMIN.blocked : ADMIN.active}
-                </span>
-                {user.roles.filter((r) => r !== "USER").map((role) => (
-                  <span key={role} className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
-                    {role}
+        <div className="mt-4">
+          <StaffTable
+            label={ADMIN.users}
+            testid="admin-users"
+            grid={GRID}
+            minWidth="min-w-[760px]"
+            columns={["Telefon", "Ad", ADMIN.status, ADMIN.role, "Elan / Qeydiyyat"]}
+          >
+            {result.items.map((user) => (
+              <StaffRow key={user.id} href={`/admin/istifadeciler/${user.id}`} grid={GRID} testid="admin-user-row">
+                <StaffCell className="font-semibold">{user.phoneMasked}</StaffCell>
+                <StaffCell className="text-muted">{user.displayName ?? "—"}</StaffCell>
+                <StaffCell>
+                  <StatusChip tone={user.status === "BLOCKED" ? "danger" : "success"}>
+                    {user.status === "BLOCKED" ? ADMIN.blocked : ADMIN.active}
+                  </StatusChip>
+                </StaffCell>
+                <StaffCell>
+                  <span className="flex flex-wrap gap-1">
+                    {user.roles.filter((r) => r !== "USER").map((role) => (
+                      <StatusChip key={role} tone="info">{role}</StatusChip>
+                    ))}
                   </span>
-                ))}
-                <span className="ml-auto text-xs text-muted">
-                  {ADMIN.listingsCount}: {user.listingCount} · {formatDateAz(user.createdAt)}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                </StaffCell>
+                <StaffCell className="text-xs text-muted">
+                  {user.listingCount} elan · {formatDateAz(user.createdAt)}
+                </StaffCell>
+              </StaffRow>
+            ))}
+          </StaffTable>
+        </div>
       )}
       {result.nextCursor !== null ? (
         <div className="mt-4">
-          <Link
+          <PaginationLink
             href={`/admin/istifadeciler?${new URLSearchParams({ ...(phone ? { phone } : {}), cursor: result.nextCursor }).toString()}`}
-            className="inline-flex min-h-12 items-center rounded-lg border border-line bg-white px-4 text-sm font-medium text-navy"
-            data-testid="users-next-page"
+            testid="users-next-page"
           >
             {ADMIN.nextPage}
-          </Link>
+          </PaginationLink>
         </div>
       ) : null}
     </div>

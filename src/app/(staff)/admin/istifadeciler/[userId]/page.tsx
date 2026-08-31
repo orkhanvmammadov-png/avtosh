@@ -35,8 +35,8 @@ export default async function AdminUserDetailPage({
 
   return (
     <div className="py-6" data-testid="admin-user-detail">
-      <h1 className="text-xl font-bold text-navy">{user.phoneMasked}</h1>
-      <dl className="mt-4 max-w-lg space-y-2 rounded-card border border-line bg-white p-4 text-sm">
+      <h1 className="text-2xl font-bold tracking-tight text-navy">{user.phoneMasked}</h1>
+      <dl className="mt-4 max-w-lg space-y-2 rounded-card border border-line bg-raised shadow-card p-4 text-sm">
         <div className="flex justify-between gap-4"><dt className="text-muted">Ad</dt><dd className="font-medium text-navy">{user.displayName ?? "—"}</dd></div>
         <div className="flex justify-between gap-4"><dt className="text-muted">{ADMIN.status}</dt>
           <dd className="font-semibold text-navy" data-testid="user-status">{user.status === "BLOCKED" ? ADMIN.blocked : ADMIN.active}</dd></div>

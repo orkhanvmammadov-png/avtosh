@@ -1,4 +1,9 @@
-import Link from "next/link";
+import { PageHeading } from "@/components/ui/page-heading";
+import { PaginationLink } from "@/components/ui/pagination-link";
+import { StatusChip, chipFor, PAYMENT_STATUS_CHIPS } from "@/components/ui/status-chip";
+import { StaffCell, StaffRow, StaffTable } from "@/components/staff/staff-table";
+import { controlClasses } from "@/components/ui/controls";
+import { buttonClasses } from "@/components/ui/button";
 import { formatDateAz, formatPriceMinor } from "@/lib/format";
 import { ADMIN } from "@/lib/marketplace/labels";
 import { requireAdminPage } from "@/lib/admin/admin-page";
@@ -27,42 +32,49 @@ export default async function AdminPaymentsPage({
   );
   return (
     <div className="py-6" data-testid="admin-payments-page">
-      <h1 className="text-xl font-bold text-navy">{ADMIN.payments}</h1>
-      <form method="get" className="mt-3 flex flex-wrap gap-2">
-        <select name="status" defaultValue={filters.status ?? ""} className="min-h-12 rounded-lg border border-line bg-white px-2 text-sm" data-testid="payments-status-filter">
+      <PageHeading title={ADMIN.payments} />
+      <form method="get" className="mt-4 flex flex-wrap gap-2">
+        <select name="status" defaultValue={filters.status ?? ""} className={controlClasses("w-auto")} data-testid="payments-status-filter">
           <option value="">{ADMIN.status}: {ADMIN.all}</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
-        <select name="type" defaultValue={filters.type ?? ""} className="min-h-12 rounded-lg border border-line bg-white px-2 text-sm">
+        <select name="type" defaultValue={filters.type ?? ""} className={controlClasses("w-auto")}>
           <option value="">Növ: {ADMIN.all}</option>
           {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
-        <button type="submit" className="min-h-12 rounded-lg bg-primary px-4 text-sm font-semibold text-white">{ADMIN.filter}</button>
+        <button type="submit" className={buttonClasses("primary")}>{ADMIN.filter}</button>
       </form>
       {result.items.length === 0 ? (
         <p className="mt-8 text-sm text-muted" data-testid="payments-empty">{ADMIN.empty}</p>
       ) : (
-        <ul className="mt-4 space-y-1.5" data-testid="admin-payments">
-          {result.items.map((p) => (
-            <li key={p.id}>
-              <Link href={`/admin/odenisler/${p.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-line bg-white px-3 py-2 text-sm hover:shadow-sm" data-testid="admin-payment-row">
-                <span className="font-semibold text-navy">{p.type}</span>
-                <span className="text-navy">{formatPriceMinor(p.amountMinor, p.currency)}</span>
-                <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${p.status === "SUCCESS" ? "bg-emerald-100 text-emerald-800" : p.status === "PENDING" ? "bg-amber-100 text-amber-800" : "bg-line/60 text-navy"}`}>
-                  {p.status}
-                </span>
-                {p.listingPublicId !== null ? <span className="text-muted">№{p.listingPublicId}</span> : null}
-                <span className="ml-auto text-xs text-muted">{p.ownerPhoneMasked} · {formatDateAz(p.createdAt)}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-4">
+          <StaffTable
+            label={ADMIN.payments}
+            testid="admin-payments"
+            grid="grid-cols-[8rem_7rem_11rem_5rem_1fr]"
+            minWidth="min-w-[760px]"
+            columns={["Növ", "Məbləğ", ADMIN.status, "Elan", "Sahib / Tarix"]}
+          >
+            {result.items.map((p) => {
+              const chip = chipFor(PAYMENT_STATUS_CHIPS, p.status);
+              return (
+                <StaffRow key={p.id} href={`/admin/odenisler/${p.id}`} grid="grid-cols-[8rem_7rem_11rem_5rem_1fr]" testid="admin-payment-row">
+                  <StaffCell className="font-semibold">{p.type}</StaffCell>
+                  <StaffCell>{formatPriceMinor(p.amountMinor, p.currency)}</StaffCell>
+                  <StaffCell><StatusChip tone={chip.tone} code={p.status}>{chip.label}</StatusChip></StaffCell>
+                  <StaffCell className="text-muted">{p.listingPublicId !== null ? `№${p.listingPublicId}` : "—"}</StaffCell>
+                  <StaffCell className="text-xs text-muted">{p.ownerPhoneMasked} · {formatDateAz(p.createdAt)}</StaffCell>
+                </StaffRow>
+              );
+            })}
+          </StaffTable>
+        </div>
       )}
       {result.nextCursor !== null ? (
         <div className="mt-4">
-          <Link href={`/admin/odenisler?${new URLSearchParams({ ...keep, cursor: result.nextCursor }).toString()}`} className="inline-flex min-h-12 items-center rounded-lg border border-line bg-white px-4 text-sm font-medium text-navy" data-testid="payments-next-page">
+          <PaginationLink href={`/admin/odenisler?${new URLSearchParams({ ...keep, cursor: result.nextCursor }).toString()}`} testid="payments-next-page">
             {ADMIN.nextPage}
-          </Link>
+          </PaginationLink>
         </div>
       ) : null}
     </div>

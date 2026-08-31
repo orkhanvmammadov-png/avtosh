@@ -101,7 +101,7 @@ export default async function ModerationReviewPage({
     <div className="py-6" data-testid="moderation-review" data-status={detail.status}>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-navy">{title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-navy">{title}</h1>
           <p className="mt-1 text-sm text-muted">
             {STAFF.review} · №{detail.publicId} ·{" "}
             <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-semibold ${statusChip.toneClasses}`}>

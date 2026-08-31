@@ -26,7 +26,7 @@ export default async function AdminPaymentDetailPage({
   const attempts = await adminPaymentAttemptHistory(paymentId);
   return (
     <div className="py-6" data-testid="admin-payment-detail">
-      <h1 className="text-xl font-bold text-navy">{ADMIN.payments}</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-navy">{ADMIN.payments}</h1>
       <div className="mt-3 max-w-xl space-y-4">
         <ConfirmAction
           label={ADMIN.verifyPayment}
@@ -35,10 +35,10 @@ export default async function AdminPaymentDetailPage({
           variant="primary"
           testid="payment-verify"
         />
-        <p className="rounded-lg border border-line bg-white px-3 py-2 text-xs text-muted" data-testid="refund-blocked">
+        <p className="rounded-control border border-line bg-raised px-3 py-2 text-xs text-muted" data-testid="refund-blocked">
           {ADMIN.refundBlocked}
         </p>
-        <section aria-label={ADMIN.attempts} className="rounded-card border border-line bg-white p-4 text-sm">
+        <section aria-label={ADMIN.attempts} className="rounded-card border border-line bg-raised shadow-card p-4 text-sm">
           <h2 className="font-semibold text-navy">{ADMIN.attempts}</h2>
           <ul className="mt-2 space-y-1" data-testid="payment-attempts">
             {attempts.length === 0 ? <li className="text-muted">—</li> : null}

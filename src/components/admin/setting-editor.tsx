@@ -74,12 +74,12 @@ export function SettingEditor({
         inputMode="numeric"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        className="min-h-12 w-28 rounded-lg border border-line bg-white px-2 text-sm text-navy"
+        className="min-h-12 w-28 rounded-control border border-line bg-raised px-2 text-sm text-navy"
         aria-label={ADMIN.settingValue}
         data-testid="setting-input"
       />
       {confirming ? (
-        <span className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2 py-1 text-xs" data-testid="setting-confirm">
+        <span className="flex items-center gap-2 rounded-control border border-line bg-sunken px-2 py-1 text-xs" data-testid="setting-confirm">
           {ADMIN.settingConfirm}
           <Button onClick={() => void save()} disabled={busy || !hydrated} data-testid="setting-confirm-submit">
             Bəli

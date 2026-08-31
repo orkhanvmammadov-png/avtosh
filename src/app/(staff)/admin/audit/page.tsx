@@ -1,4 +1,7 @@
-import Link from "next/link";
+import { PageHeading } from "@/components/ui/page-heading";
+import { PaginationLink } from "@/components/ui/pagination-link";
+import { controlClasses } from "@/components/ui/controls";
+import { buttonClasses } from "@/components/ui/button";
 import { formatDateAz } from "@/lib/format";
 import { ADMIN } from "@/lib/marketplace/labels";
 import { requireAdminPage } from "@/lib/admin/admin-page";
@@ -27,36 +30,36 @@ export default async function AdminAuditPage({
   );
   return (
     <div className="py-6" data-testid="admin-audit-page">
-      <h1 className="text-xl font-bold text-navy">{ADMIN.audit}</h1>
-      <form method="get" className="mt-3 flex flex-wrap gap-2">
+      <PageHeading title={ADMIN.audit} />
+      <form method="get" className="mt-4 flex flex-wrap gap-2">
         <input
           name="action"
           defaultValue={action ?? ""}
           placeholder={ADMIN.action}
-          className="min-h-12 w-52 rounded-lg border border-line bg-white px-2 text-sm"
+          className={controlClasses("w-52")}
           data-testid="audit-action-filter"
         />
         <input
           name="entity_id"
           defaultValue={entityId ?? ""}
           placeholder={ADMIN.entity}
-          className="min-h-12 w-72 rounded-lg border border-line bg-white px-2 text-sm"
+          className={controlClasses("w-72")}
           data-testid="audit-entity-filter"
         />
-        <select name="actor_type" defaultValue={actorType ?? ""} className="min-h-12 rounded-lg border border-line bg-white px-2 text-sm">
+        <select name="actor_type" defaultValue={actorType ?? ""} className={controlClasses("w-auto")}>
           <option value="">{ADMIN.actor}: {ADMIN.all}</option>
           {ACTOR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
-        <button type="submit" className="min-h-12 rounded-lg bg-primary px-4 text-sm font-semibold text-white">{ADMIN.filter}</button>
+        <button type="submit" className={buttonClasses("primary")}>{ADMIN.filter}</button>
       </form>
       {result.items.length === 0 ? (
         <p className="mt-8 text-sm text-muted" data-testid="audit-empty">{ADMIN.empty}</p>
       ) : (
         <ul className="mt-4 space-y-1.5" data-testid="audit-rows">
           {result.items.map((row) => (
-            <li key={row.id} className="rounded-lg border border-line bg-white px-3 py-2 text-sm" data-testid="audit-row" data-action={row.action}>
+            <li key={row.id} className="rounded-control border border-line bg-raised px-3 py-2 text-sm shadow-card" data-testid="audit-row" data-action={row.action}>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span className="font-semibold text-navy">{row.action}</span>
+                <span className="rounded-md bg-sunken px-1.5 py-0.5 font-mono text-xs font-semibold text-slate-strong">{row.action}</span>
                 <span className="text-xs text-muted">{row.actorType}{row.actorPhoneMasked !== null ? ` · ${row.actorPhoneMasked}` : ""}</span>
                 <span className="text-xs text-muted">{row.entityType} · {row.entityId}</span>
                 <span className="ml-auto text-xs text-muted">{formatDateAz(row.createdAt)}</span>
@@ -72,9 +75,9 @@ export default async function AdminAuditPage({
       )}
       {result.nextCursor !== null ? (
         <div className="mt-4">
-          <Link href={`/admin/audit?${new URLSearchParams({ ...keep, cursor: result.nextCursor }).toString()}`} className="inline-flex min-h-12 items-center rounded-lg border border-line bg-white px-4 text-sm font-medium text-navy" data-testid="audit-next-page">
+          <PaginationLink href={`/admin/audit?${new URLSearchParams({ ...keep, cursor: result.nextCursor }).toString()}`} testid="audit-next-page">
             {ADMIN.nextPage}
-          </Link>
+          </PaginationLink>
         </div>
       ) : null}
     </div>

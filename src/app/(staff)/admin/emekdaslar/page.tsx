@@ -1,9 +1,13 @@
-import Link from "next/link";
+import { PageHeading } from "@/components/ui/page-heading";
+import { StatusChip } from "@/components/ui/status-chip";
+import { StaffCell, StaffRow, StaffTable } from "@/components/staff/staff-table";
 import { ADMIN } from "@/lib/marketplace/labels";
 import { requireAdminPage } from "@/lib/admin/admin-page";
 import { adminStaff } from "@/services/admin";
 
 export const dynamic = "force-dynamic";
+
+const GRID = "grid-cols-[10rem_1fr_14rem_8rem]";
 
 /** Staff overview; role changes happen on the user detail page. */
 export default async function AdminStaffPage() {
@@ -11,29 +15,33 @@ export default async function AdminStaffPage() {
   const staff = await adminStaff();
   return (
     <div className="py-6" data-testid="admin-staff-page">
-      <h1 className="text-xl font-bold text-navy">{ADMIN.staff}</h1>
-      <ul className="mt-4 space-y-1.5" data-testid="admin-staff">
-        {staff.map((user) => (
-          <li key={user.id}>
-            <Link
-              href={`/admin/istifadeciler/${user.id}`}
-              className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-line bg-white px-3 py-2 text-sm hover:shadow-sm"
-              data-testid="staff-row"
-            >
-              <span className="font-semibold text-navy">{user.phoneMasked}</span>
-              <span className="text-muted">{user.displayName ?? "—"}</span>
-              {user.roles.filter((r) => r !== "USER").map((role) => (
-                <span key={role} className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
-                  {role}
+      <PageHeading title={ADMIN.staff} />
+      <div className="mt-4">
+        <StaffTable
+          label={ADMIN.staff}
+          testid="admin-staff"
+          grid={GRID}
+          minWidth="min-w-[640px]"
+          columns={["Telefon", "Ad", ADMIN.role, ADMIN.status]}
+        >
+          {staff.map((user) => (
+            <StaffRow key={user.id} href={`/admin/istifadeciler/${user.id}`} grid={GRID} testid="staff-row">
+              <StaffCell className="font-semibold">{user.phoneMasked}</StaffCell>
+              <StaffCell className="text-muted">{user.displayName ?? "—"}</StaffCell>
+              <StaffCell>
+                <span className="flex flex-wrap gap-1">
+                  {user.roles.filter((r) => r !== "USER").map((role) => (
+                    <StatusChip key={role} tone="info">{role}</StatusChip>
+                  ))}
                 </span>
-              ))}
-              {user.status === "BLOCKED" ? (
-                <span className="rounded bg-danger/10 px-1.5 py-0.5 text-xs font-semibold text-danger">{ADMIN.blocked}</span>
-              ) : null}
-            </Link>
-          </li>
-        ))}
-      </ul>
+              </StaffCell>
+              <StaffCell>
+                {user.status === "BLOCKED" ? <StatusChip tone="danger">{ADMIN.blocked}</StatusChip> : <StatusChip tone="success">{ADMIN.active}</StatusChip>}
+              </StaffCell>
+            </StaffRow>
+          ))}
+        </StaffTable>
+      </div>
     </div>
   );
 }

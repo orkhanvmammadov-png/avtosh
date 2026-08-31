@@ -28,13 +28,13 @@ export default async function AdminCatalogPage({
   const rows = await adminCatalog(entity);
   return (
     <div className="py-6" data-testid="admin-catalog-page">
-      <h1 className="text-xl font-bold text-navy">{ADMIN.catalog}</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-navy">{ADMIN.catalog}</h1>
       <nav aria-label={ADMIN.catalog} className="mt-3 flex flex-wrap gap-1.5">
         {ADMIN_CATALOG_ENTITIES.map((e) => (
           <Link
             key={e}
             href={`/admin/kataloq?entity=${e}`}
-            className={`min-h-12 rounded-lg border px-3 py-3 text-sm font-medium ${e === entity ? "border-primary bg-primary text-white" : "border-line bg-white text-navy"}`}
+            className={`min-h-12 rounded-lg border px-3 py-3 text-sm font-medium ${e === entity ? "border-primary bg-primary text-white" : "border-line bg-raised text-navy"}`}
             data-testid={`catalog-tab-${e}`}
             aria-current={e === entity ? "page" : undefined}
           >
@@ -46,13 +46,13 @@ export default async function AdminCatalogPage({
         {rows.map((row) => (
           <li
             key={row.id}
-            className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-line bg-white px-3 py-2 text-sm"
+            className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-control border border-line bg-raised px-3 py-2 text-sm"
             data-testid="catalog-row"
             data-active={row.is_active ? "true" : "false"}
           >
             <span className="font-medium text-navy">{row.name}</span>
             {row.extra !== null ? <span className="text-xs text-muted">{row.extra}</span> : null}
-            <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${row.is_active ? "bg-emerald-100 text-emerald-800" : "bg-line/60 text-navy"}`}>
+            <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${row.is_active ? "border border-success-line bg-success-soft text-success-deep" : "border border-line bg-sunken text-slate-strong"}`}>
               {row.is_active ? ADMIN.active : "Deaktiv"}
             </span>
             <div className="ml-auto">

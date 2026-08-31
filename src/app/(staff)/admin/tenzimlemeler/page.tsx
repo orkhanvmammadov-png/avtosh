@@ -11,11 +11,11 @@ export default async function AdminSettingsPage() {
   const settings = await adminSettings();
   return (
     <div className="py-6" data-testid="admin-settings-page">
-      <h1 className="text-xl font-bold text-navy">{ADMIN.settings}</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-navy">{ADMIN.settings}</h1>
       <p className="mt-1 text-xs text-muted">{ADMIN.settingHint}</p>
       <ul className="mt-4 space-y-2" data-testid="admin-settings">
         {settings.map((s) => (
-          <li key={s.key} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-line bg-white px-3 py-2" data-testid="admin-setting-row" data-setting={s.key}>
+          <li key={s.key} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-control border border-line bg-raised px-3 py-2" data-testid="admin-setting-row" data-setting={s.key}>
             <div className="w-full sm:w-72">
               <p className="text-sm font-semibold text-navy">{s.key}</p>
               {s.description !== null ? <p className="text-xs text-muted">{s.description}</p> : null}

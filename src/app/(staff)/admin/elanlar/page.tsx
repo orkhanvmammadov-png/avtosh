@@ -1,4 +1,9 @@
-import Link from "next/link";
+import { PageHeading } from "@/components/ui/page-heading";
+import { PaginationLink } from "@/components/ui/pagination-link";
+import { StatusChip, chipFor, LISTING_STATUS_CHIPS } from "@/components/ui/status-chip";
+import { StaffCell, StaffRow, StaffTable } from "@/components/staff/staff-table";
+import { controlClasses } from "@/components/ui/controls";
+import { buttonClasses } from "@/components/ui/button";
 import { formatDateAz, formatPriceMinor } from "@/lib/format";
 import { ADMIN } from "@/lib/marketplace/labels";
 import { requireAdminPage } from "@/lib/admin/admin-page";
@@ -29,43 +34,52 @@ export default async function AdminListingsPage({
   );
   return (
     <div className="py-6" data-testid="admin-listings-page">
-      <h1 className="text-xl font-bold text-navy">{ADMIN.listings}</h1>
-      <form method="get" className="mt-3 flex flex-wrap gap-2">
-        <select name="status" defaultValue={filters.status ?? ""} className="min-h-12 rounded-lg border border-line bg-white px-2 text-sm" data-testid="listings-status-filter">
+      <PageHeading title={ADMIN.listings} />
+      <form method="get" className="mt-4 flex flex-wrap gap-2">
+        <select name="status" defaultValue={filters.status ?? ""} className={controlClasses("w-auto")} data-testid="listings-status-filter">
           <option value="">{ADMIN.status}: {ADMIN.all}</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
-        <select name="category" defaultValue={filters.category ?? ""} className="min-h-12 rounded-lg border border-line bg-white px-2 text-sm">
+        <select name="category" defaultValue={filters.category ?? ""} className={controlClasses("w-auto")}>
           <option value="">Kateqoriya: {ADMIN.all}</option>
           <option value="CAR">CAR</option>
           <option value="MOTORCYCLE">MOTORCYCLE</option>
         </select>
-        <input name="public_id" defaultValue={filters.publicId ?? ""} placeholder="№" inputMode="numeric" className="min-h-12 w-24 rounded-lg border border-line bg-white px-2 text-sm" />
-        <input name="owner_phone" defaultValue={filters.ownerPhone ?? ""} placeholder={ADMIN.phoneSearch} className="min-h-12 w-44 rounded-lg border border-line bg-white px-2 text-sm" />
-        <button type="submit" className="min-h-12 rounded-lg bg-primary px-4 text-sm font-semibold text-white">{ADMIN.filter}</button>
+        <input name="public_id" defaultValue={filters.publicId ?? ""} placeholder="№" inputMode="numeric" className={controlClasses("w-24")} />
+        <input name="owner_phone" defaultValue={filters.ownerPhone ?? ""} placeholder={ADMIN.phoneSearch} className={controlClasses("w-44")} />
+        <button type="submit" className={buttonClasses("primary")}>{ADMIN.filter}</button>
       </form>
       {result.items.length === 0 ? (
         <p className="mt-8 text-sm text-muted" data-testid="listings-empty">{ADMIN.empty}</p>
       ) : (
-        <ul className="mt-4 space-y-1.5" data-testid="admin-listings">
-          {result.items.map((l) => (
-            <li key={l.id}>
-              <Link href={`/admin/elanlar/${l.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-line bg-white px-3 py-2 text-sm hover:shadow-sm" data-testid="admin-listing-row">
-                <span className="font-semibold text-navy">№{l.publicId}</span>
-                <span className="text-navy">{[l.brand, l.model].filter(Boolean).join(" ") || "—"}</span>
-                <span className="rounded bg-line/60 px-1.5 py-0.5 text-xs font-semibold text-navy">{l.status}</span>
-                <span className="text-muted">{formatPriceMinor(l.priceMinor, "AZN")}</span>
-                <span className="ml-auto text-xs text-muted">{l.ownerPhoneMasked} · {formatDateAz(l.createdAt)}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-4">
+          <StaffTable
+            label={ADMIN.listings}
+            testid="admin-listings"
+            grid="grid-cols-[5rem_1fr_11rem_8rem_12rem]"
+            minWidth="min-w-[760px]"
+            columns={["№", "Elan", ADMIN.status, ADMIN.price, "Sahib / Tarix"]}
+          >
+            {result.items.map((l) => {
+              const chip = chipFor(LISTING_STATUS_CHIPS, l.status);
+              return (
+                <StaffRow key={l.id} href={`/admin/elanlar/${l.id}`} grid="grid-cols-[5rem_1fr_11rem_8rem_12rem]" testid="admin-listing-row">
+                  <StaffCell className="font-semibold">№{l.publicId}</StaffCell>
+                  <StaffCell>{[l.brand, l.model].filter(Boolean).join(" ") || "—"}</StaffCell>
+                  <StaffCell><StatusChip tone={chip.tone} code={l.status}>{chip.label}</StatusChip></StaffCell>
+                  <StaffCell className="text-muted">{formatPriceMinor(l.priceMinor, "AZN")}</StaffCell>
+                  <StaffCell className="text-xs text-muted">{l.ownerPhoneMasked} · {formatDateAz(l.createdAt)}</StaffCell>
+                </StaffRow>
+              );
+            })}
+          </StaffTable>
+        </div>
       )}
       {result.nextCursor !== null ? (
         <div className="mt-4">
-          <Link href={`/admin/elanlar?${new URLSearchParams({ ...keep, cursor: result.nextCursor }).toString()}`} className="inline-flex min-h-12 items-center rounded-lg border border-line bg-white px-4 text-sm font-medium text-navy" data-testid="listings-next-page">
+          <PaginationLink href={`/admin/elanlar?${new URLSearchParams({ ...keep, cursor: result.nextCursor }).toString()}`} testid="listings-next-page">
             {ADMIN.nextPage}
-          </Link>
+          </PaginationLink>
         </div>
       ) : null}
     </div>
