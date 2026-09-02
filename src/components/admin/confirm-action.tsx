@@ -70,7 +70,7 @@ export function ConfirmAction({
 
   if (conflict) {
     return (
-      <div role="alert" className="rounded-lg border border-danger/40 bg-danger/5 p-3 text-sm" data-testid={`${testid}-conflict`}>
+      <div role="alert" className="rounded-staff border-l-4 border-danger bg-danger-soft p-3 text-sm" data-testid={`${testid}-conflict`}>
         <p className="font-semibold text-danger">{ADMIN.editConflict}</p>
         <Button className="mt-2" onClick={() => window.location.reload()} disabled={!hydrated}>
           {ADMIN.refresh}
@@ -88,16 +88,16 @@ export function ConfirmAction({
   }
 
   return (
-    <section aria-label={title} className="rounded-control border border-line bg-raised p-3" data-testid={`${testid}-confirm`}>
-      <p className="text-sm font-semibold text-navy">{title}</p>
+    <section aria-label={title} className="rounded-staff border border-line-strong bg-raised p-3" data-testid={`${testid}-confirm`}>
+      <p className="text-sm font-bold text-ink">{title}</p>
       {description !== undefined ? <p className="mt-1 text-xs text-muted">{description}</p> : null}
       {reasonField !== null ? (
-        <label className="mt-2 block text-sm font-medium text-navy" htmlFor={`${testid}-reason`}>
+        <label className="mt-2 block text-xs font-medium text-slate-strong" htmlFor={`${testid}-reason`}>
           {reasonField.label}
           <textarea
             id={`${testid}-reason`}
             data-testid={`${testid}-reason`}
-            className="mt-1 min-h-16 w-full rounded-control border border-line bg-raised px-3 py-2 text-sm text-navy"
+            className="mt-1 min-h-16 w-full rounded-staff border border-line-strong bg-raised px-3 py-2 text-sm text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none"
             maxLength={500}
             value={reason}
             onChange={(e) => setReason(e.target.value)}

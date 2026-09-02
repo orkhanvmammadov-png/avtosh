@@ -27,7 +27,7 @@ export default async function AdminReportsPage({
   const keep: Record<string, string> = status !== undefined ? { status } : {};
   return (
     <div className="py-6" data-testid="admin-reports-page">
-      <h1 className="text-2xl font-bold tracking-tight text-navy">{ADMIN.reports}</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-ink">{ADMIN.reports}</h1>
       <form method="get" className="mt-3 flex flex-wrap gap-2">
         <select name="status" defaultValue={status ?? ""} className="min-h-12 rounded-control border border-line bg-raised px-2 text-sm" data-testid="reports-status-filter">
           <option value="">{ADMIN.status}: {ADMIN.all}</option>
@@ -42,8 +42,8 @@ export default async function AdminReportsPage({
           {result.items.map((r) => (
             <li key={r.id} className="rounded-control border border-line bg-raised px-3 py-2 text-sm" data-testid="admin-report-row" data-status={r.status}>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span className="font-semibold text-navy">{r.reasonCode}</span>
-                <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${r.status === "OPEN" ? "border border-warning-line bg-warning-soft text-warning-deep" : "border border-line bg-sunken text-slate-strong"}`}>
+                <span className="font-semibold text-ink">{r.reasonCode}</span>
+                <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${r.status === "OPEN" ? "border border-warning-line bg-warning-soft text-warning" : "border border-line bg-sunken text-slate-strong"}`}>
                   {STATUS_LABELS[r.status] ?? r.status}
                 </span>
                 {r.listingPublicId !== null ? (
@@ -81,7 +81,7 @@ export default async function AdminReportsPage({
       )}
       {result.nextCursor !== null ? (
         <div className="mt-4">
-          <Link href={`/admin/hesabatlar?${new URLSearchParams({ ...keep, cursor: result.nextCursor }).toString()}`} className="inline-flex min-h-12 items-center rounded-control border border-line bg-raised px-4 text-sm font-medium text-navy" data-testid="reports-next-page">
+          <Link href={`/admin/hesabatlar?${new URLSearchParams({ ...keep, cursor: result.nextCursor }).toString()}`} className="inline-flex min-h-12 items-center rounded-control border border-line bg-raised px-4 text-sm font-medium text-ink" data-testid="reports-next-page">
             {ADMIN.nextPage}
           </Link>
         </div>

@@ -35,11 +35,11 @@ export default async function AdminDashboardPage() {
           <li key={card.testid}>
             <Link
               href={card.href}
-              className="flex items-start justify-between gap-3 rounded-card border border-line bg-raised p-4 shadow-card transition-shadow hover:shadow-raised"
+              className="flex items-start justify-between gap-3 rounded-staff border border-line bg-raised p-4 transition-shadow hover:shadow-raised"
               data-testid={card.testid}
             >
               <span>
-                <span className="block text-2xl font-extrabold tracking-tight text-navy">{card.value}</span>
+                <span className="block text-2xl font-extrabold tracking-tight text-ink">{card.value}</span>
                 <span className="mt-1 block text-sm text-muted">{card.label}</span>
               </span>
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sunken text-slate-strong">

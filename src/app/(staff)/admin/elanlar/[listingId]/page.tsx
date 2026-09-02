@@ -34,13 +34,13 @@ export default async function AdminListingDetailPage({
 
   return (
     <div className="py-6" data-testid="admin-listing-detail" data-status={detail.status}>
-      <h1 className="text-2xl font-bold tracking-tight text-navy">{title}</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-ink">{title}</h1>
       <p className="mt-1 text-sm text-muted">
-        №{detail.publicId} · <span className="font-semibold text-navy" data-testid="listing-status">{detail.status}</span>
+        №{detail.publicId} · <span className="font-semibold text-ink" data-testid="listing-status">{detail.status}</span>
         {" · "}{formatPriceMinor(detail.priceMinor, detail.currency)} · {STAFF.seller}: {detail.seller.phoneMasked}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Link href={`/moderator/elanlar/${listingId}`} className="inline-flex min-h-12 items-center rounded-control border border-line bg-raised px-4 text-sm font-medium text-navy" data-testid="open-in-moderation">
+        <Link href={`/moderator/elanlar/${listingId}`} className="inline-flex min-h-12 items-center rounded-control border border-line bg-raised px-4 text-sm font-medium text-ink" data-testid="open-in-moderation">
           {ADMIN.moderatorPortal}
         </Link>
         {detail.status === "SUSPENDED" ? (
@@ -56,8 +56,8 @@ export default async function AdminListingDetailPage({
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <section aria-label="Yerləşdirmələr" className="rounded-card border border-line bg-raised shadow-card p-4 text-sm">
-          <h2 className="font-semibold text-navy">Yerləşdirmə və müddətlər</h2>
+        <section aria-label="Yerləşdirmələr" className="rounded-staff border border-line bg-raised p-4 text-sm">
+          <h2 className="font-semibold text-ink">Yerləşdirmə və müddətlər</h2>
           <ul className="mt-2 space-y-1" data-testid="listing-publications">
             {commerce.publications.map((p) => (
               <li key={p.number} className="text-muted">
@@ -72,8 +72,8 @@ export default async function AdminListingDetailPage({
             {commerce.publications.length === 0 && commerce.periods.length === 0 ? <li className="text-muted">—</li> : null}
           </ul>
         </section>
-        <section aria-label="Təşviqlər" className="rounded-card border border-line bg-raised shadow-card p-4 text-sm">
-          <h2 className="font-semibold text-navy">Təşviqlər</h2>
+        <section aria-label="Təşviqlər" className="rounded-staff border border-line bg-raised p-4 text-sm">
+          <h2 className="font-semibold text-ink">Təşviqlər</h2>
           <ul className="mt-2 space-y-1" data-testid="listing-promotions">
             {commerce.promotions.length === 0 ? <li className="text-muted">—</li> : null}
             {commerce.promotions.map((p, i) => (
@@ -83,8 +83,8 @@ export default async function AdminListingDetailPage({
             ))}
           </ul>
         </section>
-        <section aria-label={ADMIN.payments} className="rounded-card border border-line bg-raised shadow-card p-4 text-sm lg:col-span-2">
-          <h2 className="font-semibold text-navy">{ADMIN.payments}</h2>
+        <section aria-label={ADMIN.payments} className="rounded-staff border border-line bg-raised p-4 text-sm lg:col-span-2">
+          <h2 className="font-semibold text-ink">{ADMIN.payments}</h2>
           <ul className="mt-2 space-y-1" data-testid="listing-payments">
             {commerce.payments.length === 0 ? <li className="text-muted">—</li> : null}
             {commerce.payments.map((p) => (
@@ -96,8 +96,8 @@ export default async function AdminListingDetailPage({
             ))}
           </ul>
         </section>
-        <section aria-label={STAFF.history} className="rounded-card border border-line bg-raised shadow-card p-4 text-sm lg:col-span-2">
-          <h2 className="font-semibold text-navy">{STAFF.history}</h2>
+        <section aria-label={STAFF.history} className="rounded-staff border border-line bg-raised p-4 text-sm lg:col-span-2">
+          <h2 className="font-semibold text-ink">{STAFF.history}</h2>
           <ul className="mt-2 space-y-1" data-testid="listing-reviews">
             {detail.reviews.length === 0 ? <li className="text-muted">{STAFF.historyEmpty}</li> : null}
             {detail.reviews.map((r) => (

@@ -75,13 +75,13 @@ export function PackageEditor({
 
   return (
     <div className="flex flex-wrap items-center gap-2" data-testid={`pkg-editor-${packageId}`}>
-      <label className="flex items-center gap-1 text-sm text-navy">
+      <label className="flex items-center gap-1 text-sm text-ink">
         <span className="sr-only">{ADMIN.priceAzn}</span>
         <input
           inputMode="numeric"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
-          className="min-h-12 w-24 rounded-control border border-line bg-raised px-2 text-sm text-navy"
+          className="min-h-12 w-24 rounded-control border border-line bg-raised px-2 text-sm text-ink"
           data-testid="pkg-price-input"
           aria-label={ADMIN.priceAzn}
         />

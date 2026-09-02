@@ -41,7 +41,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       extra={
         <Link
           href="/moderator/elanlar"
-          className="hidden rounded-md px-2 py-1 text-xs font-medium text-white/80 hover:bg-white/10 sm:inline-flex"
+          className="hidden rounded-md px-2 py-1 text-xs font-medium text-white/80 hover:bg-raised/10 sm:inline-flex"
         >
           {ADMIN.moderatorPortal}
         </Link>

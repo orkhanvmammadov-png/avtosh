@@ -1,3 +1,4 @@
+import { Lock } from "lucide-react";
 import { notFound } from "next/navigation";
 import { ConfirmAction } from "@/components/admin/confirm-action";
 import { formatDateAz } from "@/lib/format";
@@ -26,7 +27,7 @@ export default async function AdminPaymentDetailPage({
   const attempts = await adminPaymentAttemptHistory(paymentId);
   return (
     <div className="py-6" data-testid="admin-payment-detail">
-      <h1 className="text-2xl font-bold tracking-tight text-navy">{ADMIN.payments}</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-ink">{ADMIN.payments}</h1>
       <div className="mt-3 max-w-xl space-y-4">
         <ConfirmAction
           label={ADMIN.verifyPayment}
@@ -35,11 +36,12 @@ export default async function AdminPaymentDetailPage({
           variant="primary"
           testid="payment-verify"
         />
-        <p className="rounded-control border border-line bg-raised px-3 py-2 text-xs text-muted" data-testid="refund-blocked">
+        <p className="flex items-start gap-2 rounded-staff bg-sunken px-3 py-2.5 text-xs leading-relaxed text-slate-strong" data-testid="refund-blocked">
+          <Lock size={13} strokeWidth={2.5} aria-hidden="true" className="mt-0.5 shrink-0" />
           {ADMIN.refundBlocked}
         </p>
-        <section aria-label={ADMIN.attempts} className="rounded-card border border-line bg-raised shadow-card p-4 text-sm">
-          <h2 className="font-semibold text-navy">{ADMIN.attempts}</h2>
+        <section aria-label={ADMIN.attempts} className="rounded-staff border border-line bg-raised p-4 text-sm">
+          <h2 className="font-semibold text-ink">{ADMIN.attempts}</h2>
           <ul className="mt-2 space-y-1" data-testid="payment-attempts">
             {attempts.length === 0 ? <li className="text-muted">—</li> : null}
             {attempts.map((a, i) => (
