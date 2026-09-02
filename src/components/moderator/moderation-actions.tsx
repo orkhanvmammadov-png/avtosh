@@ -116,19 +116,19 @@ export function ModerationActions({
 
   if (done !== null) {
     return (
-      <div className="rounded-card border border-primary/30 bg-primary/5 p-4" role="status" data-testid="decision-done">
-        <p className="font-semibold text-navy">{done}</p>
+      <div className="rounded-staff bg-success-soft p-4" role="status" data-testid="decision-done">
+        <p className="font-semibold text-success">{done}</p>
         <div className="mt-4 flex flex-col gap-2">
           <Link
             href="/moderator/elanlar"
-            className="inline-flex min-h-12 items-center justify-center rounded-control bg-primary px-4 text-sm font-semibold text-white hover:bg-primary-hover"
+            className="inline-flex min-h-12 items-center justify-center rounded-staff bg-primary px-4 text-sm font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover"
             data-testid="done-back-to-queue"
           >
             {STAFF.backToQueue}
           </Link>
           <a
             href={`/moderator/elanlar/${listingId}`}
-            className="inline-flex min-h-12 items-center justify-center rounded-control border border-line bg-raised px-4 text-sm font-semibold text-navy transition-colors hover:border-line-strong hover:bg-surface"
+            className="inline-flex min-h-12 items-center justify-center rounded-staff border border-line-strong bg-raised px-4 text-sm font-semibold text-ink transition-colors duration-150 hover:border-muted hover:bg-row-hover"
             data-testid="done-view-current"
           >
             {STAFF.viewCurrent}
@@ -140,7 +140,7 @@ export function ModerationActions({
 
   if (conflict !== null) {
     return (
-      <div className="rounded-card border border-danger/40 bg-danger/5 p-4" role="alert" data-testid="decision-conflict">
+      <div className="rounded-staff border-l-4 border-danger bg-danger-soft p-4" role="alert" data-testid="decision-conflict">
         <p className="font-semibold text-danger">
           {conflict === "stale" ? STAFF.staleConflict : conflict === "decided" ? STAFF.decisionAlready : STAFF.claimTaken}
         </p>
@@ -160,14 +160,14 @@ export function ModerationActions({
       {isPending ? (
         <div aria-live="polite" data-testid="claim-state" data-claim={claimMine ? "mine" : claimOther ? "other" : "free"}>
           {claimMine ? (
-            <p className="rounded-control bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800">
+            <p className="rounded-staff bg-success-soft px-3 py-2 text-sm font-semibold text-success">
               {STAFF.claimMine}
               {claimExpiresAt !== null
                 ? ` (${formatTimeAz(claimExpiresAt)} ${STAFF.claimUntil})`
                 : null}
             </p>
           ) : claimOther ? (
-            <div className="rounded-control border border-warning-line bg-warning-soft px-3 py-2 text-sm font-semibold text-warning-deep">
+            <div className="rounded-staff border-l-4 border-warning bg-warning-soft px-3 py-2 text-sm font-semibold text-warning">
               {STAFF.claimOther}
               <Button variant="secondary" className="ml-3" onClick={() => void claim()} disabled={busy || !hydrated} data-testid="claim-button">
                 {STAFF.claim}
@@ -207,20 +207,20 @@ export function ModerationActions({
       {pendingAction !== null ? (
         <section
           aria-label={STAFF.confirmAction}
-          className="rounded-card border border-line bg-raised p-4 shadow-card"
+          className="rounded-staff border border-line bg-raised p-4"
           data-testid="decision-confirm"
         >
-          <h3 className="text-sm font-semibold text-navy">
+          <h3 className="text-sm font-bold text-ink">
             {STAFF.confirmAction}: {ACTION_META[pendingAction].label}
           </h3>
           {ACTION_META[pendingAction].needsReason ? (
             <div className="mt-3 space-y-3">
-              <label className="block text-sm font-medium text-navy" htmlFor="decision-reason">
+              <label className="block text-xs font-medium text-slate-strong" htmlFor="decision-reason">
                 {STAFF.reason}
                 <select
                   id="decision-reason"
                   data-testid="decision-reason"
-                  className="mt-1 min-h-12 w-full rounded-control border border-line bg-raised px-3 text-base text-navy"
+                  className="mt-1 min-h-12 w-full rounded-staff border border-line-strong bg-raised px-3 text-base text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none"
                   value={reasonCode}
                   onChange={(e) => setReasonCode(e.target.value)}
                 >
@@ -231,18 +231,18 @@ export function ModerationActions({
                   ))}
                 </select>
               </label>
-              <label className="block text-sm font-medium text-navy" htmlFor="decision-note">
+              <label className="block text-xs font-medium text-slate-strong" htmlFor="decision-note">
                 {STAFF.sellerNote}
                 <textarea
                   id="decision-note"
                   data-testid="decision-note"
-                  className="mt-1 min-h-24 w-full rounded-control border border-line bg-raised px-3 py-2 text-base text-navy"
+                  className="mt-1 min-h-24 w-full rounded-staff border border-line-strong bg-raised px-3 py-2 text-base text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none"
                   maxLength={1000}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                 />
               </label>
-              <p className="text-xs text-muted">{STAFF.sellerNoteHint}</p>
+              <p className="text-xs text-slate-strong">{STAFF.sellerNoteHint}</p>
             </div>
           ) : null}
           {message !== null ? (

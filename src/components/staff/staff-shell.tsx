@@ -1,14 +1,16 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { LogoutButton } from "@/components/shared/logout-button";
+import { StaffDrawer } from "@/components/staff/staff-drawer";
 import { UI } from "@/lib/marketplace/labels";
 
 /**
- * Shared operational shell for the staff portals. Deliberately NOT
- * the public marketing chrome: navy application bar, role accent,
- * horizontally scrollable nav with an edge-fade affordance, denser
- * content container. Route guards stay in the portal layouts/pages —
- * this component is presentation only.
+ * Shared operational shell for the staff portals (approved staff
+ * design): navy application bar + fixed navy left sidebar at desk+
+ * (170px, 190px at xl), drawer navigation below desk, denser paper
+ * content. Deliberately NOT the public marketing chrome. Route guards
+ * stay in the portal layouts/pages — this component is presentation
+ * only.
  */
 
 const ACCENTS = {
@@ -44,43 +46,44 @@ export function StaffShell({
   const accent = ACCENTS[role];
   return (
     <div className="min-h-dvh bg-surface">
-      <header className="sticky top-0 z-40 bg-navy text-white shadow-raised">
-        <div className="mx-auto flex h-14 max-w-(--container-content) items-center justify-between gap-4 px-4">
-          <Link href={homeHref} className="flex min-w-0 items-center gap-2.5">
-            <span aria-hidden="true" className={`h-6 w-1.5 shrink-0 rounded-full ${accent.bar}`} />
-            <span className="truncate text-lg font-extrabold tracking-tight">
-              {UI.brand} <span className="font-medium text-white/60">{portalLabel}</span>
-            </span>
-          </Link>
+      <header className="sticky top-0 z-40 bg-navy text-white">
+        <div className="flex h-12 items-center justify-between gap-3 border-b border-navy-border px-3 md:px-4">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <StaffDrawer nav={nav} portalLabel={portalLabel} />
+            <Link href={homeHref} className="flex min-w-0 items-center gap-2.5">
+              <span aria-hidden="true" className={`h-5 w-1.5 shrink-0 rounded-pill ${accent.bar}`} />
+              <span className="truncate text-base font-extrabold tracking-tight">
+                {UI.brand} <span className="font-medium text-on-navy-muted">{portalLabel}</span>
+              </span>
+            </Link>
+          </div>
           <div className="flex shrink-0 items-center gap-2">
             {extra}
-            <span className={`rounded-md px-2 py-1 text-xs font-semibold ${accent.chip}`} data-testid={roleChipTestid}>
+            <span className={`rounded-staff px-2 py-1 text-xs font-semibold ${accent.chip}`} data-testid={roleChipTestid}>
               {roleChip}
             </span>
             <LogoutButton className="text-white hover:bg-white/10" />
           </div>
         </div>
-        <div className="relative border-t border-white/10">
-          {/* edge fade signals horizontal scrollability on narrow screens */}
-          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-navy to-transparent md:hidden" />
-          <nav aria-label={portalLabel} className="no-scrollbar mx-auto max-w-(--container-content) overflow-x-auto px-4">
-            <ul className="flex gap-1 py-1.5">
-              {nav.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className="inline-flex min-h-9 items-center whitespace-nowrap rounded-md px-2.5 text-xs font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-                    data-testid={item.testid}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </div>
       </header>
-      <main id="main" className="mx-auto w-full max-w-(--container-content) px-4 pb-16">
+      <aside className="fixed bottom-0 left-0 top-12 z-30 hidden w-[170px] overflow-y-auto border-r border-navy-border bg-navy py-3 desk:block xl:w-[190px]">
+        <nav aria-label={portalLabel}>
+          <ul className="flex flex-col gap-0.5 px-2">
+            {nav.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className="block rounded-staff px-3 py-2 text-[12.5px] font-medium text-on-navy-muted transition-colors duration-150 hover:bg-white/5 hover:text-white"
+                  data-testid={item.testid}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </aside>
+      <main id="main" className="min-w-0 px-3 pb-16 md:px-4 desk:ml-[170px] desk:px-6 xl:ml-[190px]">
         {children}
       </main>
     </div>

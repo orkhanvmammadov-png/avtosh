@@ -26,11 +26,11 @@ export function StaffTable({
   label: string;
 }) {
   return (
-    <div className="overflow-x-auto rounded-card border border-line bg-raised shadow-card">
+    <div className="overflow-x-auto rounded-staff border border-line bg-raised">
       <div role="table" aria-label={label} className={minWidth} data-testid={testid}>
-        <div role="row" className={`grid items-center gap-x-4 border-b border-line bg-sunken/60 px-3 py-2 ${grid}`}>
+        <div role="row" className={`grid items-center gap-x-4 border-b border-line bg-sunken px-3 py-2 ${grid}`}>
           {columns.map((column) => (
-            <span key={column} role="columnheader" className="text-xs font-semibold uppercase tracking-wide text-faint">
+            <span key={column} role="columnheader" className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-slate-strong">
               {column}
             </span>
           ))}
@@ -53,8 +53,8 @@ export function StaffRow({
   children: ReactNode;
   testid?: string;
 } & Record<`data-${string}`, string | undefined>) {
-  const className = `grid items-center gap-x-4 border-b border-line px-3 py-2.5 text-sm last:border-b-0 ${grid} ${
-    href !== undefined ? "transition-colors hover:bg-surface" : ""
+  const className = `grid items-center gap-x-4 border-b border-line px-3 py-2.5 text-[12.5px] last:border-b-0 ${grid} ${
+    href !== undefined ? "transition-colors duration-150 hover:bg-row-hover" : ""
   }`;
   if (href !== undefined) {
     return (
@@ -78,7 +78,7 @@ export function StaffCell({
   className?: string;
 }) {
   return (
-    <span role="cell" className={`min-w-0 truncate text-navy ${className}`}>
+    <span role="cell" className={`min-w-0 truncate text-ink ${className}`}>
       {children}
     </span>
   );
