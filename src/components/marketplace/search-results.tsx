@@ -57,12 +57,11 @@ export function SearchResults({
   return (
     <div>
       {promoted.length > 0 ? (
-        <section aria-labelledby="promoted-title" className="mb-6 rounded-card border border-boost-line bg-boost-soft/40 p-3" data-testid="promoted-section">
-          <h2 id="promoted-title" className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-boost-deep">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" /></svg>
+        <section aria-labelledby="promoted-title" className="mb-6" data-testid="promoted-section">
+          <h2 id="promoted-title" className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
             {UI.promoted}
           </h2>
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <ul className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-4 xl:gap-5">
             {promoted.map((item, index) => (
               <li key={item.publicId} className={boostSlotClass(index)} data-testid="promoted-card">
                 <ListingCard listing={item} nowMs={renderedAtMs} priority promotedLabel={UI.promoted} />
@@ -71,15 +70,16 @@ export function SearchResults({
           </ul>
         </section>
       ) : null}
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4" data-testid="results-grid">
+      <ul className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-4 xl:grid-cols-4 xl:gap-5" data-testid="results-grid">
         {items.map((item, index) => (
           <li key={item.publicId} data-testid="organic-card"><ListingCard listing={item} nowMs={renderedAtMs} priority={promoted.length === 0 && index < 4} /></li>
         ))}
         {loading ? Array.from({ length: 4 }, (_, i) => <li key={`s-${i}`}><CardSkeleton /></li>) : null}
       </ul>
       {error ? <p role="alert" className="mt-4 text-sm text-danger">{UI.errorTitle}. {UI.errorHint}</p> : null}
+      <p className="mt-6 text-center text-xs text-muted">{items.length} elan göstərilir</p>
       {hasMore ? (
-        <div className="mt-8 flex justify-center">
+        <div className="mt-3 flex justify-center">
           <Button variant="secondary" onClick={loadMore} disabled={loading} className="min-w-48" data-testid="load-more">
             {loading ? UI.loading : UI.showMore}
           </Button>

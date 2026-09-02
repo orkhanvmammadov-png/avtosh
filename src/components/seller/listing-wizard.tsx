@@ -131,15 +131,15 @@ export function ListingWizard({
   }
 
   return (
-    <div className="mx-auto max-w-3xl py-6" data-testid="listing-wizard">
+    <div className="mx-auto max-w-3xl py-6 pb-24 md:pb-6" data-testid="listing-wizard">
       {editor.conflict ? (
         <div
           role="alert"
-          className="mb-4 rounded-card border border-danger-line bg-danger-soft p-4"
+          className="mb-4 rounded-control border-l-4 border-danger bg-danger-soft p-4"
           data-testid="wizard-conflict"
         >
-          <p className="font-semibold text-danger-deep">{SELLER.conflictTitle}</p>
-          <p className="mt-1 text-sm text-navy">{SELLER.conflictHint}</p>
+          <p className="font-semibold text-danger">{SELLER.conflictTitle}</p>
+          <p className="mt-1 text-sm text-ink">{SELLER.conflictHint}</p>
           <Button className="mt-3" onClick={() => void editor.reloadFromServer()} data-testid="wizard-conflict-reload">
             {SELLER.conflictReload}
           </Button>
@@ -148,51 +148,46 @@ export function ListingWizard({
 
       {feedback !== null ? (
         <div
-          className="mb-4 rounded-card border border-warning-line bg-warning-soft p-4"
-          style={{ borderColor: "#f59e0b66" }}
+          className="mb-4 rounded-control border-l-4 border-warning bg-warning-soft p-4"
           data-testid="wizard-feedback"
         >
-          <h2 className="text-sm font-semibold text-navy">{SELLER.moderationFeedback}</h2>
-          <p className="mt-1 text-sm font-medium text-navy">
+          <h2 className="text-sm font-semibold text-warning">{SELLER.moderationFeedback}</h2>
+          <p className="mt-1 text-sm font-medium text-ink">
             {feedback.reasonCode !== null ? (REASON_LABELS[feedback.reasonCode] ?? feedback.reasonCode) : null}
           </p>
-          {feedback.note !== null ? <p className="mt-1 text-sm text-muted">{feedback.note}</p> : null}
+          {feedback.note !== null ? <p className="mt-1 text-sm text-slate-strong">{feedback.note}</p> : null}
         </div>
       ) : null}
 
-      <nav aria-label={SELLER.stepLabel} className="mb-4">
-        <ol className="flex flex-wrap gap-1">
+      <nav aria-label={SELLER.stepLabel} className="mb-5">
+        <ol className="flex gap-1.5">
           {SELLER.steps.map((label, index) => {
             const number = index + 1;
             const current = number === step;
             const completed = number < step;
             return (
-              <li key={label} className="flex items-center">
-                {index > 0 ? (
-                  <span aria-hidden="true" className={`mx-0.5 hidden h-px w-4 md:block ${completed || current ? "bg-primary" : "bg-line"}`} />
-                ) : null}
+              <li key={label} className="min-w-0 flex-1">
                 <button
                   type="button"
                   aria-current={current ? "step" : undefined}
-                  className={`inline-flex min-h-12 items-center gap-2 rounded-full px-2 pr-3 text-sm font-medium transition-colors ${
-                    current ? "text-navy" : "text-muted hover:text-navy"
-                  }`}
                   onClick={() => void navigate(number)}
                   data-testid={`wizard-step-${number}`}
+                  className="group block min-h-12 w-full text-left"
                 >
                   <span
                     aria-hidden="true"
-                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                      current
-                        ? "bg-primary text-white"
-                        : completed
-                          ? "bg-success-soft text-success-deep"
-                          : "bg-sunken text-muted"
+                    className={`block h-1.5 w-full rounded-pill transition-colors duration-150 ${
+                      current ? "bg-primary" : completed ? "bg-primary/45 group-hover:bg-primary/70" : "bg-line-strong/60 group-hover:bg-line-strong"
+                    }`}
+                  />
+                  <span
+                    className={`mt-1.5 block truncate text-[11.5px] tracking-[0.01em] transition-colors duration-150 ${
+                      current ? "font-semibold text-ink" : completed ? "font-medium text-slate-strong group-hover:text-ink" : "text-muted group-hover:text-slate-strong"
                     }`}
                   >
-                    {completed ? "✓" : number}
+                    <span className="sm:hidden">{number}</span>
+                    <span className="hidden sm:inline">{number}. {label}</span>
                   </span>
-                  <span className="hidden sm:inline">{label}</span>
                 </button>
               </li>
             );
@@ -201,17 +196,29 @@ export function ListingWizard({
       </nav>
 
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h1 ref={headingRef} tabIndex={-1} className="text-xl font-bold text-navy outline-none">
+        <h1 ref={headingRef} tabIndex={-1} className="text-xl font-bold tracking-[-0.01em] text-ink outline-none">
           {SELLER.steps[step - 1]}
         </h1>
-        <p className="text-xs text-muted" aria-live="polite" data-testid="wizard-save-state">
+        <p
+          className={`rounded-pill px-2.5 py-1 text-xs font-medium transition-colors duration-150 ${
+            editor.saveState === "saving"
+              ? "bg-sunken text-slate-strong"
+              : editor.saveState === "saved"
+                ? "bg-success-soft text-success"
+                : editor.saveState === "error"
+                  ? "bg-danger-soft text-danger"
+                  : ""
+          }`}
+          aria-live="polite"
+          data-testid="wizard-save-state"
+        >
           {editor.saveState === "saving" ? SELLER.saving : null}
           {editor.saveState === "saved" ? SELLER.saved : null}
           {editor.saveState === "error" ? SELLER.saveError : null}
         </p>
       </div>
 
-      <div key={`${editor.resetKey}-${step}`} className="rounded-card border border-line bg-raised p-4 shadow-card md:p-6">
+      <div key={`${editor.resetKey}-${step}`} className="rounded-card border border-line bg-raised p-4 md:p-6">
         {step === 1 ? <VehicleStep editor={editor} catalog={catalog} /> : null}
         {step === 2 ? <DetailsStep editor={editor} catalog={catalog} /> : null}
         {step === 3 ? <PhotosStep editor={editor} /> : null}
@@ -220,10 +227,10 @@ export function ListingWizard({
       </div>
 
       {submitError !== null ? (
-        <div role="alert" className="mt-4 rounded-card border border-danger-line bg-danger-soft p-4" data-testid="wizard-submit-error">
-          <p className="font-semibold text-danger-deep">{submitError.title}</p>
+        <div role="alert" className="mt-4 rounded-control border-l-4 border-danger bg-danger-soft p-4" data-testid="wizard-submit-error">
+          <p className="font-semibold text-danger">{submitError.title}</p>
           {submitError.items.length > 0 ? (
-            <ul className="mt-2 list-inside list-disc text-sm text-navy">
+            <ul className="mt-2 list-inside list-disc text-sm text-ink">
               {submitError.items.map((item) => (
                 <li key={item}>{item}</li>
               ))}
@@ -232,7 +239,7 @@ export function ListingWizard({
         </div>
       ) : null}
 
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <div className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-between gap-3 border-t border-line bg-raised p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:static md:mt-4 md:border-0 md:bg-transparent md:p-0">
         {step > 1 ? (
           <Button variant="secondary" onClick={() => void navigate(step - 1)} data-testid="wizard-back">
             {SELLER.back}
@@ -276,7 +283,7 @@ function SubmitResultScreen({ result }: { result: SubmitResult }) {
     >
       {paid && result.payment !== null ? (
         <>
-          <p className="mt-5 text-3xl font-extrabold tracking-tight text-primary" data-testid="wizard-payment-amount">
+          <p className="mt-5 font-condensed text-[34px] font-bold leading-none text-ink" data-testid="wizard-payment-amount">
             {formatPriceMinor(result.payment.amountMinor, result.payment.currency)}
           </p>
           <p className="mt-2 text-sm text-muted">{SELLER.paymentAfterHint}</p>

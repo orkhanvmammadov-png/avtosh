@@ -74,7 +74,7 @@ export function SettingEditor({
         inputMode="numeric"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        className="min-h-12 w-28 rounded-control border border-line bg-raised px-2 text-sm text-navy"
+        className="min-h-12 w-28 rounded-control border border-line bg-raised px-2 text-sm text-ink"
         aria-label={ADMIN.settingValue}
         data-testid="setting-input"
       />

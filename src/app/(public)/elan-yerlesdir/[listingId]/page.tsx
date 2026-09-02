@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Container } from "@/components/ui/container";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
@@ -40,11 +41,13 @@ export default async function WizardPage({
   }
   if (auth.user.status === "BLOCKED") {
     return (
+    <Container>
       <div className="py-16 text-center" data-testid="seller-blocked">
-        <h1 className="text-2xl font-bold text-navy">{SELLER.blockedTitle}</h1>
+        <h1 className="text-xl font-bold tracking-[-0.01em] text-ink md:text-2xl">{SELLER.blockedTitle}</h1>
         <p className="mt-2 text-sm text-muted">{SELLER.blockedHint}</p>
       </div>
-    );
+    </Container>
+  );
   }
 
   let listing;
@@ -59,12 +62,14 @@ export default async function WizardPage({
 
   if (listing.status === "PENDING_MODERATION") {
     return (
+    <Container>
       <div className="py-16 text-center" data-testid="wizard-status-moderation">
-        <h1 className="text-2xl font-bold text-navy">{SELLER.moderationPending}</h1>
+        <h1 className="text-xl font-bold tracking-[-0.01em] text-ink md:text-2xl">{SELLER.moderationPending}</h1>
         <p className="mt-2 text-sm text-muted">{SELLER.moderationPendingHint}</p>
         <BackToMyListings />
       </div>
-    );
+    </Container>
+  );
   }
 
   if (listing.status === "PAYMENT_REQUIRED") {
@@ -77,8 +82,9 @@ export default async function WizardPage({
     // the Phase 4.12 boundary; nothing here simulates payment.
     const intent = await paymentRequiredFor(listing.id, auth.user.id, listing.status);
     return (
+    <Container>
       <div className="py-16 text-center" data-testid="wizard-status-payment">
-        <h1 className="text-2xl font-bold text-navy">{SELLER.paymentRequired}</h1>
+        <h1 className="text-xl font-bold tracking-[-0.01em] text-ink md:text-2xl">{SELLER.paymentRequired}</h1>
         {intent !== null ? (
           <p className="mt-4 text-3xl font-extrabold text-primary" data-testid="payment-intent-amount">
             {formatPriceMinor(intent.amountMinor, intent.currency)}
@@ -90,7 +96,8 @@ export default async function WizardPage({
         </div>
         <BackToMyListings />
       </div>
-    );
+    </Container>
+  );
   }
 
   if (!isSellerEditable(listing.status)) {
@@ -103,11 +110,13 @@ export default async function WizardPage({
 
 function BackToMyListings() {
   return (
+    <Container>
     <Link
       href="/profil/elanlar"
       className="mt-8 inline-flex min-h-12 items-center rounded-lg bg-primary px-6 text-sm font-semibold text-white hover:bg-primary-hover"
     >
       {UI.myListings}
     </Link>
+  </Container>
   );
 }

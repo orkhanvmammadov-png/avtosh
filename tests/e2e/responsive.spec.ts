@@ -25,9 +25,11 @@ test.describe("Responsive layout invariants", () => {
       else await expect(page.getByTestId("filters-open")).toBeVisible();
       await expect(page.getByTestId("sort-select")).toBeVisible();
       const card = page.getByTestId("listing-card").first();
-      const box = await card.locator(".aspect-vehicle").first().boundingBox();
+      // approved design card imagery: 16:10 mobile, 16:11 at md+
+      const box = await card.locator(".aspect-gallery").first().boundingBox();
       expect(box).not.toBeNull();
-      expect(Math.abs((box!.width / box!.height) - 4 / 3)).toBeLessThan(0.05);
+      const expectedRatio = width < 768 ? 16 / 10 : 16 / 11;
+      expect(Math.abs((box!.width / box!.height) - expectedRatio)).toBeLessThan(0.05);
 
       await page.goto(`/elan/${s.activeCar}`);
       await expectNoHorizontalOverflow(page);

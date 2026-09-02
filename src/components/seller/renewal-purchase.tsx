@@ -52,7 +52,7 @@ export function RenewalPurchase({ renewal }: { renewal: RenewalStateDto }) {
 
   if (charge === null) {
     return (
-      <p className="text-sm text-muted" data-testid="renewal-unconfigured">
+      <p className="text-sm text-slate-strong" data-testid="renewal-unconfigured">
         {SELLER.renewalNotAvailable}
       </p>
     );
@@ -60,27 +60,27 @@ export function RenewalPurchase({ renewal }: { renewal: RenewalStateDto }) {
 
   return (
     <div className="space-y-4" data-testid="renewal-purchase">
-      <dl className="rounded-card border border-line bg-raised p-4 text-sm shadow-card">
+      <dl className="rounded-card border border-line bg-raised p-4 text-sm">
         <div className="flex justify-between py-1">
-          <dt className="text-muted">{SELLER.promotionPrice}</dt>
-          <dd className="font-semibold text-navy" data-testid="renewal-price">
+          <dt className="text-slate-strong">{SELLER.promotionPrice}</dt>
+          <dd className="font-condensed text-[19px] font-bold text-ink" data-testid="renewal-price">
             {formatPriceMinor(charge.amountMinor, charge.currency)}
           </dd>
         </div>
         <div className="flex justify-between py-1">
-          <dt className="text-muted">{SELLER.promotionDuration}</dt>
-          <dd className="font-semibold text-navy" data-testid="renewal-duration">
+          <dt className="text-slate-strong">{SELLER.promotionDuration}</dt>
+          <dd className="font-semibold text-ink" data-testid="renewal-duration">
             {charge.durationDays !== null ? `${charge.durationDays} ${SELLER.promotionDay}` : "—"}
           </dd>
         </div>
       </dl>
-      <p className="text-sm text-muted" data-testid="renewal-explainer">
+      <p className="text-sm leading-relaxed text-slate-strong" data-testid="renewal-explainer">
         {SELLER.renewalAfterPayment}{" "}
-        <span className="font-semibold text-navy">{charge.durationDays ?? "—"}</span>{" "}
+        <span className="font-semibold text-ink">{charge.durationDays ?? "—"}</span>{" "}
         {SELLER.renewalAfterPaymentTail}
       </p>
       {renewal.openIntent !== null && renewal.openIntent.status === "PENDING" ? (
-        <p className="rounded-control border border-warning-line bg-warning-soft px-3 py-2 text-xs text-warning-deep" data-testid="renewal-pending-note">
+        <p className="rounded-control border-l-4 border-warning bg-warning-soft px-3 py-2 text-xs leading-relaxed text-warning" data-testid="renewal-pending-note">
           {SELLER.renewalPendingIntent}
         </p>
       ) : null}

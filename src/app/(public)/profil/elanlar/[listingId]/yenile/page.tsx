@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Container } from "@/components/ui/container";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
@@ -40,8 +41,10 @@ export default async function RenewalPage({
   }
   if (auth.user.status === "BLOCKED") {
     return (
+    <Container>
       <ResultPanel tone="danger" title={SELLER.blockedTitle} hint={SELLER.blockedHint} data-testid="seller-blocked" />
-    );
+    </Container>
+  );
   }
 
   let renewal;
@@ -56,6 +59,7 @@ export default async function RenewalPage({
 
   if (!renewal.eligible) {
     return (
+    <Container>
       <ResultPanel
         tone="neutral"
         title={SELLER.renewalNotAvailable}
@@ -63,12 +67,14 @@ export default async function RenewalPage({
         data-testid="renewal-unavailable"
         actions={<Link href="/profil/elanlar" className={buttonClasses("primary", "px-6")}>{UI.myListings}</Link>}
       />
-    );
+    </Container>
+  );
   }
 
   return (
+    <Container>
     <div className="mx-auto max-w-xl py-8" data-testid="renewal-page">
-      <h1 className="text-2xl font-bold text-navy">{SELLER.renewalTitle}</h1>
+      <h1 className="text-xl font-bold tracking-[-0.01em] text-ink md:text-2xl">{SELLER.renewalTitle}</h1>
       <p className="mt-1 text-sm text-muted" data-testid="renewal-listing">
         {renewal.title} — №{renewal.publicId}
       </p>
@@ -82,5 +88,6 @@ export default async function RenewalPage({
         <RenewalPurchase renewal={renewal} />
       </div>
     </div>
+  </Container>
   );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Container } from "@/components/ui/container";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
@@ -29,11 +30,13 @@ export default async function SellerEntryPage() {
   }
   if (auth.user.status === "BLOCKED") {
     return (
+    <Container>
       <div className="py-16 text-center" data-testid="seller-blocked">
-        <h1 className="text-2xl font-bold text-navy">{SELLER.blockedTitle}</h1>
+        <h1 className="text-xl font-bold tracking-[-0.01em] text-ink md:text-2xl">{SELLER.blockedTitle}</h1>
         <p className="mt-2 text-sm text-muted">{SELLER.blockedHint}</p>
       </div>
-    );
+    </Container>
+  );
   }
   const [categories, listings] = await Promise.all([
     getCategories(),
@@ -42,20 +45,21 @@ export default async function SellerEntryPage() {
   const editable = listings.filter((listing) => isSellerEditable(listing.status));
 
   return (
+    <Container>
     <div className="mx-auto max-w-2xl py-8" data-testid="seller-entry">
-      <h1 className="text-2xl font-bold text-navy">{UI.postListing}</h1>
+      <h1 className="text-xl font-bold tracking-[-0.01em] text-ink md:text-2xl">{UI.postListing}</h1>
       {editable.length > 0 ? (
         <section aria-label={SELLER.existingDrafts} className="mt-6">
-          <h2 className="mb-2 text-sm font-semibold text-navy">{SELLER.existingDrafts}</h2>
+          <h2 className="mb-2 text-sm font-bold text-ink">{SELLER.existingDrafts}</h2>
           <ul className="space-y-2" data-testid="draft-continue-list">
             {editable.map((listing) => (
               <li key={listing.id}>
                 <Link
                   href={`/elan-yerlesdir/${listing.id}`}
-                  className="flex min-h-12 items-center justify-between gap-3 rounded-lg border border-line bg-white px-4 py-2 hover:bg-surface"
+                  className="flex min-h-12 items-center justify-between gap-3 rounded-card border border-line bg-raised px-4 py-2 transition-colors duration-150 hover:border-line-strong hover:bg-row-hover"
                   data-testid="draft-continue"
                 >
-                  <span className="min-w-0 truncate text-sm font-medium text-navy">
+                  <span className="min-w-0 truncate text-sm font-medium text-ink">
                     {vehicleTitle(listing)}
                     <span className="ml-2 text-xs text-muted">{statusPresentation(listing.status).label}</span>
                   </span>
@@ -70,5 +74,6 @@ export default async function SellerEntryPage() {
         <CreateListing categories={categories} />
       </div>
     </div>
+  </Container>
   );
 }

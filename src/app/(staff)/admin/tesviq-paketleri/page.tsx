@@ -12,7 +12,7 @@ export default async function AdminPackagesPage() {
   const packages = await adminPackages();
   return (
     <div className="py-6" data-testid="admin-packages-page">
-      <h1 className="text-2xl font-bold tracking-tight text-navy">{ADMIN.packages}</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-ink">{ADMIN.packages}</h1>
       <p className="mt-1 text-xs text-muted">
         Qiymət dəyişiklikləri yalnız GƏLƏCƏK alışlara təsir edir; mövcud ödəniş anlıqları dəyişməzdir.
       </p>
@@ -25,11 +25,11 @@ export default async function AdminPackagesPage() {
             data-package={`${pkg.type}-${pkg.durationDays}`}
             data-active={pkg.isActive ? "true" : "false"}
           >
-            <span className="w-40 text-sm font-semibold text-navy">{pkg.name}</span>
+            <span className="w-40 text-sm font-semibold text-ink">{pkg.name}</span>
             <span className="text-sm text-muted" data-testid="pkg-current-price">
               {formatPriceMinor(pkg.priceMinor, pkg.currency)}
             </span>
-            <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${pkg.isActive ? "border border-success-line bg-success-soft text-success-deep" : "border border-line bg-sunken text-slate-strong"}`}>
+            <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${pkg.isActive ? "border border-success-line bg-success-soft text-success" : "border border-line bg-sunken text-slate-strong"}`}>
               {pkg.isActive ? ADMIN.active : "Deaktiv"}
             </span>
             <PackageEditor packageId={pkg.id} priceMinor={pkg.priceMinor} isActive={pkg.isActive} version={pkg.version} />

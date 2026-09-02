@@ -33,17 +33,17 @@ export function QueueCard({ item }: { item: QueueCardItem }) {
   const title = vehicleTitle({ brand: item.brandName, model: item.modelName, year: item.year });
   return (
     <article
-      className="flex items-center gap-3 rounded-card border border-line bg-raised p-2.5 shadow-card transition-shadow hover:shadow-raised"
+      className="flex items-center gap-3 rounded-staff border border-line bg-raised p-2.5 transition-colors duration-150 hover:border-line-strong hover:bg-row-hover"
       data-testid="queue-item"
       data-listing-id={item.id}
     >
-      <div className="h-14 w-20 shrink-0 overflow-hidden rounded-md bg-sunken">
+      <div className="h-14 w-20 shrink-0 overflow-hidden rounded-staff bg-sunken">
         {item.primaryImageUrl !== null ? (
           // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
           <img src={item.primaryImageUrl} alt="" className="h-full w-full object-cover text-transparent" />
         ) : (
           <div
-            className="flex h-full w-full items-center justify-center text-[10px] font-medium text-muted"
+            className="flex h-full w-full items-center justify-center text-[10px] font-medium text-slate-strong"
             data-testid="queue-image-fallback"
           >
             {STAFF.noImage}
@@ -51,7 +51,7 @@ export function QueueCard({ item }: { item: QueueCardItem }) {
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-navy">{title}</p>
+        <p className="truncate text-[13px] font-semibold text-ink">{title}</p>
         <p className="text-xs text-muted">
           {item.category === "MOTORCYCLE" ? "Motosiklet" : "Avtomobil"}
           {item.cityName !== null ? ` · ${item.cityName}` : ""} ·{" "}
@@ -63,9 +63,10 @@ export function QueueCard({ item }: { item: QueueCardItem }) {
       </div>
       {item.claim !== null ? (
         <span
-          className="shrink-0 rounded-md border border-warning-line bg-warning-soft px-2 py-1 text-xs font-semibold text-warning-deep"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-pill bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning"
           data-testid="queue-claimed"
         >
+          <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
           Nəzarətdə
         </span>
       ) : null}

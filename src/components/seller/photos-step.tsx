@@ -131,11 +131,11 @@ export function PhotosStep({ editor }: { editor: ListingEditor }) {
         />
         <label
           htmlFor="wizard-photos-input"
-          className="inline-flex min-h-12 cursor-pointer items-center rounded-lg bg-primary px-5 text-sm font-semibold text-white hover:bg-primary-hover"
+          className="inline-flex min-h-12 cursor-pointer items-center rounded-control bg-primary px-5 text-sm font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed"
         >
           {SELLER.addPhotos}
         </label>
-        <p className="mt-2 text-xs text-muted">{SELLER.photoFormats}</p>
+        <p className="mt-2 text-xs text-slate-strong">{SELLER.photoFormats}</p>
       </div>
 
       {uploads.length > 0 ? (
@@ -143,9 +143,9 @@ export function PhotosStep({ editor }: { editor: ListingEditor }) {
           {uploads.map((upload) => (
             <li
               key={upload.key}
-              className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm ${
-                upload.state === "error" ? "border-danger/40 bg-danger/5 text-danger" : "border-line bg-white text-navy"
-              }`}
+              className={`flex items-center justify-between gap-3 rounded-control px-3 py-2 text-sm ${
+                upload.state === "error" ? "bg-danger-soft text-danger" : "bg-sunken text-ink"
+              } ${upload.state !== "error" ? "shimmer" : ""}`}
               data-state={upload.state}
             >
               <span className="min-w-0 truncate">{upload.name}</span>
@@ -157,7 +157,7 @@ export function PhotosStep({ editor }: { editor: ListingEditor }) {
               {upload.state === "error" ? (
                 <button
                   type="button"
-                  className="min-h-12 shrink-0 rounded-lg px-2 text-sm font-medium text-navy"
+                  className="min-h-12 shrink-0 rounded-control px-2 text-sm font-semibold text-danger transition-colors duration-150 hover:text-danger-hover"
                   onClick={() => dropUpload(upload.key)}
                 >
                   Bağla
@@ -172,18 +172,18 @@ export function PhotosStep({ editor }: { editor: ListingEditor }) {
         {dto.images.map((image, index) => (
           <li
             key={image.id}
-            className="overflow-hidden rounded-card border border-line bg-white"
+            className="overflow-hidden rounded-card border border-line bg-raised transition-colors duration-150 hover:border-line-strong"
             data-testid="wizard-image"
             data-image-id={image.id}
             data-primary={image.isPrimary ? "true" : "false"}
           >
-            <div className="relative aspect-vehicle bg-line/40">
+            <div className="relative aspect-vehicle bg-sunken">
               {image.url !== null ? (
                 // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL, next/image adds nothing here
                 <img src={image.url} alt={`${SELLER.photos} ${index + 1}`} className="h-full w-full object-cover" />
               ) : null}
               {image.isPrimary ? (
-                <span className="absolute left-2 top-2 rounded-md bg-primary px-2 py-0.5 text-xs font-semibold text-white">
+                <span className="absolute left-2 top-2 rounded-[5px] bg-primary px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.04em] text-white">
                   {SELLER.primaryPhoto}
                 </span>
               ) : null}
@@ -192,7 +192,7 @@ export function PhotosStep({ editor }: { editor: ListingEditor }) {
               <button
                 type="button"
                 aria-label={`${SELLER.moveLeft} — ${index + 1}`}
-                className="inline-flex h-12 w-12 items-center justify-center rounded-lg text-navy disabled:text-muted"
+                className="inline-flex h-12 w-12 items-center justify-center rounded-control text-ink transition-colors duration-150 hover:bg-sunken disabled:text-muted disabled:hover:bg-transparent"
                 disabled={index === 0 || busyImageId !== null}
                 onClick={() => move(image.id, -1)}
                 data-testid="image-move-left"
@@ -202,7 +202,7 @@ export function PhotosStep({ editor }: { editor: ListingEditor }) {
               <button
                 type="button"
                 aria-label={`${SELLER.moveRight} — ${index + 1}`}
-                className="inline-flex h-12 w-12 items-center justify-center rounded-lg text-navy disabled:text-muted"
+                className="inline-flex h-12 w-12 items-center justify-center rounded-control text-ink transition-colors duration-150 hover:bg-sunken disabled:text-muted disabled:hover:bg-transparent"
                 disabled={index === dto.images.length - 1 || busyImageId !== null}
                 onClick={() => move(image.id, 1)}
                 data-testid="image-move-right"
@@ -212,7 +212,7 @@ export function PhotosStep({ editor }: { editor: ListingEditor }) {
               {!image.isPrimary ? (
                 <button
                   type="button"
-                  className="inline-flex min-h-12 items-center rounded-lg px-2 text-xs font-medium text-navy disabled:text-muted"
+                  className="inline-flex min-h-12 items-center rounded-control px-2 text-xs font-semibold text-primary transition-colors duration-150 hover:bg-primary-tint disabled:text-muted disabled:hover:bg-transparent"
                   disabled={busyImageId !== null}
                   onClick={() => void imageOp(image.id, () => setPrimaryImage(dto.id, image.id))}
                   data-testid="image-make-primary"
@@ -223,7 +223,7 @@ export function PhotosStep({ editor }: { editor: ListingEditor }) {
               <button
                 type="button"
                 aria-label={`${SELLER.deletePhoto} — ${index + 1}`}
-                className="ml-auto inline-flex h-12 w-12 items-center justify-center rounded-lg text-danger disabled:text-muted"
+                className="ml-auto inline-flex h-12 w-12 items-center justify-center rounded-control text-danger transition-colors duration-150 hover:bg-danger-soft disabled:text-muted disabled:hover:bg-transparent"
                 disabled={busyImageId !== null}
                 onClick={() => void imageOp(image.id, () => deleteImage(dto.id, image.id))}
                 data-testid="image-delete"

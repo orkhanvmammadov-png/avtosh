@@ -12,7 +12,7 @@ export function SortSelect() {
   const params = useSearchParams();
   const current = normalizeSort(params.get("sort") ?? undefined);
   return (
-    <label className="flex items-center gap-2 text-sm text-navy">
+    <label className="flex items-center gap-2 text-sm text-ink">
       <span className="font-medium">{UI.sort}</span>
       <select
         value={current}

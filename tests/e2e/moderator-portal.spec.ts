@@ -171,7 +171,7 @@ test("reject requires a reason and lands in history", async ({ page }, { project
   expect(await moderationReviewCount(fixture.id)).toBe(1);
   // the durable panel's own navigation shows the current state
   await page.getByTestId("done-view-current").click();
-  await expect(page.getByTestId("moderation-history")).toContainText("Rədd edilib");
+  await expect(page.getByTestId("moderation-history")).toContainText("Rədd edildi"); // approved design label
   await expect(page.getByTestId("moderation-history")).toContainText("Qadağan olunmuş məhsul");
 });
 

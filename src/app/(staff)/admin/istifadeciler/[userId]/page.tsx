@@ -35,17 +35,17 @@ export default async function AdminUserDetailPage({
 
   return (
     <div className="py-6" data-testid="admin-user-detail">
-      <h1 className="text-2xl font-bold tracking-tight text-navy">{user.phoneMasked}</h1>
-      <dl className="mt-4 max-w-lg space-y-2 rounded-card border border-line bg-raised shadow-card p-4 text-sm">
-        <div className="flex justify-between gap-4"><dt className="text-muted">Ad</dt><dd className="font-medium text-navy">{user.displayName ?? "—"}</dd></div>
+      <h1 className="text-2xl font-bold tracking-tight text-ink">{user.phoneMasked}</h1>
+      <dl className="mt-4 max-w-lg space-y-2 rounded-staff border border-line bg-raised p-4 text-sm">
+        <div className="flex justify-between gap-4"><dt className="text-muted">Ad</dt><dd className="font-medium text-ink">{user.displayName ?? "—"}</dd></div>
         <div className="flex justify-between gap-4"><dt className="text-muted">{ADMIN.status}</dt>
-          <dd className="font-semibold text-navy" data-testid="user-status">{user.status === "BLOCKED" ? ADMIN.blocked : ADMIN.active}</dd></div>
+          <dd className="font-semibold text-ink" data-testid="user-status">{user.status === "BLOCKED" ? ADMIN.blocked : ADMIN.active}</dd></div>
         {user.blockedReason !== null ? (
           <div className="flex justify-between gap-4"><dt className="text-muted">{ADMIN.blockReason}</dt>
-            <dd className="whitespace-pre-line text-navy" data-testid="user-block-reason">{user.blockedReason}</dd></div>
+            <dd className="whitespace-pre-line text-ink" data-testid="user-block-reason">{user.blockedReason}</dd></div>
         ) : null}
         <div className="flex justify-between gap-4"><dt className="text-muted">{ADMIN.role}</dt>
-          <dd className="font-medium text-navy" data-testid="user-roles">{user.roles.join(", ")}</dd></div>
+          <dd className="font-medium text-ink" data-testid="user-roles">{user.roles.join(", ")}</dd></div>
         <div className="flex justify-between gap-4"><dt className="text-muted">{ADMIN.listingsCount}</dt><dd>{user.listingCount}</dd></div>
         <div className="flex justify-between gap-4"><dt className="text-muted">{ADMIN.created}</dt><dd>{formatDateAz(user.createdAt)}</dd></div>
       </dl>

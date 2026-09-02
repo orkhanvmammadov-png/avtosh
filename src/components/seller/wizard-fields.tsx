@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 /** Shared, accessible form primitives for the seller wizard. */
 
 export const fieldClass =
-  "min-h-12 w-full rounded-control border border-line bg-raised px-3 text-base text-navy transition-colors hover:border-line-strong disabled:bg-sunken disabled:text-muted disabled:hover:border-line";
+  "min-h-12 w-full rounded-control border border-line-strong bg-raised px-3 text-base text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:shadow-[0_0_0_2px_rgba(20,122,78,0.25)] focus:outline-none disabled:bg-sunken disabled:text-muted disabled:hover:border-line-strong";
 
 export function Field({
   label,
@@ -22,7 +22,7 @@ export function Field({
 }) {
   return (
     <div>
-      <label htmlFor={htmlFor} className="mb-1 block text-sm font-medium text-navy">
+      <label htmlFor={htmlFor} className="mb-1 block text-xs font-medium text-slate-strong">
         {label}
       </label>
       {children}
@@ -134,7 +134,7 @@ export function CheckboxField({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label htmlFor={id} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-control border border-line bg-raised px-3 transition-colors hover:border-line-strong">
+    <label htmlFor={id} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-control border border-line-strong bg-raised px-3 transition-colors duration-150 hover:border-primary">
       <input
         id={id}
         data-testid={id}
@@ -143,7 +143,7 @@ export function CheckboxField({
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
       />
-      <span className="text-sm font-medium text-navy">{label}</span>
+      <span className="text-sm font-medium text-ink">{label}</span>
     </label>
   );
 }

@@ -22,10 +22,10 @@ export function AccountNav({ active }: { active: AccountTab }) {
             <Link
               href={tab.href}
               aria-current={tab.key === active ? "page" : undefined}
-              className={`inline-flex min-h-12 items-center whitespace-nowrap border-b-2 px-3 text-sm font-medium transition-colors ${
+              className={`inline-flex min-h-12 items-center whitespace-nowrap border-b-2 px-3 text-sm transition-colors duration-150 ${
                 tab.key === active
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted hover:text-navy"
+                  ? "border-primary font-semibold text-ink"
+                  : "border-transparent font-medium text-slate-strong hover:text-ink"
               }`}
             >
               {tab.label}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Container } from "@/components/ui/container";
 import Link from "next/link";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
 import { formatDateAz } from "@/lib/format";
@@ -44,6 +45,7 @@ export default async function KapitalReturnPage({
         ? `/giris?return_to=${encodeURIComponent(`/odenis/kapital/netice?ID=${providerOrderId}`)}`
         : "/giris";
     return (
+    <Container>
       <ResultPanel
         tone="neutral"
         title={SELLER.payGenericTitle}
@@ -56,7 +58,8 @@ export default async function KapitalReturnPage({
           </Link>
         }
       />
-    );
+    </Container>
+  );
   }
 
   const { outcome, listingId, purpose, promotionEndsAt, renewalExpiresAt } = result;
@@ -137,6 +140,7 @@ export default async function KapitalReturnPage({
             : "warning";
 
   return (
+    <Container>
     <ResultPanel
       tone={tone}
       title={view.title}
@@ -149,5 +153,6 @@ export default async function KapitalReturnPage({
         </Link>
       ))}
     />
+  </Container>
   );
 }

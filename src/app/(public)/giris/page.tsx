@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Container } from "@/components/ui/container";
 import { redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
 import { LoginFlow } from "@/components/auth/login-flow";
@@ -27,8 +28,10 @@ export default async function LoginPage({
     redirect(returnTo ?? "/profil");
   }
   return (
-    <div className="py-10 md:py-16">
-      <LoginFlow returnTo={returnTo} />
-    </div>
+    <Container>
+      <div className="py-10 md:py-16">
+        <LoginFlow returnTo={returnTo} />
+      </div>
+    </Container>
   );
 }

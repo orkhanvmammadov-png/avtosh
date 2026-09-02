@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, buttonClasses } from "@/components/ui/button";
+import { PromotionBadge } from "@/components/ui/promotion-badge";
 import { UI } from "@/lib/marketplace/labels";
 import { publicFetch, PublicApiError } from "@/lib/marketplace/public-api";
 
@@ -10,7 +11,20 @@ import { publicFetch, PublicApiError } from "@/lib/marketplace/public-api";
  * POST /api/v1/listings/:publicId/contact. Non-contactable listings
  * never render this component (the server decides).
  */
-export function ContactCard({ publicId, displayName, maskedPhone }: { publicId: string; displayName: string | null; maskedPhone: string | null }) {
+export function ContactCard({
+  publicId,
+  displayName,
+  maskedPhone,
+  priceLabel,
+  premium = false,
+}: {
+  publicId: string;
+  displayName: string | null;
+  maskedPhone: string | null;
+  /** Presentation-only: Condensed price rendered inside the panel (≥desk). */
+  priceLabel?: string;
+  premium?: boolean;
+}) {
   const [contact, setContact] = useState<{ phone: string; whatsappUrl: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,21 +46,26 @@ export function ContactCard({ publicId, displayName, maskedPhone }: { publicId: 
     }
   }
 
-  // ONE instance serves both form factors purely via classes: a fixed
-  // bottom action bar below the desk breakpoint, the sidebar card at
-  // desk+. Same DOM, same testids, same reveal/rate-limit behavior.
+  // ONE instance serves both form factors purely via classes: the
+  // approved fixed MobileStickyContact bar below desk, the sticky
+  // navy-raised ContactPanel at desk+. Same DOM, same testids, same
+  // reveal/rate-limit behavior.
   return (
     <aside
       aria-labelledby="contact-title"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-raised p-3 shadow-overlay desk:static desk:rounded-card desk:border desk:p-6 desk:shadow-card"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-navy-border bg-navy p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-white desk:static desk:rounded-[12px] desk:border desk:bg-navy-raised desk:p-5"
       data-testid="contact-card"
     >
       <div className="mx-auto flex max-w-xl items-center gap-3 desk:mx-0 desk:block desk:max-w-none">
         <div className="min-w-0 flex-1 desk:flex-none">
-          <h2 id="contact-title" className="hidden text-sm font-semibold uppercase tracking-wide text-faint desk:block">{UI.seller}</h2>
-          <p className="truncate text-sm font-semibold text-navy desk:mt-1 desk:text-lg">{displayName ?? "Satıcı"}</p>
+          {premium ? <span className="mb-2 hidden desk:block"><PromotionBadge type="PREMIUM" /></span> : null}
+          {priceLabel !== undefined ? (
+            <p className="hidden font-condensed text-[34px] font-bold leading-none desk:block">{priceLabel}</p>
+          ) : null}
+          <h2 id="contact-title" className="hidden text-[11px] font-semibold uppercase tracking-[0.06em] text-on-navy-muted desk:mt-4 desk:block">{UI.seller}</h2>
+          <p className="truncate text-sm font-semibold text-white desk:mt-0.5 desk:text-base">{displayName ?? "Satıcı"}</p>
           {contact === null && maskedPhone ? (
-            <p className="truncate font-mono text-xs text-muted desk:mt-2 desk:text-base" data-testid="contact-masked">{maskedPhone}</p>
+            <p className="truncate font-mono text-xs text-on-navy-muted desk:mt-1.5 desk:text-sm" data-testid="contact-masked">{maskedPhone}</p>
           ) : null}
         </div>
         {contact === null ? (
@@ -57,15 +76,21 @@ export function ContactCard({ publicId, displayName, maskedPhone }: { publicId: 
               </svg>
               {loading ? UI.loading : UI.showPhone}
             </Button>
-            {maskedPhone === null ? <p className="mt-1 text-xs text-muted desk:mt-2 desk:text-sm">{UI.contactUnavailable}</p> : null}
-            {error ? <p role="alert" className="mt-1 text-xs text-danger desk:mt-2 desk:text-sm">{error}</p> : null}
+            {maskedPhone === null ? <p className="mt-1 text-xs text-on-navy-muted desk:mt-2">{UI.contactUnavailable}</p> : null}
+            {error ? <p role="alert" className="mt-1 text-xs text-[#F2B8B5] desk:mt-2 desk:text-sm">{error}</p> : null}
           </div>
         ) : (
           <div className="flex shrink-0 gap-2 desk:mt-4 desk:flex-col">
             <a href={`tel:${contact.phone}`} className={buttonClasses("primary", "w-full whitespace-nowrap")} data-testid="contact-call">
               {UI.callSeller}: {contact.phone}
             </a>
-            <a href={contact.whatsappUrl} target="_blank" rel="noopener noreferrer" className={buttonClasses("secondary", "w-full")} data-testid="contact-whatsapp">
+            <a
+              href={contact.whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonClasses("secondary", "w-full border-navy-border bg-transparent text-white hover:border-green-dark hover:text-green-dark active:bg-white/5")}
+              data-testid="contact-whatsapp"
+            >
               {UI.whatsapp}
             </a>
           </div>

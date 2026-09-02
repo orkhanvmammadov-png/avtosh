@@ -1,3 +1,4 @@
+import { Lock } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { PaginationLink } from "@/components/ui/pagination-link";
 import { controlClasses } from "@/components/ui/controls";
@@ -30,7 +31,13 @@ export default async function AdminAuditPage({
   );
   return (
     <div className="py-6" data-testid="admin-audit-page">
-      <PageHeading title={ADMIN.audit} />
+      <div className="flex flex-wrap items-center gap-3">
+        <PageHeading title={ADMIN.audit} />
+        <span className="inline-flex items-center gap-1.5 rounded-staff bg-sunken px-2 py-1 font-mono text-[10.5px] font-semibold uppercase tracking-[0.06em] text-slate-strong">
+          <Lock size={11} strokeWidth={2.5} aria-hidden="true" />
+          Yalnız oxunur · Dəyişməz
+        </span>
+      </div>
       <form method="get" className="mt-4 flex flex-wrap gap-2">
         <input
           name="action"
@@ -57,7 +64,7 @@ export default async function AdminAuditPage({
       ) : (
         <ul className="mt-4 space-y-1.5" data-testid="audit-rows">
           {result.items.map((row) => (
-            <li key={row.id} className="rounded-control border border-line bg-raised px-3 py-2 text-sm shadow-card" data-testid="audit-row" data-action={row.action}>
+            <li key={row.id} className="rounded-control border border-line bg-raised px-3 py-2 text-sm" data-testid="audit-row" data-action={row.action}>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                 <span className="rounded-md bg-sunken px-1.5 py-0.5 font-mono text-xs font-semibold text-slate-strong">{row.action}</span>
                 <span className="text-xs text-muted">{row.actorType}{row.actorPhoneMasked !== null ? ` · ${row.actorPhoneMasked}` : ""}</span>

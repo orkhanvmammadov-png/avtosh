@@ -1,28 +1,40 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
 /**
- * Standard feedback notice. Callers pass the accessibility role their
- * flow already established (`alert` for errors/conflicts, `status`
- * for confirmations) — this component never downgrades semantics.
+ * Approved inline notice (components.md): borderless tinted message.
+ * `rule` adds the danger/warning left rule used by banners (e.g. the
+ * wizard correction banner). Callers pass the accessibility role
+ * their flow already established — semantics are never downgraded.
  */
 
 const TONES = {
-  info: "border-info-line bg-info-soft text-info-deep",
-  success: "border-success-line bg-success-soft text-success-deep",
-  warning: "border-warning-line bg-warning-soft text-warning-deep",
-  danger: "border-danger-line bg-danger-soft text-danger-deep",
+  info: "bg-info-soft text-info",
+  success: "bg-success-soft text-success",
+  warning: "bg-warning-soft text-warning",
+  danger: "bg-danger-soft text-danger",
+} as const;
+
+const RULES = {
+  info: "border-l-4 border-info",
+  success: "border-l-4 border-success",
+  warning: "border-l-4 border-warning",
+  danger: "border-l-4 border-danger",
 } as const;
 
 export type NoticeTone = keyof typeof TONES;
 
 export function Notice({
   tone,
+  rule = false,
   children,
   className = "",
   ...rest
-}: { tone: NoticeTone; children: ReactNode } & HTMLAttributes<HTMLDivElement>) {
+}: { tone: NoticeTone; rule?: boolean; children: ReactNode } & HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={`rounded-control border px-3 py-2.5 text-sm leading-5 ${TONES[tone]} ${className}`} {...rest}>
+    <div
+      className={`rounded-control px-3 py-2.5 text-sm leading-relaxed ${TONES[tone]} ${rule ? RULES[tone] : ""} ${className}`}
+      {...rest}
+    >
       {children}
     </div>
   );
