@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FavoriteButton } from "@/components/shared/favorite-button";
 import { ListingImage } from "@/components/shared/listing-image";
+import { Badge } from "@/components/ui/badge";
 import { PromotionBadge } from "@/components/ui/promotion-badge";
 import { formatFreshness, formatMileage, formatPriceMinor, vehicleTitle } from "@/lib/format";
 import { UI } from "@/lib/marketplace/labels";
@@ -38,7 +39,11 @@ export function ListingCard({
           />
           {(promotedLabel || listing.badges.premium || listing.badges.boosted) && (
             <div className="absolute left-2 top-2 flex gap-1">
-              {listing.badges.premium ? <PromotionBadge type="PREMIUM" compact /> : null}
+              {/* Boost placements keep the required ad marking ("Reklam")
+                  alongside the approved zap chip (documented deviation
+                  from zap-only: the existing ad-label contract wins). */}
+              {promotedLabel ? <Badge tone="neutral">{promotedLabel}</Badge> : null}
+              {!promotedLabel && listing.badges.premium ? <PromotionBadge type="PREMIUM" compact /> : null}
               {promotedLabel || listing.badges.boosted ? <PromotionBadge type="BOOST" compact /> : null}
             </div>
           )}

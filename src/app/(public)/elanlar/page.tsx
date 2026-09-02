@@ -72,14 +72,14 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   return (
     <Container>
     <div className="py-6">
-      <h1 className="text-2xl font-bold tracking-tight text-navy">
+      <h1 className="text-xl font-bold tracking-[-0.01em] text-ink md:text-2xl">
         {categoryLabel} {UI.listings.toLowerCase()}
       </h1>
       <div className="mt-3 empty:hidden">
         <AppliedFilters state={state} catalog={catalog} />
       </div>
       {/* Results toolbar: sticky under the header until the rail appears at desk (1024). */}
-      <div className="sticky top-16 z-30 -mx-4 mt-3 flex items-center justify-between gap-3 border-b border-line bg-surface/95 px-4 py-2 backdrop-blur desk:static desk:mx-0 desk:justify-end desk:border-0 desk:bg-transparent desk:p-0">
+      <div className="sticky top-14 z-30 -mx-4 mt-3 flex items-center justify-between gap-3 border-b border-line bg-surface/95 px-4 py-2 backdrop-blur desk:static desk:mx-0 desk:justify-end desk:border-0 desk:bg-transparent desk:p-0">
         <FiltersTrigger activeCount={activeCount} />
         <SortSelect />
       </div>

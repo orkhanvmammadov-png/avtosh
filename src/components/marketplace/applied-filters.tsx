@@ -97,7 +97,7 @@ export function AppliedFilters({ state, catalog }: { state: SearchFilterState; c
         <li key={chip.key}>
           <Link
             href={chip.href}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-info-line bg-info-soft px-3 text-xs font-medium text-info-deep transition-colors hover:border-primary"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-pill bg-primary-tint px-3 text-xs font-semibold text-primary-pressed transition-colors duration-150 hover:bg-primary-tint-pressed"
             data-testid="applied-filter"
           >
             {chip.label}
@@ -111,7 +111,7 @@ export function AppliedFilters({ state, catalog }: { state: SearchFilterState; c
         <li>
           <Link
             href={searchHref({ category: state.category, sort: state.sort })}
-            className="inline-flex min-h-9 items-center rounded-full px-3 text-xs font-medium text-muted transition-colors hover:text-danger"
+            className="inline-flex min-h-9 items-center px-2 text-xs font-medium text-slate-strong underline-offset-2 transition-colors duration-150 hover:text-danger hover:underline"
             data-testid="applied-clear-all"
           >
             {UI.clearFilters}

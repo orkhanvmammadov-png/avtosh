@@ -6,7 +6,6 @@ import { HomeSearch } from "@/components/marketplace/home-search";
 import { ListingCard } from "@/components/shared/listing-card";
 import { PremiumFeed } from "@/components/marketplace/premium-feed";
 import { PromotionBadge } from "@/components/ui/promotion-badge";
-import { UI } from "@/lib/marketplace/labels";
 import { getBrands } from "@/services/catalog";
 import { homeData, searchMarketplace } from "@/services/marketplace";
 
