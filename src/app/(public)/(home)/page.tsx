@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
-import { Container } from "@/components/ui/container";
 import Link from "next/link";
+import { ArrowRight, Check } from "lucide-react";
+import { Container } from "@/components/ui/container";
 import { HomeSearch } from "@/components/marketplace/home-search";
+import { ListingCard } from "@/components/shared/listing-card";
 import { PremiumFeed } from "@/components/marketplace/premium-feed";
+import { PromotionBadge } from "@/components/ui/promotion-badge";
 import { UI } from "@/lib/marketplace/labels";
 import { getBrands } from "@/services/catalog";
-import { homeData } from "@/services/marketplace";
+import { homeData, searchMarketplace } from "@/services/marketplace";
 
 export const dynamic = "force-dynamic";
 
@@ -14,119 +17,111 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-const CATEGORY_TILES = [
-  {
-    code: "CAR",
-    label: UI.cars,
-    hint: "Sedan, SUV, hetçbek və daha çox",
-    icon: (
-      <path d="M4 15l1.8-5a2.4 2.4 0 0 1 2.3-1.6h7.8a2.4 2.4 0 0 1 2.3 1.6L20 15v5h-1.8a2 2 0 0 1-4 0h-4.4a2 2 0 0 1-4 0H4v-5zM7 15h.01M17 15h.01" />
-    ),
-  },
-  {
-    code: "MOTORCYCLE",
-    label: UI.motorcycles,
-    hint: "Şəhər, sport və turing motosikletlər",
-    icon: (
-      <path d="M5.5 17.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM5.5 15h4l3-6h3l3 6M12 9l-1.5-3H8" />
-    ),
-  },
-];
-
-const TRUST_POINTS = [
-  {
-    title: "Yoxlanılmış elanlar",
-    hint: "Hər elan dərc olunmazdan əvvəl moderasiyadan keçir.",
-    icon: <path d="M12 3l7 3v5c0 4.5-3 8.6-7 10-4-1.4-7-5.5-7-10V6l7-3zM9 12l2 2 4-4" />,
-  },
-  {
-    title: "Birbaşa əlaqə",
-    hint: "Satıcının nömrəsini bir kliklə görün, vasitəçisiz danışın.",
-    icon: <path d="M6 4h4l2 5-2.5 1.5a11 11 0 0 0 4 4L15 12l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 4 6a2 2 0 0 1 2-2z" />,
-  },
-  {
-    title: "Təhlükəsiz ödəniş",
-    hint: "Elan və təşviq ödənişləri Kapital Bank üzərindən onlayn aparılır.",
-    icon: <path d="M3 8h18M3 8v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8M3 8l2-3h14l2 3M7 14h4" />,
-  },
+/** Approved trust row (contracts.md canonical copy — real product facts). */
+const TRUST = [
+  { title: "Hər elan yoxlanılır", hint: "Dərc olunmazdan əvvəl moderasiyadan keçir." },
+  { title: "WhatsApp ilə giriş", hint: "Şifrəsiz, birdəfəlik kod ilə daxil olun." },
+  { title: "İlk 3 elan pulsuz", hint: "Sonrakı elanlar üçün sabit dərc haqqı." },
 ];
 
 export default async function HomePage() {
   const { home } = await homeData();
   const defaultCategory = home.categories[0]?.code ?? "CAR";
-  const initialBrands = await getBrands(defaultCategory).catch(() => []);
+  const [initialBrands, fresh] = await Promise.all([
+    getBrands(defaultCategory).catch(() => []),
+    // "Yeni elanlar" — the accepted public search read model, newest
+    // first (server-side service reuse; no new API).
+    searchMarketplace({ category: "CAR", sort: "NEWEST", limit: 8 }).catch(() => null),
+  ]);
   return (
-    <Container>
     <>
-      <section aria-labelledby="hero-title" className="pt-6">
-        <div className="rounded-card bg-navy px-5 py-8 text-white shadow-raised md:px-10 md:py-12">
+      {/* Full-bleed navy stage; the search panel overlaps it by ~56px. */}
+      <section aria-labelledby="hero-title" className="bg-navy pb-14 pt-8 text-white md:pt-12">
+        <Container>
           <div className="max-w-2xl">
-            <h1 id="hero-title" className="text-3xl font-extrabold tracking-tight md:text-4xl">
+            <h1 id="hero-title" className="text-3xl font-extrabold leading-[1.05] tracking-[-0.015em] md:text-[44px]">
               Avtomobil və motosiklet elanları
             </h1>
-            <p className="mt-3 text-sm text-white/70 md:text-base" data-testid="new-count">
-              Son 24 saatda <strong className="font-bold text-premium">{home.newListingsLast24h}</strong>{" "}
+            <p className="mt-3 text-sm text-on-navy-muted md:text-base" data-testid="new-count">
+              Son 24 saatda <strong className="font-bold text-green-dark">{home.newListingsLast24h}</strong>{" "}
               yeni elan yerləşdirilib
             </p>
           </div>
-          <div className="mt-6 md:mt-8">
-            <HomeSearch categories={home.categories} initialBrands={initialBrands} />
+        </Container>
+      </section>
+      <Container className="-mt-14">
+        <HomeSearch categories={home.categories} initialBrands={initialBrands} />
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/elanlar?category=CAR" className="inline-flex min-h-9 items-center gap-1 font-medium text-primary hover:text-primary-hover">
+              {"Ətraflı axtarış"}
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+            <Link href="/elanlar?category=CAR&sort=PRICE_ASC" className="inline-flex min-h-9 items-center rounded-pill bg-raised px-3 text-xs font-medium text-slate-strong hover:text-primary">
+              Sərfəli avtomobillər
+            </Link>
+            <Link href="/elanlar?category=MOTORCYCLE" className="inline-flex min-h-9 items-center rounded-pill bg-raised px-3 text-xs font-medium text-slate-strong hover:text-primary">
+              Motosikletlər
+            </Link>
           </div>
+          <p className="hidden items-center gap-1.5 text-xs text-slate-strong md:flex">
+            <Check size={14} className="text-primary" aria-hidden="true" />
+            Hər elan yoxlanılır
+          </p>
         </div>
-      </section>
 
-      <section aria-label="Kateqoriyalar" className="mt-6 grid gap-4 sm:grid-cols-2">
-        {CATEGORY_TILES.map((tile) => (
-          <Link
-            key={tile.code}
-            href={`/elanlar?category=${tile.code}`}
-            className="group flex items-center gap-4 rounded-card border border-line bg-raised p-5 shadow-card transition-shadow hover:shadow-raised"
-          >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-info-soft text-primary">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                {tile.icon}
-              </svg>
-            </span>
-            <span className="min-w-0">
-              <span className="block text-base font-semibold text-navy group-hover:text-primary">{tile.label}</span>
-              <span className="mt-0.5 block text-sm text-muted">{tile.hint}</span>
-            </span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="ml-auto shrink-0 text-faint transition-colors group-hover:text-primary" aria-hidden="true">
-              <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </Link>
-        ))}
-      </section>
+        {home.premium.items.length > 0 ? (
+          <section aria-labelledby="premium-title" className="mt-8 md:mt-12" data-testid="premium-section">
+            <div className="mb-4 flex items-center gap-2.5">
+              <h2 id="premium-title" className="text-lg font-bold tracking-[-0.01em] text-ink md:text-2xl">
+                Premium elanlar
+              </h2>
+              <PromotionBadge type="PREMIUM" />
+            </div>
+            <PremiumFeed
+              initialItems={home.premium.items}
+              initialCursor={home.premium.nextCursor}
+              initialHasMore={home.premium.hasMore}
+              renderedAtMs={home.generatedAtMs}
+            />
+          </section>
+        ) : null}
 
-      {home.premium.items.length > 0 ? (
-        <section aria-labelledby="premium-title" className="mt-10" data-testid="premium-section">
-          <div className="mb-4 flex items-center gap-3">
-            <span aria-hidden="true" className="h-6 w-1.5 rounded-full bg-premium" />
-            <h2 id="premium-title" className="text-2xl font-bold tracking-tight text-navy">{UI.premium}</h2>
-          </div>
-          <PremiumFeed
-            initialItems={home.premium.items}
-            initialCursor={home.premium.nextCursor}
-            initialHasMore={home.premium.hasMore}
-            renderedAtMs={home.generatedAtMs}
-          />
+        {fresh !== null && fresh.items.length > 0 ? (
+          <section aria-labelledby="fresh-title" className="mt-8 md:mt-12">
+            <div className="mb-4 flex items-baseline justify-between gap-3">
+              <h2 id="fresh-title" className="text-lg font-bold tracking-[-0.01em] text-ink md:text-2xl">
+                Yeni elanlar
+              </h2>
+              <Link href="/elanlar?category=CAR" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-hover">
+                Hamısına bax
+                <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            </div>
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+              {fresh.items.slice(0, 8).map((item) => (
+                <li key={item.publicId}>
+                  <ListingCard listing={item} nowMs={fresh.generatedAtMs} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        <section aria-label="Niyə AVTOSH" className="mt-10 grid gap-6 border-t border-line pt-8 md:mt-14 md:grid-cols-3">
+          {TRUST.map((point) => (
+            <div key={point.title} className="flex gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-tint text-primary">
+                <Check size={16} strokeWidth={2.5} aria-hidden="true" />
+              </span>
+              <div>
+                <h3 className="text-sm font-bold text-ink">{point.title}</h3>
+                <p className="mt-0.5 text-sm leading-relaxed text-slate-strong">{point.hint}</p>
+              </div>
+            </div>
+          ))}
         </section>
-      ) : null}
-
-      <section aria-label="Niyə AVTOSH" className="mt-12 grid gap-4 md:grid-cols-3">
-        {TRUST_POINTS.map((point) => (
-          <div key={point.title} className="rounded-card border border-line bg-raised p-5 shadow-card">
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-sunken text-slate-strong">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                {point.icon}
-              </svg>
-            </span>
-            <h3 className="mt-3 text-base font-semibold text-navy">{point.title}</h3>
-            <p className="mt-1 text-sm leading-6 text-muted">{point.hint}</p>
-          </div>
-        ))}
-      </section>
+      </Container>
     </>
-  </Container>
   );
 }

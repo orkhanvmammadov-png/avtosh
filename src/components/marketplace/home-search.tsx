@@ -9,7 +9,7 @@ import { searchHref } from "@/lib/marketplace/search-params";
 import type { BrandDto, CategoryDto, ModelDto } from "@/services/catalog";
 
 const selectClass =
-  "min-h-12 w-full rounded-lg border border-line bg-white px-3 text-base text-navy disabled:bg-surface disabled:text-muted";
+  "mt-1.5 block min-h-12 w-full rounded-control border border-line-strong bg-raised px-3 text-sm text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none disabled:bg-sunken disabled:text-muted";
 
 /** Hero search: category → brands → models, navigating to /elanlar with URL params. */
 export function HomeSearch({ categories, initialBrands }: { categories: CategoryDto[]; initialBrands: BrandDto[] }) {
@@ -63,7 +63,7 @@ export function HomeSearch({ categories, initialBrands }: { categories: Category
   }
 
   return (
-    <form onSubmit={submit} className="rounded-card border border-line bg-white p-4 shadow-sm md:p-6" aria-label="Elan axtarışı">
+    <form onSubmit={submit} className="rounded-[12px] bg-raised p-4 shadow-overlay md:p-5" aria-label="Elan axtarışı">
       <div role="radiogroup" aria-label="Kateqoriya" className="mb-4 flex gap-2">
         {categories.map((c) => (
           <button
@@ -73,21 +73,21 @@ export function HomeSearch({ categories, initialBrands }: { categories: Category
             aria-checked={category === c.code}
             data-testid={`category-${c.code}`}
             onClick={() => selectCategory(c.code)}
-            className={`min-h-12 flex-1 rounded-lg border px-4 text-sm font-semibold transition-colors ${category === c.code ? "border-primary bg-primary text-white" : "border-line bg-white text-navy hover:bg-surface"}`}
+            className={`min-h-12 flex-1 rounded-control border px-4 text-sm font-semibold transition-colors duration-150 ${category === c.code ? "border-primary bg-primary text-white" : "border-line-strong bg-raised text-ink hover:border-primary hover:text-primary"}`}
           >
             {CATEGORY_LABELS[c.code] ?? c.name}
           </button>
         ))}
       </div>
       <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-        <label className="block text-sm font-medium text-navy">
+        <label className="block text-xs font-medium text-slate-strong">
           <span className="mb-1 block">{UI.brandLabel}</span>
           <select className={selectClass} value={brandId} onChange={(e) => void selectBrand(e.target.value)} disabled={loadingBrands} data-testid="home-brand">
             <option value="">{UI.any}</option>
             {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         </label>
-        <label className="block text-sm font-medium text-navy">
+        <label className="block text-xs font-medium text-slate-strong">
           <span className="mb-1 block">{UI.modelLabel}</span>
           <select className={selectClass} value={modelId} onChange={(e) => setModelId(e.target.value)} disabled={brandId === ""} data-testid="home-model">
             <option value="">{UI.any}</option>
