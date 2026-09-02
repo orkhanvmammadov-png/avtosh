@@ -50,7 +50,7 @@ export default async function MyListingsPage({
     <div className="py-6" data-testid="my-listings-page">
       <AccountNav active="listings" />
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight text-navy">{UI.myListings}</h1>
+        <h1 className="text-xl font-bold tracking-[-0.01em] text-ink md:text-2xl">{UI.myListings}</h1>
         <Link href="/elan-yerlesdir" className={buttonClasses("primary", "gap-1.5")}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
           {UI.postListing}
@@ -62,10 +62,10 @@ export default async function MyListingsPage({
             key={key}
             href={key === "all" ? "/profil/elanlar" : `/profil/elanlar?filter=${key}`}
             aria-current={key === filter ? "page" : undefined}
-            className={`inline-flex min-h-12 items-center rounded-full border px-4 text-sm font-medium transition-colors ${
+            className={`inline-flex min-h-12 items-center rounded-pill border px-4 text-sm font-medium transition-colors duration-150 ${
               key === filter
-                ? "border-primary bg-primary text-white"
-                : "border-line bg-raised text-navy hover:border-line-strong hover:bg-surface"
+                ? "border-primary bg-primary font-semibold text-white"
+                : "border-line-strong bg-raised text-ink hover:border-primary hover:text-primary"
             }`}
             data-testid={`filter-${key}`}
           >
@@ -74,9 +74,9 @@ export default async function MyListingsPage({
         ))}
       </nav>
       {items.length === 0 ? (
-        <div className="mt-10 rounded-card border border-dashed border-line bg-raised px-6 py-12 text-center" data-testid="my-listings-empty">
-          <p className="text-lg font-semibold text-navy">{SELLER.emptyMyListings}</p>
-          <p className="mt-2 text-sm text-muted">{SELLER.emptyMyListingsHint}</p>
+        <div className="mt-10 rounded-card border border-dashed border-line-strong bg-raised px-6 py-12 text-center" data-testid="my-listings-empty">
+          <p className="text-lg font-semibold text-ink">{SELLER.emptyMyListings}</p>
+          <p className="mt-2 text-sm text-slate-strong">{SELLER.emptyMyListingsHint}</p>
         </div>
       ) : (
         <ul className="mt-5 space-y-3" data-testid="my-listings-list">
