@@ -29,9 +29,9 @@ export default async function LoginPage({
   }
   return (
     <Container>
-    <div className="py-10 md:py-16">
-      <LoginFlow returnTo={returnTo} />
-    </div>
-  </Container>
+      <div className="py-10 md:py-16">
+        <LoginFlow returnTo={returnTo} />
+      </div>
+    </Container>
   );
 }

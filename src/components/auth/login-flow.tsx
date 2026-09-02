@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Blade } from "@/components/shared/brand-mark";
 import { Button } from "@/components/ui/button";
+import { controlClasses } from "@/components/ui/controls";
 import { UI } from "@/lib/marketplace/labels";
 import { invalidateFavoriteIds } from "@/lib/marketplace/favorites-client";
 import { publicFetch, PublicApiError } from "@/lib/marketplace/public-api";
@@ -13,7 +15,7 @@ interface ChallengeState {
   resendAfter: number;
 }
 
-const field = "block w-full min-h-12 rounded-control border border-line bg-raised px-3 text-sm text-navy placeholder:text-faint transition-colors hover:border-line-strong";
+const OTP_LENGTH = 6;
 
 function errorMessage(error: unknown): string {
   if (error instanceof PublicApiError) {
@@ -39,6 +41,7 @@ export function LoginFlow({ returnTo }: { returnTo: string | null }) {
   const [busy, setBusy] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const otpRef = useRef<HTMLInputElement>(null);
+  const [otpFocused, setOtpFocused] = useState(false);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -120,18 +123,18 @@ export function LoginFlow({ returnTo }: { returnTo: string | null }) {
     }
   }
 
+  // Approved auth card (screens.md §auth): 400px white card, blade
+  // brand accent, single real inputs — the six-box OTP look is pure
+  // presentation layered over ONE real input so fill/paste/autofill
+  // keep working.
   return (
-    <div className="mx-auto w-full max-w-md rounded-card border border-line bg-raised p-6 shadow-raised md:p-8" data-testid="login-flow">
-      <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 13l1.6-4a2 2 0 0 1 1.9-1.3h7a2 2 0 0 1 1.9 1.3L19 13v4h-1.5a1.7 1.7 0 0 1-3.4 0H9.9a1.7 1.7 0 0 1-3.4 0H5v-4z" />
-        </svg>
-      </span>
-      <h1 className="mt-4 text-2xl font-bold tracking-tight text-navy">{UI.loginTitle}</h1>
+    <div className="mx-auto w-full max-w-[400px] rounded-modal border border-line bg-raised p-6 md:p-8" data-testid="login-flow">
+      <Blade size={26} />
+      <h1 className="mt-4 text-xl font-bold tracking-[-0.01em] text-ink md:text-2xl">{UI.loginTitle}</h1>
       {challenge === null ? (
         <form onSubmit={requestOtp} className="mt-4 space-y-4" aria-label={UI.loginTitle}>
-          <p className="text-sm text-muted">{UI.loginHint}</p>
-          <label className="block text-sm font-medium text-navy">
+          <p className="text-sm leading-relaxed text-slate-strong">{UI.loginHint}</p>
+          <label className="block text-xs font-medium text-slate-strong">
             <span className="mb-1 block">{UI.phoneLabel}</span>
             <input
               type="tel"
@@ -141,7 +144,7 @@ export function LoginFlow({ returnTo }: { returnTo: string | null }) {
               placeholder={UI.phonePlaceholder}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className={field}
+              className={controlClasses("text-base")}
               data-testid="login-phone"
             />
           </label>
@@ -152,24 +155,41 @@ export function LoginFlow({ returnTo }: { returnTo: string | null }) {
         </form>
       ) : (
         <form onSubmit={verify} className="mt-4 space-y-4" aria-label={UI.otpLabel}>
-          <p className="text-sm text-muted">
-            {UI.otpSentTo} <strong className="text-navy">{challenge.phone}</strong>
+          <p className="text-sm leading-relaxed text-slate-strong">
+            {UI.otpSentTo} <strong className="font-semibold text-ink">{challenge.phone}</strong>
           </p>
-          <label className="block text-sm font-medium text-navy">
+          <label className="block text-xs font-medium text-slate-strong">
             <span className="mb-1 block">{UI.otpLabel}</span>
-            <input
-              ref={otpRef}
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              pattern="[0-9]{6}"
-              maxLength={6}
-              required
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
-              className={`${field} text-center text-2xl tracking-[0.5em]`}
-              data-testid="login-otp"
-            />
+            <span className="relative block">
+              <span aria-hidden="true" className="pointer-events-none grid grid-cols-6 gap-2">
+                {Array.from({ length: OTP_LENGTH }, (_, i) => {
+                  const activeBox = otpFocused && i === Math.min(otp.length, OTP_LENGTH - 1);
+                  return (
+                    <span
+                      key={i}
+                      className={`flex h-12 items-center justify-center rounded-control border bg-raised font-condensed text-xl font-bold text-ink transition-colors duration-150 ${activeBox ? "border-primary shadow-[0_0_0_2px_rgba(20,122,78,0.25)]" : otp[i] ? "border-line-strong" : "border-line-strong/70"}`}
+                    >
+                      {otp[i] ?? ""}
+                    </span>
+                  );
+                })}
+              </span>
+              <input
+                ref={otpRef}
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                required
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
+                onFocus={() => setOtpFocused(true)}
+                onBlur={() => setOtpFocused(false)}
+                className="absolute inset-0 h-full w-full cursor-text opacity-0"
+                data-testid="login-otp"
+              />
+            </span>
           </label>
           <p className="text-xs text-muted">{UI.otpHint}</p>
           {error ? <p role="alert" className="text-sm text-danger">{error}</p> : null}
@@ -177,7 +197,7 @@ export function LoginFlow({ returnTo }: { returnTo: string | null }) {
             {busy ? UI.loading : UI.verify}
           </Button>
           <div className="flex items-center justify-between text-sm">
-            <button type="button" onClick={() => { setChallenge(null); setError(null); }} className="min-h-12 rounded-control px-2 text-muted transition-colors hover:text-navy" data-testid="login-change-phone">
+            <button type="button" onClick={() => { setChallenge(null); setError(null); }} className="min-h-12 rounded-control px-2 text-slate-strong transition-colors duration-150 hover:text-ink" data-testid="login-change-phone">
               {UI.changePhone}
             </button>
             <button
@@ -185,7 +205,7 @@ export function LoginFlow({ returnTo }: { returnTo: string | null }) {
               onClick={() => void resend()}
               disabled={countdown > 0 || busy}
               aria-live="polite"
-              className="min-h-12 rounded-control px-2 font-medium text-primary transition-colors disabled:text-muted"
+              className="min-h-12 rounded-control px-2 font-semibold text-primary transition-colors duration-150 hover:text-primary-hover disabled:text-muted"
               data-testid="login-resend"
             >
               {countdown > 0 ? `${UI.resendIn} ${countdown}s` : UI.resend}
