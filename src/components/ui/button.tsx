@@ -1,25 +1,36 @@
 import type { ButtonHTMLAttributes } from "react";
+import { Loader2 } from "lucide-react";
 
+/**
+ * Approved button contract (components.md): Fira Sans 600 +1% LS,
+ * radius 6 (staff compact 4), sizes lg h48 / md h40 / staff h32;
+ * touch targets stay ≥48px below md. Variants incl. Premium
+ * (navy+gold) and Boost (green tint + ink) per spec.
+ */
 const VARIANTS = {
-  primary: "bg-primary text-white hover:bg-primary-hover disabled:bg-primary/50",
-  secondary: "bg-raised text-navy border border-line hover:bg-surface hover:border-line-strong disabled:text-muted",
-  ghost: "bg-transparent text-navy hover:bg-line/60 disabled:text-muted",
-  danger: "bg-danger text-white hover:bg-danger-deep disabled:bg-danger/50",
+  primary: "bg-primary text-white hover:bg-primary-hover active:bg-primary-pressed disabled:opacity-40",
+  secondary:
+    "bg-raised text-ink border border-line-strong hover:border-primary hover:text-primary active:bg-primary-tint active:text-primary-pressed disabled:opacity-60",
+  ghost: "bg-transparent text-primary hover:bg-primary-tint active:bg-primary-tint-pressed disabled:opacity-60",
+  danger: "bg-danger text-white hover:bg-danger-hover active:bg-danger-pressed disabled:opacity-40",
+  premium: "bg-navy text-premium hover:bg-navy-raised active:bg-[#0D1219] disabled:opacity-40",
+  boost: "bg-boost-soft text-boost hover:bg-primary-tint-pressed active:bg-[#C7E2D3] disabled:opacity-50",
 } as const;
 
 const SIZES = {
-  /* sm is for DENSE STAFF DESKTOP rows only — touch surfaces keep ≥48px. */
-  sm: "min-h-10 px-3 text-sm",
-  md: "min-h-12 px-4 text-sm",
-  lg: "min-h-14 px-6 text-base",
+  /** staff compact — desktop staff tables only (never touch surfaces) */
+  sm: "h-8 rounded-staff px-3 text-xs",
+  /** standard */
+  md: "min-h-10 rounded-control px-4 text-[13.5px] max-md:min-h-12",
+  /** large CTA */
+  lg: "min-h-12 rounded-control px-5 text-sm",
 } as const;
 
 export type ButtonVariant = keyof typeof VARIANTS;
 export type ButtonSize = keyof typeof SIZES;
 
-/** 48px minimum touch target (md), visible focus via global :focus-visible. */
 export function buttonClasses(variant: ButtonVariant = "primary", extra = "", size: ButtonSize = "md"): string {
-  return `inline-flex items-center justify-center gap-2 rounded-control font-semibold transition-colors disabled:cursor-not-allowed ${SIZES[size]} ${VARIANTS[variant]} ${extra}`;
+  return `inline-flex items-center justify-center gap-2 font-semibold tracking-[0.01em] transition-colors duration-150 disabled:cursor-not-allowed ${SIZES[size]} ${VARIANTS[variant]} ${extra}`;
 }
 
 export function Button({
@@ -44,19 +55,7 @@ export function Button({
       aria-busy={loading || undefined}
       {...props}
     >
-      {loading ? (
-        <svg
-          className="h-4 w-4 animate-spin"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="12" r="9" className="opacity-25" />
-          <path d="M21 12a9 9 0 0 0-9-9" strokeLinecap="round" />
-        </svg>
-      ) : null}
+      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
       {children}
     </button>
   );

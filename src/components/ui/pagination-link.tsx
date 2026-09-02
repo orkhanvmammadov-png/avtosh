@@ -15,7 +15,7 @@ export function PaginationLink({
     <Link
       href={href}
       data-testid={testid}
-      className="inline-flex min-h-12 items-center gap-2 rounded-control border border-line bg-raised px-4 text-sm font-medium text-navy transition-colors hover:border-line-strong hover:bg-surface"
+      className="inline-flex min-h-10 items-center gap-2 rounded-control border border-line-strong bg-raised px-4 text-[13.5px] font-semibold text-ink transition-colors duration-150 hover:border-primary hover:text-primary max-md:min-h-12"
     >
       {children}
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">

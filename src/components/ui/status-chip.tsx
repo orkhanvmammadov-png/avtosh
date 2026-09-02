@@ -1,21 +1,20 @@
 import type { ReactNode } from "react";
 
 /**
- * The one status chip. Soft background + deep foreground + hairline
- * border per tone — never color-only (the label carries the meaning).
- * Central maps translate business enums to Azerbaijani labels; staff
- * surfaces may show the internal code as secondary context via
- * `code`, never as the unstyled primary label.
+ * Approved status chip (components.md): tint background + status
+ * foreground + DOT (never color-only). Public/seller chips are pills
+ * (r999); staff chips are r4 and may append the technical code in
+ * mono. Enum VALUES never change — only display labels.
  */
 
 const TONES = {
-  neutral: "bg-sunken text-slate-strong border-line",
-  info: "bg-info-soft text-info-deep border-info-line",
-  success: "bg-success-soft text-success-deep border-success-line",
-  warning: "bg-warning-soft text-warning-deep border-warning-line",
-  danger: "bg-danger-soft text-danger-deep border-danger-line",
-  premium: "bg-premium-soft text-premium-deep border-premium-line",
-  boost: "bg-boost-soft text-boost-deep border-boost-line",
+  neutral: "bg-sunken text-slate-strong",
+  info: "bg-info-soft text-info",
+  success: "bg-success-soft text-success",
+  warning: "bg-warning-soft text-warning",
+  danger: "bg-danger-soft text-danger",
+  premium: "bg-navy text-premium",
+  boost: "bg-boost-soft text-boost",
 } as const;
 
 export type ChipTone = keyof typeof TONES;
@@ -24,20 +23,26 @@ export function StatusChip({
   tone = "neutral",
   children,
   code,
+  staff = false,
   className = "",
   ...rest
 }: {
   tone?: ChipTone;
   children: ReactNode;
-  /** Optional internal code shown as secondary context (staff surfaces). */
+  /** Technical code as secondary context (staff surfaces only). */
   code?: string;
+  /** Staff variant: radius 4 instead of pill. */
+  staff?: boolean;
   className?: string;
 } & Record<`data-${string}`, string | undefined>) {
   return (
     <span
-      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold ${TONES[tone]} ${className}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap px-2 py-0.5 text-xs font-semibold ${
+        staff ? "rounded-staff" : "rounded-pill"
+      } ${TONES[tone]} ${className}`}
       {...rest}
     >
+      <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-80" />
       {children}
       {code !== undefined ? <span className="font-mono text-[10px] font-normal opacity-70">{code}</span> : null}
     </span>
@@ -49,41 +54,41 @@ export interface ChipSpec {
   tone: ChipTone;
 }
 
-/** Listing statuses — seller/staff wording (public pages use badges). */
+/** Listing statuses — approved AZ labels (components.md status map). */
 export const LISTING_STATUS_CHIPS: Record<string, ChipSpec> = {
   DRAFT: { label: "Qaralama", tone: "neutral" },
   PAYMENT_REQUIRED: { label: "Ödəniş tələb olunur", tone: "warning" },
-  PAYMENT_COMPLETED: { label: "Ödəniş tamamlanıb", tone: "info" },
-  PENDING_MODERATION: { label: "Moderasiyadadır", tone: "info" },
-  CORRECTION_REQUIRED: { label: "Düzəliş tələb olunur", tone: "warning" },
-  REJECTED: { label: "Rədd edilib", tone: "danger" },
+  PAYMENT_COMPLETED: { label: "Ödənilib", tone: "success" },
+  PENDING_MODERATION: { label: "Yoxlanılır", tone: "warning" },
+  CORRECTION_REQUIRED: { label: "Düzəliş tələb olunur", tone: "danger" },
+  REJECTED: { label: "Rədd edildi", tone: "danger" },
   ACTIVE: { label: "Aktiv", tone: "success" },
   SUSPENDED: { label: "Dayandırılıb", tone: "danger" },
   SOLD: { label: "Satılıb", tone: "neutral" },
-  EXPIRED: { label: "Müddəti bitib", tone: "warning" },
+  EXPIRED: { label: "Müddəti bitib", tone: "neutral" },
   DELETED: { label: "Silinib", tone: "neutral" },
 };
 
 export const PAYMENT_STATUS_CHIPS: Record<string, ChipSpec> = {
   CREATED: { label: "Yaradılıb", tone: "neutral" },
   PENDING: { label: "Gözləyir", tone: "warning" },
-  SUCCESS: { label: "Uğurlu", tone: "success" },
+  SUCCESS: { label: "Ödənildi", tone: "success" },
   FAILED: { label: "Uğursuz", tone: "danger" },
-  CANCELLED: { label: "Ləğv edilib", tone: "neutral" },
-  REFUNDED: { label: "Geri qaytarılıb", tone: "info" },
+  CANCELLED: { label: "Ləğv edildi", tone: "neutral" },
+  REFUNDED: { label: "Geri qaytarıldı", tone: "info" },
 };
 
 export const PROMOTION_STATUS_CHIPS: Record<string, ChipSpec> = {
   SCHEDULED: { label: "Növbədə", tone: "info" },
   ACTIVE: { label: "Aktiv", tone: "success" },
   EXPIRED: { label: "Bitib", tone: "neutral" },
-  CANCELLED: { label: "Ləğv edilib", tone: "neutral" },
+  CANCELLED: { label: "Ləğv edildi", tone: "neutral" },
 };
 
 export const REPORT_STATUS_CHIPS: Record<string, ChipSpec> = {
   OPEN: { label: "Açıq", tone: "warning" },
-  RESOLVED: { label: "Həll edilib", tone: "success" },
-  DISMISSED: { label: "Əsassızdır", tone: "neutral" },
+  RESOLVED: { label: "Həll edildi", tone: "success" },
+  DISMISSED: { label: "Bağlandı", tone: "neutral" },
 };
 
 export function chipFor(map: Record<string, ChipSpec>, status: string): ChipSpec {

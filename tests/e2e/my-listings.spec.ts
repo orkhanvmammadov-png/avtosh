@@ -18,11 +18,11 @@ test("owner sees every lifecycle state with Azerbaijani labels and matching acti
   const { userId } = await loginAs(context, testPhone(project.name, 40));
   const fixtures: [string, string, string | null][] = [
     ["DRAFT", "Qaralama", "Davam et"],
-    ["PENDING_MODERATION", "Moderasiyadadır", "Ətraflı"],
+    ["PENDING_MODERATION", "Yoxlanılır", "Ətraflı"], // approved design label
     ["PAYMENT_REQUIRED", "Ödəniş tələb olunur", "Ətraflı"],
     ["ACTIVE", "Aktiv", "Elana bax"],
     ["CORRECTION_REQUIRED", "Düzəliş tələb olunur", "Düzəliş et"],
-    ["REJECTED", "Rədd edilib", "Redaktə et"],
+    ["REJECTED", "Rədd edildi", "Redaktə et"], // approved design label
     ["SOLD", "Satılıb", "Elana bax"],
     ["EXPIRED", "Müddəti bitib", "Yenilə"], // Phase 4.16: renewal action
     ["SUSPENDED", "Dayandırılıb", null],

@@ -1,11 +1,11 @@
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div aria-hidden="true" className={`animate-pulse rounded-md bg-line ${className}`} />;
+  return <div aria-hidden="true" className={`shimmer rounded-md ${className}`} />;
 }
 
 /** Card-shaped skeleton matching ListingCard proportions (4:3 image). */
 export function CardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-card border border-line bg-white">
+    <div className="overflow-hidden rounded-card bg-raised">
       <Skeleton className="aspect-vehicle w-full rounded-none" />
       <div className="space-y-2 p-4">
         <Skeleton className="h-4 w-3/4" />
