@@ -3,8 +3,10 @@
 Azerbaijan-focused responsive **web** marketplace for cars and
 motorcycles. Web only — no native iOS/Android applications.
 
-**Current phase: Phase 4.17 — Final UI/UX Refresh — COMPLETE**
-(technical + owner visual acceptance). **Next step: Local Full UAT**
+**Current phase: Phase 4.17R — Approved Claude Design
+Implementation** (presentation layer rebuilt on the owner-approved
+`design_handoff_avtosh/` system — see
+`docs/architecture/design-system.md`). **Next step: Local Full UAT**
 — a complete end-to-end user-acceptance pass on a local environment —
 before Production Readiness (launch checkpoints: WhatsApp BSP
 integration/template approval, Kapital production credentials,

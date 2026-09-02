@@ -54,7 +54,7 @@ export function ReportListing({ publicId }: { publicId: string }) {
 
   if (state === "done") {
     return (
-      <p className="text-sm font-medium text-navy" data-testid="report-success" role="status">
+      <p className="rounded-control bg-success-soft px-3 py-2 text-sm font-medium text-success" data-testid="report-success" role="status">
         {REPORT.success}
       </p>
     );
@@ -72,7 +72,7 @@ export function ReportListing({ publicId }: { publicId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex min-h-12 items-center text-sm font-medium text-muted underline hover:text-navy"
+        className="inline-flex min-h-12 items-center text-sm font-medium text-slate-strong underline transition-colors duration-150 hover:text-ink"
         data-testid="report-open"
       >
         {REPORT.action}
@@ -81,14 +81,14 @@ export function ReportListing({ publicId }: { publicId: string }) {
   }
 
   return (
-    <div className="rounded-card border border-line bg-raised p-4 shadow-card" data-testid="report-form">
-      <h2 className="text-sm font-semibold text-navy">{REPORT.title}</h2>
+    <div className="rounded-card border border-line bg-raised p-4" data-testid="report-form">
+      <h2 className="text-sm font-bold text-ink">{REPORT.title}</h2>
       <label className="mt-3 block text-xs font-medium text-muted">
         {REPORT.reason}
         <select
           value={reason}
           onChange={(e) => setReason(e.target.value as (typeof REASONS)[number])}
-          className="mt-1 block min-h-12 w-full rounded-control border border-line bg-raised px-3 text-sm text-navy"
+          className="mt-1 block min-h-12 w-full rounded-control border border-line-strong bg-raised px-3 text-sm text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none"
           data-testid="report-reason"
         >
           {REASONS.map((code) => (
@@ -105,7 +105,7 @@ export function ReportListing({ publicId }: { publicId: string }) {
           onChange={(e) => setNote(e.target.value)}
           maxLength={500}
           rows={3}
-          className="mt-1 block w-full rounded-control border border-line bg-raised px-3 py-2 text-sm text-navy"
+          className="mt-1 block w-full rounded-control border border-line-strong bg-raised px-3 py-2 text-sm text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none"
           data-testid="report-note"
         />
       </label>

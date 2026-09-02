@@ -17,7 +17,7 @@ export function BackToTop() {
       type="button"
       aria-label="Yuxarı qayıt"
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-      className="fixed bottom-5 right-4 z-40 inline-flex h-12 w-12 items-center justify-center rounded-full border border-line bg-raised text-navy shadow-raised transition-colors hover:bg-surface"
+      className="fixed bottom-5 right-4 z-40 inline-flex h-12 w-12 items-center justify-center rounded-pill border border-line-strong bg-raised text-ink shadow-raised transition-colors duration-150 hover:border-primary hover:text-primary"
       data-testid="back-to-top"
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

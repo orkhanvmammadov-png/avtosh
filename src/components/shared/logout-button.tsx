@@ -24,7 +24,7 @@ export function LogoutButton({ className = "inline-flex" }: { className?: string
       onClick={() => void logout()}
       disabled={busy}
       data-testid="logout-button"
-      className={`min-h-12 items-center rounded-lg px-3 text-sm font-medium text-navy hover:bg-surface disabled:text-muted ${className}`}
+      className={`min-h-12 items-center rounded-control px-3 text-sm font-medium text-ink transition-colors duration-150 hover:bg-sunken disabled:text-muted ${className}`}
     >
       {UI.logout}
     </button>

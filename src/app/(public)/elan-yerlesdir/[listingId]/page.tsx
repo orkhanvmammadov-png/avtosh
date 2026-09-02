@@ -43,7 +43,7 @@ export default async function WizardPage({
     return (
     <Container>
       <div className="py-16 text-center" data-testid="seller-blocked">
-        <h1 className="text-2xl font-bold text-navy">{SELLER.blockedTitle}</h1>
+        <h1 className="text-xl font-bold tracking-[-0.01em] text-ink md:text-2xl">{SELLER.blockedTitle}</h1>
         <p className="mt-2 text-sm text-muted">{SELLER.blockedHint}</p>
       </div>
     </Container>
@@ -64,7 +64,7 @@ export default async function WizardPage({
     return (
     <Container>
       <div className="py-16 text-center" data-testid="wizard-status-moderation">
-        <h1 className="text-2xl font-bold text-navy">{SELLER.moderationPending}</h1>
+        <h1 className="text-xl font-bold tracking-[-0.01em] text-ink md:text-2xl">{SELLER.moderationPending}</h1>
         <p className="mt-2 text-sm text-muted">{SELLER.moderationPendingHint}</p>
         <BackToMyListings />
       </div>
@@ -84,7 +84,7 @@ export default async function WizardPage({
     return (
     <Container>
       <div className="py-16 text-center" data-testid="wizard-status-payment">
-        <h1 className="text-2xl font-bold text-navy">{SELLER.paymentRequired}</h1>
+        <h1 className="text-xl font-bold tracking-[-0.01em] text-ink md:text-2xl">{SELLER.paymentRequired}</h1>
         {intent !== null ? (
           <p className="mt-4 text-3xl font-extrabold text-primary" data-testid="payment-intent-amount">
             {formatPriceMinor(intent.amountMinor, intent.currency)}

@@ -73,7 +73,7 @@ function FilterForm({ state, catalog, onApplied }: { state: SearchFilterState; c
   return (
     <form onSubmit={submit} className="space-y-4" aria-label={UI.filters} data-testid="filter-form">
       <fieldset>
-        <legend className="mb-2 text-sm font-semibold text-navy">Kateqoriya</legend>
+        <legend className="mb-2 text-xs font-medium text-slate-strong">Kateqoriya</legend>
         <div className="flex gap-2">
           {catalog.categories.map((c) => (
             <Link
