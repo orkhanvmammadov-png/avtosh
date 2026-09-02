@@ -43,7 +43,7 @@ export function QueueCard({ item }: { item: QueueCardItem }) {
           <img src={item.primaryImageUrl} alt="" className="h-full w-full object-cover text-transparent" />
         ) : (
           <div
-            className="flex h-full w-full items-center justify-center text-[10px] font-medium text-muted"
+            className="flex h-full w-full items-center justify-center text-[10px] font-medium text-slate-strong"
             data-testid="queue-image-fallback"
           >
             {STAFF.noImage}

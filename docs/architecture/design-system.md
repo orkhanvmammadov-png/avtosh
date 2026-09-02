@@ -94,10 +94,14 @@ sidebar 30.
 ## Accessibility notes
 
 - Focus: global 2px green `:focus-visible` ring, offset 2.
-- Contrast: ink on paper 14.9:1; secondary text `#565B63` 5.9:1;
-  green-on-dark `#2FAE74` on navy ≈ 6.0:1; gold `#D9B45B` on navy ≈
-  7.4:1. Muted `#8A8F98` (≈2.9:1 on paper) is reserved for
-  non-essential metadata per the handoff and never used for
-  actionable or unique information.
+- Contrast (WCAG AA, computed): ink on paper 15.2:1; secondary
+  `#565B63` 6.2:1 (5.7:1 on sunken); muted metadata `#666B74` 4.9:1
+  on paper / 5.4:1 on white — every readable text tier meets 4.5:1.
+  Semantic text on its tint: success 5.2:1, warning 4.7:1, danger
+  5.4:1, info 4.8:1, premium-ink 5.3:1, boost 6.3:1. On navy:
+  green `#2FAE74` 6.2:1 (5.3:1 on navy-raised), gold `#D9B45B`
+  8.9:1, on-navy-muted `#A7ADB8` 7.8:1 (6.7:1 on navy-raised).
+  Readable text never sits on sunken in the muted tier (fallback
+  labels use secondary), and no readable text uses reduced opacity.
 - Touch targets: 48px minimum on mobile (44px+ elsewhere);
   `prefers-reduced-motion` collapses all animation.

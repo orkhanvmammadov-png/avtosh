@@ -7,7 +7,7 @@ export function VehiclePlaceholder({ className = "" }: { className?: string }) {
     <div
       role="img"
       aria-label={UI.imageUnavailable}
-      className={`flex h-full w-full flex-col items-center justify-center gap-1.5 bg-sunken text-muted ${className}`}
+      className={`flex h-full w-full flex-col items-center justify-center gap-1.5 bg-sunken text-slate-strong ${className}`}
     >
       <CameraOff size={28} strokeWidth={1.75} aria-hidden="true" />
       <span className="text-[11px] font-medium">Şəkil yoxdur</span>

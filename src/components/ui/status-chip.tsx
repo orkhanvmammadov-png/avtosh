@@ -44,7 +44,7 @@ export function StatusChip({
     >
       <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-80" />
       {children}
-      {code !== undefined ? <span className="font-mono text-[10px] font-normal opacity-70">{code}</span> : null}
+      {code !== undefined ? <span className="font-mono text-[10px] font-normal">{code}</span> : null}
     </span>
   );
 }

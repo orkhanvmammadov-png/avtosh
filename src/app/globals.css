@@ -29,8 +29,9 @@
   /* --- Ink / text ------------------------------------------------ */
   --color-ink: #1b1e24;
   --color-slate-strong: #565b63; /* text-secondary */
-  --color-muted: #8a8f98;
-  --color-faint: #8a8f98; /* alias of muted (kept for existing classes) */
+  /* WCAG AA: 4.87:1 on paper, 5.36:1 on raised — readable metadata tier. */
+  --color-muted: #666b74;
+  --color-faint: #666b74; /* alias of muted (kept for existing classes) */
 
   /* --- Surfaces / borders (warm paper system) -------------------- */
   --color-surface: #f5f4f0;

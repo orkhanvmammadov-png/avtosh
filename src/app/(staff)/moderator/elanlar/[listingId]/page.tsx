@@ -108,7 +108,7 @@ export default async function ModerationReviewPage({
             <span className={`inline-flex items-center gap-1.5 rounded-staff px-2 py-0.5 text-xs font-semibold ${statusChip.toneClasses}`}>
               <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
               {statusChip.label}
-              <span className="font-mono text-[10px] font-normal opacity-70" data-testid="review-status">{detail.status}</span>
+              <span className="font-mono text-[10px] font-normal" data-testid="review-status">{detail.status}</span>
             </span>
             {" · "}
             {formatPriceMinor(detail.priceMinor, detail.currency)}
@@ -136,7 +136,7 @@ export default async function ModerationReviewPage({
                       />
                     ) : (
                       <div
-                        className="flex aspect-vehicle w-full items-center justify-center text-xs text-muted"
+                        className="flex aspect-vehicle w-full items-center justify-center text-xs text-slate-strong"
                         data-testid="gallery-image-fallback"
                       >
                         {STAFF.noImage}
