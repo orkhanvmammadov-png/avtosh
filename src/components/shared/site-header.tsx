@@ -1,75 +1,66 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { Plus } from "lucide-react";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
+import { BrandMark } from "@/components/shared/brand-mark";
+import { HeaderNav } from "@/components/shared/header-nav";
 import { LogoutButton } from "@/components/shared/logout-button";
 import { MobileNav } from "@/components/shared/mobile-nav";
+import { Container } from "@/components/ui/container";
 import { UI } from "@/lib/marketplace/labels";
 
 /**
- * Session-aware public header (server component). The cookie session is
- * the single source of truth — no client-side auth guessing.
+ * Approved navy public header (screens.md Home): brand · nav with
+ * green active underline · account links · permanent green
+ * "+ Elan yerləşdir" CTA. Session-aware server component — the
+ * cookie session is the single source of truth.
  */
 export async function SiteHeader() {
   const auth = await getCurrentAuthFromCookies();
   const authed = auth !== null;
-  // no display value here — call sites choose inline-flex vs hidden lg:inline-flex
-  const navLink =
-    "min-h-12 items-center rounded-control px-3 text-sm font-medium text-slate-strong transition-colors hover:bg-surface hover:text-navy";
+  const quietLink =
+    "hidden min-h-12 items-center px-3 text-sm font-medium text-on-navy-muted transition-colors duration-150 hover:text-white lg:inline-flex";
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-raised/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-(--container-content) items-center justify-between gap-4 px-4">
-        <Link href="/" className="flex items-center gap-2" aria-label={`${UI.brand} — ana səhifə`}>
-          <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 13l1.6-4a2 2 0 0 1 1.9-1.3h7a2 2 0 0 1 1.9 1.3L19 13v4h-1.5a1.7 1.7 0 0 1-3.4 0H9.9a1.7 1.7 0 0 1-3.4 0H5v-4z" />
-            </svg>
-          </span>
-          <span className="text-xl font-extrabold tracking-tight text-navy">
-            AVTOSH<span className="text-primary">.AZ</span>
-          </span>
-        </Link>
-        <nav aria-label="Əsas naviqasiya" className="hidden items-center gap-1 md:flex">
-          <Link href="/elanlar?category=CAR" className={`inline-flex ${navLink}`}>
-            {UI.cars}
-          </Link>
-          <Link href="/elanlar?category=MOTORCYCLE" className={`inline-flex ${navLink}`}>
-            {UI.motorcycles}
-          </Link>
-        </nav>
+    <header className="sticky top-0 z-40 bg-navy text-white">
+      <Container className="flex h-14 items-center justify-between gap-4 xl:h-[62px]">
+        <BrandMark tone="dark" />
+        <Suspense fallback={<nav className="hidden md:flex" aria-label="Əsas naviqasiya" />}>
+          <HeaderNav authed={authed} />
+        </Suspense>
         <div className="flex items-center gap-1.5" data-testid={authed ? "header-authed" : "header-anonymous"}>
           {authed ? (
             <>
-              <Link href="/profil/elanlar" className={`hidden lg:inline-flex ${navLink}`} data-testid="header-my-listings">
+              <Link href="/profil/elanlar" className={quietLink} data-testid="header-my-listings">
                 {UI.myListings}
               </Link>
-              <Link href="/profil/secilmisler" className={`hidden lg:inline-flex ${navLink} gap-1.5`} data-testid="header-favorites">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M12 21s-7.5-4.6-10-9.2C.4 8.6 2.3 5 5.7 5c2 0 3.4 1.1 4.3 2.6h4C14.9 6.1 16.3 5 18.3 5c3.4 0 5.3 3.6 3.7 6.8C19.5 16.4 12 21 12 21z" />
-                </svg>
+              <Link href="/profil/secilmisler" className="hidden" data-testid="header-favorites">
                 {UI.favorites}
               </Link>
-              <Link href="/profil" className={`hidden lg:inline-flex ${navLink}`} data-testid="header-profile">
+              <Link href="/profil" className={quietLink} data-testid="header-profile">
                 {UI.profile}
               </Link>
-              <LogoutButton className="hidden lg:inline-flex" />
+              <LogoutButton className="hidden text-on-navy-muted hover:bg-white/10 hover:text-white lg:inline-flex" />
             </>
           ) : (
-            <Link href="/giris" className={`hidden md:inline-flex ${navLink}`} data-testid="header-login">
+            <Link
+              href="/giris"
+              className="hidden min-h-12 items-center px-3 text-sm font-medium text-on-navy-muted transition-colors duration-150 hover:text-white md:inline-flex"
+              data-testid="header-login"
+            >
               {UI.login}
             </Link>
           )}
           <Link
             href={authed ? "/elan-yerlesdir" : "/giris?return_to=%2Felan-yerlesdir"}
             aria-label={UI.postListing}
-            className="hidden min-h-12 w-12 items-center justify-center gap-1.5 rounded-control bg-primary px-0 text-sm font-semibold text-white shadow-card transition-colors hover:bg-primary-hover md:inline-flex lg:w-auto lg:px-4"
+            className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-control bg-primary px-3 text-[13.5px] font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed max-md:min-h-12 md:px-4"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            <span className="hidden lg:inline">{UI.postListing}</span>
+            <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
+            <span className="hidden sm:inline">{UI.postListing}</span>
           </Link>
           <MobileNav authed={authed} buttonClassName={authed ? "lg:hidden" : "md:hidden"} />
         </div>
-      </div>
+      </Container>
     </header>
   );
 }

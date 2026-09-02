@@ -25,7 +25,7 @@ export function MobileNav({ authed = false, buttonClassName = "md:hidden" }: { a
         type="button"
         aria-label="Menyunu aç"
         aria-haspopup="dialog"
-        className={`inline-flex min-h-12 min-w-12 items-center justify-center rounded-lg text-navy ${buttonClassName}`}
+        className={`inline-flex min-h-12 min-w-12 items-center justify-center rounded-control text-white ${buttonClassName}`}
         onClick={() => dialogRef.current?.showModal()}
         data-testid="mobile-menu-button"
       >
@@ -36,15 +36,15 @@ export function MobileNav({ authed = false, buttonClassName = "md:hidden" }: { a
       <dialog
         ref={dialogRef}
         aria-label="Naviqasiya"
-        className="m-0 h-dvh max-h-none w-80 max-w-[85vw] bg-white p-0 backdrop:bg-navy/40 open:flex open:flex-col"
+        className="m-0 h-dvh max-h-none w-80 max-w-[85vw] bg-raised p-0 backdrop:bg-scrim open:flex open:flex-col"
         data-testid="mobile-menu"
       >
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
-          <span className="text-lg font-bold text-navy">{UI.brand}</span>
+          <span className="text-lg font-extrabold tracking-tight text-ink">AVTOSH<span className="text-primary">.AZ</span></span>
           <button
             type="button"
             aria-label="Menyunu bağla"
-            className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-lg"
+            className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-control text-ink hover:bg-sunken"
             onClick={() => dialogRef.current?.close()}
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -54,32 +54,32 @@ export function MobileNav({ authed = false, buttonClassName = "md:hidden" }: { a
         </div>
         <nav aria-label="Mobil naviqasiya" className="flex flex-col p-2">
           {LINKS.map((link) => (
-            <Link key={link.href} href={link.href} className="rounded-lg px-3 py-3 text-base font-medium text-navy hover:bg-surface" onClick={() => dialogRef.current?.close()}>
+            <Link key={link.href} href={link.href} className="rounded-control px-3 py-3 text-base font-medium text-ink hover:bg-primary-tint" onClick={() => dialogRef.current?.close()}>
               {link.label}
             </Link>
           ))}
           {authed ? (
             <>
-              <Link href="/profil/elanlar" className="rounded-lg px-3 py-3 text-base font-medium text-navy hover:bg-surface" onClick={() => dialogRef.current?.close()} data-testid="mobile-my-listings">
+              <Link href="/profil/elanlar" className="rounded-control px-3 py-3 text-base font-medium text-ink hover:bg-primary-tint" onClick={() => dialogRef.current?.close()} data-testid="mobile-my-listings">
                 {UI.myListings}
               </Link>
-              <Link href="/profil/secilmisler" className="rounded-lg px-3 py-3 text-base font-medium text-navy hover:bg-surface" onClick={() => dialogRef.current?.close()} data-testid="mobile-favorites">
+              <Link href="/profil/secilmisler" className="rounded-control px-3 py-3 text-base font-medium text-ink hover:bg-primary-tint" onClick={() => dialogRef.current?.close()} data-testid="mobile-favorites">
                 {UI.favorites}
               </Link>
-              <Link href="/profil" className="rounded-lg px-3 py-3 text-base font-medium text-navy hover:bg-surface" onClick={() => dialogRef.current?.close()} data-testid="mobile-profile">
+              <Link href="/profil" className="rounded-control px-3 py-3 text-base font-medium text-ink hover:bg-primary-tint" onClick={() => dialogRef.current?.close()} data-testid="mobile-profile">
                 {UI.profile}
               </Link>
             </>
           ) : null}
           <Link
             href={authed ? "/elan-yerlesdir" : "/giris?return_to=%2Felan-yerlesdir"}
-            className="mt-2 rounded-lg bg-primary px-3 py-3 text-center text-base font-semibold text-white"
+            className="mt-2 rounded-control bg-primary px-3 py-3 text-center text-base font-semibold text-white"
             onClick={() => dialogRef.current?.close()}
           >
             {UI.postListing}
           </Link>
           {authed ? null : (
-            <Link href="/giris" className="rounded-lg px-3 py-3 text-base font-medium text-navy hover:bg-surface" onClick={() => dialogRef.current?.close()} data-testid="mobile-login">
+            <Link href="/giris" className="rounded-control px-3 py-3 text-base font-medium text-ink hover:bg-primary-tint" onClick={() => dialogRef.current?.close()} data-testid="mobile-login">
               {UI.login}
             </Link>
           )}

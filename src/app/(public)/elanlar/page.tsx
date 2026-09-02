@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Container } from "@/components/ui/container";
 import Link from "next/link";
 import { AppliedFilters } from "@/components/marketplace/applied-filters";
 import { BackToTop } from "@/components/marketplace/back-to-top";
@@ -69,6 +70,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const clearHref = searchHref({ category: state.category });
 
   return (
+    <Container>
     <div className="py-6">
       <h1 className="text-2xl font-bold tracking-tight text-navy">
         {categoryLabel} {UI.listings.toLowerCase()}
@@ -111,5 +113,6 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       </div>
       <BackToTop />
     </div>
+  </Container>
   );
 }

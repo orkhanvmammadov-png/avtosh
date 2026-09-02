@@ -1,7 +1,9 @@
 import { CardSkeleton, Skeleton } from "@/components/ui/skeleton";
+import { Container } from "@/components/ui/container";
 
 export default function Loading() {
   return (
+    <Container>
     <div className="py-8" aria-busy="true" aria-live="polite">
       <Skeleton className="h-9 w-2/3 max-w-md" />
       <Skeleton className="mt-3 h-4 w-72" />
@@ -10,5 +12,6 @@ export default function Loading() {
         {Array.from({ length: 8 }, (_, i) => <CardSkeleton key={i} />)}
       </div>
     </div>
+  </Container>
   );
 }

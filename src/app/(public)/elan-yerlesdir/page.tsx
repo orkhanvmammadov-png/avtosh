@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Container } from "@/components/ui/container";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
@@ -29,11 +30,13 @@ export default async function SellerEntryPage() {
   }
   if (auth.user.status === "BLOCKED") {
     return (
+    <Container>
       <div className="py-16 text-center" data-testid="seller-blocked">
         <h1 className="text-2xl font-bold text-navy">{SELLER.blockedTitle}</h1>
         <p className="mt-2 text-sm text-muted">{SELLER.blockedHint}</p>
       </div>
-    );
+    </Container>
+  );
   }
   const [categories, listings] = await Promise.all([
     getCategories(),
@@ -42,6 +45,7 @@ export default async function SellerEntryPage() {
   const editable = listings.filter((listing) => isSellerEditable(listing.status));
 
   return (
+    <Container>
     <div className="mx-auto max-w-2xl py-8" data-testid="seller-entry">
       <h1 className="text-2xl font-bold text-navy">{UI.postListing}</h1>
       {editable.length > 0 ? (
@@ -70,5 +74,6 @@ export default async function SellerEntryPage() {
         <CreateListing categories={categories} />
       </div>
     </div>
+  </Container>
   );
 }

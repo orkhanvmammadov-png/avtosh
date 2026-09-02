@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Container } from "@/components/ui/container";
 import { notFound } from "next/navigation";
 import { ContactCard } from "@/components/marketplace/contact-card";
 import { FavoriteButton } from "@/components/shared/favorite-button";
@@ -63,6 +64,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   ];
 
   return (
+    <Container>
     <article className={`py-6 ${!limited && listing.seller ? "pb-28 desk:pb-6" : ""}`} data-testid="listing-detail" data-status={listing.status}>
       <header className="mb-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -120,5 +122,6 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
     </article>
+  </Container>
   );
 }

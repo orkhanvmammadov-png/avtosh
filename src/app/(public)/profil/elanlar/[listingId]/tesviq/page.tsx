@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Container } from "@/components/ui/container";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
@@ -45,8 +46,10 @@ export default async function PromotionPage({
   }
   if (auth.user.status === "BLOCKED") {
     return (
+    <Container>
       <ResultPanel tone="danger" title={SELLER.blockedTitle} hint={SELLER.blockedHint} data-testid="seller-blocked" />
-    );
+    </Container>
+  );
   }
 
   let state;
@@ -61,6 +64,7 @@ export default async function PromotionPage({
 
   if (!state.promotable) {
     return (
+    <Container>
       <ResultPanel
         tone="neutral"
         title={SELLER.promotionNotAvailable}
@@ -68,7 +72,8 @@ export default async function PromotionPage({
         data-testid="promotion-unavailable"
         actions={<Link href="/profil/elanlar" className={buttonClasses("primary", "px-6")}>{UI.myListings}</Link>}
       />
-    );
+    </Container>
+  );
   }
 
   const [packages, listings] = await Promise.all([
@@ -80,6 +85,7 @@ export default async function PromotionPage({
     // a safe notice instead of an empty purchase form; the server
     // would reject any checkout attempt regardless
     return (
+    <Container>
       <div className="py-16 text-center" data-testid="promotion-packages-unavailable">
         <h1 className="text-2xl font-bold text-navy">{SELLER.promotionPackagesUnavailable}</h1>
         <p className="mt-2 text-sm text-muted">{SELLER.promotionPackagesUnavailableHint}</p>
@@ -90,12 +96,14 @@ export default async function PromotionPage({
           {UI.myListings}
         </Link>
       </div>
-    );
+    </Container>
+  );
   }
   const listing = listings.find((item) => item.id === listingId);
   const title = listing !== undefined ? vehicleTitle(listing) : "Elan";
 
   return (
+    <Container>
     <div className="mx-auto max-w-xl py-8" data-testid="promotion-page">
       <h1 className="text-2xl font-bold text-navy">{SELLER.promotionTitle}</h1>
       <p className="mt-1 text-sm text-muted">{title}</p>
@@ -109,5 +117,6 @@ export default async function PromotionPage({
         />
       </div>
     </div>
+  </Container>
   );
 }

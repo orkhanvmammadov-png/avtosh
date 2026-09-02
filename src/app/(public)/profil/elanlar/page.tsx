@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Container } from "@/components/ui/container";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
@@ -45,6 +46,7 @@ export default async function MyListingsPage({
   const items = await myListings(auth, filter);
 
   return (
+    <Container>
     <div className="py-6" data-testid="my-listings-page">
       <AccountNav active="listings" />
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
@@ -86,5 +88,6 @@ export default async function MyListingsPage({
         </ul>
       )}
     </div>
+  </Container>
   );
 }

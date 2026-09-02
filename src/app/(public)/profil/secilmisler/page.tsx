@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Container } from "@/components/ui/container";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
@@ -25,6 +26,7 @@ export default async function FavoritesPage() {
   }
   const items = await myFavoriteCards(auth);
   return (
+    <Container>
     <div className="py-6" data-testid="favorites-page">
       <AccountNav active="favorites" />
       <h1 className="mt-6 text-2xl font-bold tracking-tight text-navy">{UI.favorites}</h1>
@@ -75,5 +77,6 @@ export default async function FavoritesPage() {
         </ul>
       )}
     </div>
+  </Container>
   );
 }

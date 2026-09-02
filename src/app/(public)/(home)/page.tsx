@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Container } from "@/components/ui/container";
 import Link from "next/link";
 import { HomeSearch } from "@/components/marketplace/home-search";
 import { PremiumFeed } from "@/components/marketplace/premium-feed";
@@ -55,6 +56,7 @@ export default async function HomePage() {
   const defaultCategory = home.categories[0]?.code ?? "CAR";
   const initialBrands = await getBrands(defaultCategory).catch(() => []);
   return (
+    <Container>
     <>
       <section aria-labelledby="hero-title" className="pt-6">
         <div className="rounded-card bg-navy px-5 py-8 text-white shadow-raised md:px-10 md:py-12">
@@ -125,5 +127,6 @@ export default async function HomePage() {
         ))}
       </section>
     </>
+  </Container>
   );
 }

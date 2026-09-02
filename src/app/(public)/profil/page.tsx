@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Container } from "@/components/ui/container";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
@@ -22,6 +23,7 @@ export default async function ProfilePage() {
   }
   const { user } = auth;
   return (
+    <Container>
     <div className="py-6" data-testid="profile-page">
       <AccountNav active="profile" />
       <h1 className="mt-6 text-2xl font-bold tracking-tight text-navy">{UI.account}</h1>
@@ -57,5 +59,6 @@ export default async function ProfilePage() {
         <LogoutButton className="inline-flex justify-start border border-line bg-raised px-4 shadow-card" />
       </nav>
     </div>
+  </Container>
   );
 }
