@@ -87,11 +87,11 @@ export default async function PromotionPage({
     return (
     <Container>
       <div className="py-16 text-center" data-testid="promotion-packages-unavailable">
-        <h1 className="text-2xl font-bold text-navy">{SELLER.promotionPackagesUnavailable}</h1>
+        <h1 className="text-xl font-bold tracking-[-0.01em] text-ink md:text-2xl">{SELLER.promotionPackagesUnavailable}</h1>
         <p className="mt-2 text-sm text-muted">{SELLER.promotionPackagesUnavailableHint}</p>
         <Link
           href="/profil/elanlar"
-          className="mt-8 inline-flex min-h-12 items-center rounded-lg bg-primary px-6 text-sm font-semibold text-white hover:bg-primary-hover"
+          className="mt-8 inline-flex min-h-12 items-center rounded-control bg-primary px-6 text-sm font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover"
         >
           {UI.myListings}
         </Link>
@@ -105,7 +105,7 @@ export default async function PromotionPage({
   return (
     <Container>
     <div className="mx-auto max-w-xl py-8" data-testid="promotion-page">
-      <h1 className="text-2xl font-bold text-navy">{SELLER.promotionTitle}</h1>
+      <h1 className="text-xl font-bold tracking-[-0.01em] text-ink md:text-2xl">{SELLER.promotionTitle}</h1>
       <p className="mt-1 text-sm text-muted">{title}</p>
       <div className="mt-6">
         <PromotionPurchase

@@ -100,7 +100,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                     {listing.status === "SOLD" ? <Badge tone="sold">{STATUS_LABELS.SOLD}</Badge> : null}
                     {listing.status === "EXPIRED" ? <Badge tone="expired">{STATUS_LABELS.EXPIRED}</Badge> : null}
                     {listing.badges.premium ? <PromotionBadge type="PREMIUM" /> : null}
-                    {listing.badges.boosted ? <PromotionBadge type="BOOST" /> : null}
+                    {listing.badges.boosted ? <PromotionBadge type="BOOST" label={UI.boostedBadge} /> : null}
                   </div>
                   <h1 className="mt-1.5 text-xl font-bold tracking-[-0.01em] md:text-2xl">{title}</h1>
                   <p className="mt-1 font-condensed text-[26px] font-bold leading-none text-green-dark desk:text-[28px]" data-testid="detail-price">

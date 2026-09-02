@@ -74,7 +74,7 @@ export default async function RenewalPage({
   return (
     <Container>
     <div className="mx-auto max-w-xl py-8" data-testid="renewal-page">
-      <h1 className="text-2xl font-bold text-navy">{SELLER.renewalTitle}</h1>
+      <h1 className="text-xl font-bold tracking-[-0.01em] text-ink md:text-2xl">{SELLER.renewalTitle}</h1>
       <p className="mt-1 text-sm text-muted" data-testid="renewal-listing">
         {renewal.title} — №{renewal.publicId}
       </p>
