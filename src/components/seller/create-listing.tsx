@@ -31,15 +31,15 @@ export function CreateListing({ categories }: { categories: { id: string; code: 
   }
 
   return (
-    <div className="rounded-card border border-line bg-white p-5" data-testid="create-listing">
+    <div className="rounded-card border border-line bg-raised p-5" data-testid="create-listing">
       <fieldset>
-        <legend className="mb-2 text-sm font-medium text-navy">{SELLER.chooseCategory}</legend>
+        <legend className="mb-2 text-xs font-medium text-slate-strong">{SELLER.chooseCategory}</legend>
         <div className="flex flex-wrap gap-2">
           {categories.map((item) => (
             <label
               key={item.id}
-              className={`inline-flex min-h-12 cursor-pointer items-center gap-2 rounded-lg border px-4 text-sm font-medium ${
-                category === item.code ? "border-primary bg-primary/5 text-primary" : "border-line bg-white text-navy"
+              className={`inline-flex min-h-12 cursor-pointer items-center gap-2 rounded-control border px-4 text-sm font-semibold transition-colors duration-150 ${
+                category === item.code ? "border-primary bg-primary text-white" : "border-line-strong bg-raised text-ink hover:border-primary hover:text-primary"
               }`}
             >
               <input

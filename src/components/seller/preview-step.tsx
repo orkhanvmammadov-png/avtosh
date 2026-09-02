@@ -78,10 +78,10 @@ export function PreviewStep({
     <div className="space-y-5">
       <section
         aria-label={SELLER.completenessTitle}
-        className={`rounded-card border px-4 py-3 ${missing.length === 0 ? "border-primary/30 bg-primary/5" : "border-line bg-white"}`}
+        className={`rounded-control px-4 py-3 ${missing.length === 0 ? "bg-success-soft" : "border-l-4 border-warning bg-warning-soft"}`}
         data-testid="wizard-completeness"
       >
-        <h3 className="text-sm font-semibold text-navy">
+        <h3 className={`text-sm font-semibold ${missing.length === 0 ? "text-success" : "text-warning"}`}>
           {missing.length === 0 ? SELLER.completenessDone : SELLER.completenessTitle}
         </h3>
         {missing.length > 0 ? (
@@ -90,7 +90,7 @@ export function PreviewStep({
               <li key={item.key}>
                 <button
                   type="button"
-                  className="inline-flex min-h-12 items-center rounded-lg border border-line bg-white px-3 text-sm text-navy hover:bg-surface"
+                  className="inline-flex min-h-12 items-center rounded-control border border-line-strong bg-raised px-3 text-sm font-medium text-ink transition-colors duration-150 hover:border-primary hover:text-primary"
                   onClick={() => onGoToStep(item.step)}
                   data-testid={`missing-${item.key}`}
                 >
@@ -104,7 +104,7 @@ export function PreviewStep({
 
       {quota !== null ? (
         <p
-          className="rounded-card border border-line bg-white px-4 py-3 text-sm text-navy"
+          className="rounded-control bg-primary-tint px-4 py-3 text-sm font-medium text-primary-pressed"
           data-testid="wizard-quota"
         >
           {quota.nextPublicationIsPaid
@@ -113,9 +113,9 @@ export function PreviewStep({
         </p>
       ) : null}
 
-      <article className="overflow-hidden rounded-card border border-line bg-white" data-testid="wizard-preview">
+      <article className="overflow-hidden rounded-card border border-line bg-raised" data-testid="wizard-preview">
         {dto.images.length > 0 ? (
-          <div className="grid grid-cols-3 gap-1 bg-line/30 p-1">
+          <div className="grid grid-cols-3 gap-1 bg-sunken p-1">
             {dto.images.slice(0, 6).map((image, index) =>
               image.url !== null ? (
                 // eslint-disable-next-line @next/next/no-img-element -- short-lived signed owner URLs
@@ -130,8 +130,8 @@ export function PreviewStep({
           </div>
         ) : null}
         <div className="space-y-2 p-4">
-          <h3 className="text-lg font-bold text-navy">{title}</h3>
-          <p className="text-xl font-extrabold text-primary">
+          <h3 className="text-lg font-bold tracking-[-0.01em] text-ink">{title}</h3>
+          <p className="font-condensed text-[26px] font-bold leading-none text-ink">
             {formatPriceMinor(dto.priceMinor, dto.currency)}
           </p>
           <dl className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
@@ -139,13 +139,13 @@ export function PreviewStep({
               .filter(([, value]) => value !== null)
               .map(([label, value]) => (
                 <div key={label} className="flex justify-between gap-4 border-b border-line py-1.5 text-sm">
-                  <dt className="text-muted">{label}</dt>
-                  <dd className="font-medium text-navy">{value}</dd>
+                  <dt className="text-slate-strong">{label}</dt>
+                  <dd className="font-medium text-ink">{value}</dd>
                 </div>
               ))}
           </dl>
           {dto.description !== null ? (
-            <p className="whitespace-pre-line pt-2 text-sm leading-6 text-navy">{dto.description}</p>
+            <p className="whitespace-pre-line pt-2 text-sm leading-relaxed text-ink">{dto.description}</p>
           ) : null}
         </div>
       </article>
