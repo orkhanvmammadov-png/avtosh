@@ -31,16 +31,16 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
             if (index !== active) setActive(Math.min(list.length - 1, index));
           }}>
           {list.map((img, i) => (
-            <div key={i} className="aspect-vehicle w-full shrink-0 snap-center overflow-hidden rounded-card bg-sunken">
+            <div key={i} className="aspect-vehicle w-full shrink-0 snap-center overflow-hidden rounded-card bg-navy-raised">
               <ListingImage src={img.url} alt={`${title} — ${UI.photoOf.toLowerCase()} ${i + 1}`} priority={i === 0} />
             </div>
           ))}
         </div>
-        <p className="mt-2 text-center text-xs text-muted" aria-live="polite" data-testid="gallery-counter">{active + 1} / {list.length}</p>
+        <p className="mt-2 text-center text-xs text-on-navy-muted" aria-live="polite" data-testid="gallery-counter">{active + 1} / {list.length}</p>
       </div>
       {/* Desktop / tablet */}
       <div className="hidden md:block">
-        <div className="aspect-vehicle w-full overflow-hidden rounded-card bg-sunken" data-testid="gallery-main">
+        <div className="aspect-gallery w-full overflow-hidden rounded-[12px] bg-navy-raised" data-testid="gallery-main">
           <ListingImage src={current.url} alt={`${title} — ${UI.photoOf.toLowerCase()} ${active + 1}`} priority />
         </div>
         {list.length > 1 ? (
@@ -52,7 +52,7 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
                   aria-label={`${UI.photoOf} ${i + 1}`}
                   aria-current={i === active ? "true" : undefined}
                   onClick={() => setActive(i)}
-                  className={`aspect-vehicle w-full overflow-hidden rounded-md border-2 transition-colors ${i === active ? "border-primary" : "border-transparent hover:border-line-strong"}`}
+                  className={`aspect-vehicle w-full overflow-hidden rounded-lg border-2 transition-colors duration-150 ${i === active ? "border-green-dark" : "border-transparent hover:border-navy-border"}`}
                 >
                   <ListingImage src={img.url} alt="" />
                 </button>

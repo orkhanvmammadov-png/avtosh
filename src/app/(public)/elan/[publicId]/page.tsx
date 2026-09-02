@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
-import { Container } from "@/components/ui/container";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Check } from "lucide-react";
+import { Container } from "@/components/ui/container";
 import { ContactCard } from "@/components/marketplace/contact-card";
 import { FavoriteButton } from "@/components/shared/favorite-button";
 import { Gallery } from "@/components/marketplace/gallery";
 import { ReportListing } from "@/components/marketplace/report-listing";
 import { Badge } from "@/components/ui/badge";
+import { Notice } from "@/components/ui/notice";
+import { PromotionBadge } from "@/components/ui/promotion-badge";
+import { SectionCard } from "@/components/ui/section-card";
+import { buttonClasses } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/errors";
 import { formatMileage, formatPriceMinor, formatYear, vehicleTitle } from "@/lib/format";
 import { CATEGORY_LABELS, SPEC_LABELS, STATUS_LABELS, UI } from "@/lib/marketplace/labels";
@@ -42,12 +48,21 @@ export async function generateMetadata({ params }: { params: Promise<{ publicId:
   };
 }
 
+/**
+ * Approved listing detail (screens.md): full-bleed navy stage with
+ * gallery + sticky conversion panel; specs/features/description on
+ * paper below. The single responsive ContactCard keeps the accepted
+ * reveal endpoint/rate-limit behavior; SOLD/EXPIRED render the
+ * approved limited state (desaturated gallery, notice instead of the
+ * panel, no favorite on SOLD).
+ */
 export default async function ListingDetailPage({ params }: { params: Promise<{ publicId: string }> }) {
   const { publicId } = await params;
   const listing = await loadDetail(publicId);
   if (listing === null) notFound();
   const title = vehicleTitle(listing);
   const limited = !listing.contactable;
+  const contactable = !limited && listing.seller !== null;
   const specs: [string, string | null][] = [
     [SPEC_LABELS.year, formatYear(listing.year)],
     [SPEC_LABELS.mileage, formatMileage(listing.mileage)],
@@ -64,64 +79,108 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   ];
 
   return (
-    <Container>
-    <article className={`py-6 ${!limited && listing.seller ? "pb-28 desk:pb-6" : ""}`} data-testid="listing-detail" data-status={listing.status}>
-      <header className="mb-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {listing.status === "SOLD" ? <Badge tone="sold">{STATUS_LABELS.SOLD}</Badge> : null}
-          {listing.status === "EXPIRED" ? <Badge tone="expired">{STATUS_LABELS.EXPIRED}</Badge> : null}
-          {listing.badges.premium ? <Badge tone="premium">{UI.premiumBadge}</Badge> : null}
-          {listing.badges.boosted ? <Badge tone="boosted">{UI.boostedBadge}</Badge> : null}
-        </div>
-        <div className="mt-2 flex items-start justify-between gap-4">
-          <h1 className="text-2xl font-bold text-navy md:text-3xl">{title}</h1>
-          <FavoriteButton publicId={listing.publicId} size="lg" autoIntent />
-        </div>
-        <p className="mt-2 text-3xl font-extrabold tracking-tight text-primary" data-testid="detail-price">{formatPriceMinor(listing.priceMinor, listing.currency)}</p>
-        {limited ? (
-          <p role="status" className="mt-3 rounded-control border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning-deep" data-testid="limited-notice">
-            Bu elan artıq aktiv deyil. Satıcı ilə əlaqə mümkün deyil.
-          </p>
-        ) : null}
-      </header>
-      <div className="grid gap-6 desk:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div className="min-w-0 space-y-6">
-          <Gallery images={listing.images} title={title} />
-          <section aria-labelledby="specs-title" className="rounded-card border border-line bg-raised p-4 shadow-card md:p-6">
-            <h2 id="specs-title" className="text-lg font-semibold text-navy">{UI.specs}</h2>
-            <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2" data-testid="specs">
-              {specs.filter(([, v]) => v !== null && v !== "—").map(([k, v]) => (
-                <div key={k} className="flex justify-between gap-4 border-b border-line py-2 text-sm">
-                  <dt className="text-muted">{k}</dt><dd className="font-medium text-navy">{v}</dd>
+    <article data-testid="listing-detail" data-status={listing.status}>
+      {/* Navy stage — full-bleed. */}
+      <section className="bg-navy pb-8 pt-4 text-white md:pb-10">
+        <Container>
+          <nav aria-label="Naviqasiya yolu" className="mb-4 flex flex-wrap items-center gap-1.5 text-xs text-on-navy-muted">
+            <Link href="/" className="hover:text-white">Əsas səhifə</Link>
+            <span aria-hidden="true">/</span>
+            <Link href={`/elanlar?category=${listing.category}`} className="hover:text-white">
+              {CATEGORY_LABELS[listing.category]}
+            </Link>
+            <span aria-hidden="true">/</span>
+            <span className="truncate text-white/80">{title}</span>
+          </nav>
+          <div className="grid gap-6 desk:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+            <div className="min-w-0">
+              <div className="mb-3 flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {listing.status === "SOLD" ? <Badge tone="sold">{STATUS_LABELS.SOLD}</Badge> : null}
+                    {listing.status === "EXPIRED" ? <Badge tone="expired">{STATUS_LABELS.EXPIRED}</Badge> : null}
+                    {listing.badges.premium ? <PromotionBadge type="PREMIUM" /> : null}
+                    {listing.badges.boosted ? <PromotionBadge type="BOOST" /> : null}
+                  </div>
+                  <h1 className="mt-1.5 text-xl font-bold tracking-[-0.01em] md:text-2xl">{title}</h1>
+                  <p className="mt-1 font-condensed text-[26px] font-bold leading-none text-green-dark desk:text-[28px]" data-testid="detail-price">
+                    {formatPriceMinor(listing.priceMinor, listing.currency)}
+                  </p>
                 </div>
-              ))}
-            </dl>
-          </section>
-          {!limited && listing.description ? (
-            <section aria-labelledby="desc-title" className="rounded-card border border-line bg-raised p-4 shadow-card md:p-6">
-              <h2 id="desc-title" className="text-lg font-semibold text-navy">{UI.description}</h2>
-              <p className="mt-3 whitespace-pre-line text-sm leading-6 text-navy" data-testid="description">{listing.description}</p>
-            </section>
-          ) : null}
-          {!limited && listing.features.length > 0 ? (
-            <section aria-labelledby="feat-title" className="rounded-card border border-line bg-raised p-4 shadow-card md:p-6">
-              <h2 id="feat-title" className="text-lg font-semibold text-navy">{UI.features}</h2>
-              <ul className="mt-3 flex flex-wrap gap-2" data-testid="features">
-                {listing.features.map((f) => <li key={f.code} className="rounded-md bg-surface px-3 py-1.5 text-sm text-navy">{f.name}</li>)}
-              </ul>
-            </section>
-          ) : null}
-          <div className="pt-2">
-            <ReportListing publicId={listing.publicId} />
+                {listing.status !== "SOLD" ? <FavoriteButton publicId={listing.publicId} size="lg" autoIntent /> : null}
+              </div>
+              <div className={limited ? "saturate-[0.6]" : ""}>
+                <Gallery images={listing.images} title={title} />
+              </div>
+            </div>
+            <div className="desk:sticky desk:top-20 desk:self-start">
+              {contactable && listing.seller ? (
+                <ContactCard
+                  publicId={listing.publicId}
+                  displayName={listing.seller.displayName}
+                  maskedPhone={listing.seller.contactPhoneMasked}
+                  priceLabel={formatPriceMinor(listing.priceMinor, listing.currency)}
+                  premium={listing.badges.premium}
+                />
+              ) : (
+                <div className="rounded-[12px] border border-navy-border bg-navy-raised p-5">
+                  <p role="status" className="text-sm leading-relaxed text-on-navy-muted" data-testid="limited-notice">
+                    Bu elan artıq aktiv deyil. Satıcı ilə əlaqə mümkün deyil.
+                  </p>
+                  <Link
+                    href={`/elanlar?category=${listing.category}`}
+                    className={buttonClasses("primary", "mt-4 w-full")}
+                  >
+                    Oxşar elanlara bax
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
+        </Container>
+      </section>
+
+      {/* Paper content. */}
+      <Container className={`space-y-5 py-6 md:py-8 ${contactable ? "pb-[120px] desk:pb-8" : ""}`}>
+        <SectionCard title={UI.specs} titleId="specs-title">
+          <dl className="grid grid-cols-1 gap-x-8 gap-y-0.5 sm:grid-cols-2" data-testid="specs">
+            {specs.filter(([, v]) => v !== null && v !== "—").map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-4 border-b border-line py-2 text-sm last:border-b-0 sm:[&:nth-last-child(2)]:border-b-0">
+                <dt className="text-slate-strong">{k}</dt>
+                <dd className="text-right font-medium text-ink">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </SectionCard>
+        {!limited && listing.features.length > 0 ? (
+          <SectionCard title={UI.features} titleId="feat-title">
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2" data-testid="features">
+              {listing.features.map((f) => (
+                <li key={f.code} className="flex items-center gap-2 text-sm text-ink">
+                  <Check size={15} strokeWidth={2.5} className="shrink-0 text-primary" aria-hidden="true" />
+                  {f.name}
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
+        ) : null}
+        {!limited && listing.description ? (
+          <SectionCard title={UI.description} titleId="desc-title">
+            <p className="whitespace-pre-line text-sm leading-relaxed text-ink" data-testid="description">
+              {listing.description}
+            </p>
+          </SectionCard>
+        ) : null}
+        {!limited ? (
+          <Notice tone="info">
+            Təhlükəsizlik üçün: avtomobili şəxsən yoxlamadan ödəniş etməyin və rəsmi sənədləşmədən
+            əvvəl beh göndərməyin.
+          </Notice>
+        ) : null}
+        <div className="pt-1">
+          <ReportListing publicId={listing.publicId} />
         </div>
-        <div className="desk:sticky desk:top-20 desk:self-start">
-          {!limited && listing.seller ? (
-            <ContactCard publicId={listing.publicId} displayName={listing.seller.displayName} maskedPhone={listing.seller.contactPhoneMasked} />
-          ) : null}
-        </div>
-      </div>
+      </Container>
     </article>
-  </Container>
   );
 }
