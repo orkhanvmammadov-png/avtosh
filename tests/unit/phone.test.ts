@@ -17,6 +17,25 @@ describe("normalizePhoneE164", () => {
     expect(normalizePhoneE164("+491701234567")).toBe("+491701234567");
   });
 
+  it("canonicalizes every accepted Azerbaijani local variant to one E.164 value", () => {
+    // Phase 4.17O.1 table — all variants are ONE phone identity.
+    const variants = [
+      "010 218 41 91",
+      "0102184191",
+      "010-218-41-91",
+      "(010) 218 41 91",
+      "+994 10 218 41 91",
+      "+994102184191",
+    ];
+    for (const variant of variants) {
+      expect(normalizePhoneE164(variant), variant).toBe("+994102184191");
+    }
+  });
+
+  it("keeps rejecting the accepted non-AZ negative", () => {
+    expect(normalizePhoneE164("+1202555")).toBeNull();
+  });
+
   it("rejects malformed input", () => {
     expect(normalizePhoneE164("")).toBeNull();
     expect(normalizePhoneE164("12345")).toBeNull();

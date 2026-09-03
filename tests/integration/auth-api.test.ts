@@ -153,6 +153,59 @@ describe("POST /auth/otp/request", () => {
     expect(rows.length).toBe(1);
   });
 
+  it("delivers the canonical E.164 destination for preferred local input (4.17O.1)", async () => {
+    const { status } = await post(otpRequestRoute, "/otp/request", {
+      phone: "010 218 41 91",
+    });
+    expect(status).toBe(200);
+    // the provider boundary receives ONLY the canonical number
+    expect(provider.lastCodeFor("+994102184191")).toBeTruthy();
+    expect(provider.lastCodeFor("010 218 41 91")).toBeFalsy();
+  });
+
+  it("format variants resolve to one user identity, never two accounts (4.17O.1)", async () => {
+    // login with the preferred local format...
+    const localReq = await post(otpRequestRoute, "/otp/request", { phone: "010 218 41 92" });
+    expect(localReq.status).toBe(200);
+    const localVerify = await post(otpVerifyRoute, "/otp/verify", {
+      challenge_id: localReq.body.data?.challenge_id,
+      otp: provider.lastCodeFor("+994102184192")!,
+    });
+    expect(localVerify.status).toBe(200);
+    const localUser = (localVerify.body.data?.user as { id: string; phone_masked: string }).id;
+
+    // ...then with the canonical E.164 form of the SAME phone
+    const e164Req = await post(otpRequestRoute, "/otp/request", { phone: "+994102184192" });
+    expect(e164Req.status).toBe(200);
+    const e164Verify = await post(otpVerifyRoute, "/otp/verify", {
+      challenge_id: e164Req.body.data?.challenge_id,
+      otp: provider.lastCodeFor("+994102184192")!,
+    });
+    expect(e164Verify.status).toBe(200);
+    const e164User = (e164Verify.body.data?.user as { id: string }).id;
+
+    expect(e164User).toBe(localUser);
+    const sql = getSql();
+    const rows = await sql`
+      select id, phone_e164 from users where phone_e164 = '+994102184192'
+    `;
+    expect(rows.length).toBe(1); // one identity, stored canonically
+    expect(rows[0].id).toBe(localUser);
+  });
+
+  it("format variants share one phone rate-limit bucket (4.17O.1)", async () => {
+    await withEnv({ OTP_MIN_INTERVAL_SECONDS: "60" }, async () => {
+      const first = await post(otpRequestRoute, "/otp/request", { phone: "0102184193" });
+      expect(first.status).toBe(200);
+      // a different raw representation must NOT get an independent bucket
+      const second = await post(otpRequestRoute, "/otp/request", { phone: "+994102184193" });
+      expect(second.status).toBe(429);
+      expect(second.body.error?.code).toBe("OTP_RATE_LIMITED");
+      const third = await post(otpRequestRoute, "/otp/request", { phone: "(010) 218 41 93" });
+      expect(third.status).toBe(429);
+    });
+  });
+
   it("responds identically for new and existing phones (no enumeration)", async () => {
     const existing = nextPhone();
     await login(existing); // becomes an existing user

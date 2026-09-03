@@ -28,7 +28,7 @@ test("invalid phone shows Azerbaijani validation error and no OTP step", async (
   await page.goto("/giris");
   await page.getByTestId("login-phone").fill("+1202555");
   await page.getByTestId("login-request").click();
-  await expect(page.getByTestId("login-flow").getByRole("alert")).toContainText("Telefon nömrəsi düzgün deyil");
+  await expect(page.getByTestId("login-flow").getByRole("alert")).toContainText("Mobil nömrəni düzgün formatda daxil edin"); // 4.17O.1 local-phone copy
   await expect(page.getByTestId("login-otp")).toHaveCount(0);
 });
 
@@ -53,6 +53,30 @@ test("full OTP login lands on profile and header becomes session-aware", async (
   if (project.name === "desktop") {
     await expect(page.getByTestId("header-profile")).toBeVisible(); // text links collapse into the drawer below lg
   }
+});
+
+test("local-format entry (0XX XXX XX XX) logs in against the canonical identity", async ({ page }, { project }) => {
+  // 4.17O.1: the user types the familiar national form; the server
+  // canonicalizes to E.164 for the challenge, provider and identity.
+  const canonical = testPhone(project.name, 8); // +99450XXXXXXX
+  const local = `0${canonical.slice(4)}`;
+  await page.goto("/giris");
+  const input = page.getByTestId("login-phone");
+  await input.click();
+  await input.pressSequentially(local);
+  // the visible value is grouped as 0XX XXX XX XX by the formatter
+  await expect(input).toHaveValue(
+    `${local.slice(0, 3)} ${local.slice(3, 6)} ${local.slice(6, 8)} ${local.slice(8, 10)}`,
+  );
+  await page.getByTestId("login-request").click();
+  await expect(page.getByTestId("login-otp")).toBeVisible();
+  // destination is shown in the human-friendly local form
+  await expect(page.getByTestId("login-flow")).toContainText(local.slice(0, 3));
+  await forceOtpCode(canonical); // challenge exists under the CANONICAL phone
+  await page.getByTestId("login-otp").fill(KNOWN_OTP);
+  await page.getByTestId("login-verify").click();
+  await expect(page).toHaveURL(/\/profil$/);
+  await expect(page.getByTestId("profile-phone")).toContainText("•");
 });
 
 test("wrong OTP shows an error and correct code still works after it", async ({ page }, { project }) => {
