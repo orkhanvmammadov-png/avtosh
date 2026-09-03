@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Blade } from "@/components/shared/brand-mark";
+import { formatAzLocalPhoneInput, formatAzPhoneForDisplay } from "@/components/auth/phone-format";
 import { Button } from "@/components/ui/button";
 import { controlClasses } from "@/components/ui/controls";
 import { UI } from "@/lib/marketplace/labels";
@@ -143,7 +144,7 @@ export function LoginFlow({ returnTo }: { returnTo: string | null }) {
               required
               placeholder={UI.phonePlaceholder}
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(formatAzLocalPhoneInput(e.target.value))}
               className={controlClasses("text-base")}
               data-testid="login-phone"
             />
@@ -156,7 +157,7 @@ export function LoginFlow({ returnTo }: { returnTo: string | null }) {
       ) : (
         <form onSubmit={verify} className="mt-4 space-y-4" aria-label={UI.otpLabel}>
           <p className="text-sm leading-relaxed text-slate-strong">
-            {UI.otpSentTo} <strong className="font-semibold text-ink">{challenge.phone}</strong>
+            {UI.otpSentTo} <strong className="font-semibold text-ink">{formatAzPhoneForDisplay(challenge.phone)}</strong>
           </p>
           <label className="block text-xs font-medium text-slate-strong">
             <span className="mb-1 block">{UI.otpLabel}</span>
