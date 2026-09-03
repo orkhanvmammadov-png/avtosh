@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+/**
+ * Accepted production-year bounds for listings and search (one
+ * authoritative source; validators and year pickers derive from it).
+ */
+export const LISTING_YEAR_MIN = 1900;
+export const LISTING_YEAR_MAX = 2100;
+
 const schema = z.object({
   MARKETPLACE_PAGE_SIZE: z.coerce.number().int().min(1).max(48).default(24),
   MARKETPLACE_MAX_PAGE_SIZE: z.coerce.number().int().min(1).max(100).default(48),

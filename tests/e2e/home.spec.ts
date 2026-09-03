@@ -115,9 +115,15 @@ test.describe("Home", () => {
     expect(await yearMin.evaluate((el) => el.tagName)).toBe("SELECT");
     expect(await yearMax.evaluate((el) => el.tagName)).toBe("SELECT");
     await expect(yearMin.locator("option").first()).toHaveText("Minimum il");
-    // newest year first after the neutral option
-    const currentYear = new Date().getFullYear();
-    await expect(yearMin.locator("option").nth(1)).toHaveText(String(currentYear));
+    // full authoritative contract, newest first: 2100 … 1900
+    await expect(yearMin.locator("option").nth(1)).toHaveText("2100");
+    await expect(yearMin.locator("option").last()).toHaveText("1900");
+    // the extreme bounds are actually selectable
+    await yearMin.selectOption("1900");
+    await expect(yearMin).toHaveValue("1900");
+    await yearMax.selectOption("2100");
+    await expect(yearMax).toHaveValue("2100");
+    // ordinary years still work
     await yearMin.selectOption("2020");
     await yearMax.selectOption("2024");
     // typed manual price value (non-multiple of 500) serializes untouched

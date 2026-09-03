@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SEARCH_SORTS } from "@/lib/config/marketplace";
+import { LISTING_YEAR_MAX, LISTING_YEAR_MIN, SEARCH_SORTS } from "@/lib/config/marketplace";
 
 const categoryCode = z.string().regex(/^[A-Z][A-Z0-9_]{1,31}$/, "Invalid category code");
 const bool = z.enum(["true", "false"]).transform((v) => v === "true");
@@ -18,8 +18,8 @@ export const searchQuerySchema = z
     city_id: z.uuid().optional(),
     price_min: int(1, 9_000_000_000_000).optional(),
     price_max: int(1, 9_000_000_000_000).optional(),
-    year_min: int(1900, 2100).optional(),
-    year_max: int(1900, 2100).optional(),
+    year_min: int(LISTING_YEAR_MIN, LISTING_YEAR_MAX).optional(),
+    year_max: int(LISTING_YEAR_MIN, LISTING_YEAR_MAX).optional(),
     mileage_max: int(0, 10_000_000).optional(),
     fuel_type_id: z.uuid().optional(),
     transmission_id: z.uuid().optional(),

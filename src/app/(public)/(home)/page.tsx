@@ -8,6 +8,7 @@ import { PremiumFeed } from "@/components/marketplace/premium-feed";
 import { PromotionBadge } from "@/components/ui/promotion-badge";
 import { getBrands, getCities, getReferenceOptions } from "@/services/catalog";
 import { visibleFilterGroups } from "@/lib/marketplace/search-params";
+import { LISTING_YEAR_MAX, LISTING_YEAR_MIN } from "@/lib/config/marketplace";
 import { homeData, searchMarketplace } from "@/services/marketplace";
 
 export const dynamic = "force-dynamic";
@@ -32,11 +33,13 @@ const TRUST = [
  */
 async function loadAdvancedCatalog(categoryCodes: string[]): Promise<HomeAdvancedCatalog> {
   const cities = await getCities().catch(() => []);
-  // Accepted search bounds are 1900–2100 (validators/marketplace);
-  // options run newest→oldest from the current year, computed
-  // server-side so hydration sees one consistent list.
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: currentYear - 1900 + 1 }, (_, i) => currentYear - i);
+  // The complete accepted year contract (LISTING_YEAR_MIN..MAX — the
+  // same authoritative bounds the search validator enforces), newest
+  // first. Static list: no hydration-sensitive Date computation.
+  const years = Array.from(
+    { length: LISTING_YEAR_MAX - LISTING_YEAR_MIN + 1 },
+    (_, i) => LISTING_YEAR_MAX - i,
+  );
   const optionsByCategory: HomeAdvancedCatalog["optionsByCategory"] = {};
   await Promise.all(
     categoryCodes.map(async (category) => {
