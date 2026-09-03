@@ -49,7 +49,6 @@ test.describe("Home", () => {
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await toggle.click();
     await expect(panel).toBeVisible();
-    await expect(toggle).toContainText("Ətraflı axtarışı gizlət");
     await expect(page).toHaveURL(/\/$/); // expansion is state, not navigation
     await expectNoHorizontalOverflow(page);
     // manual price (no steppers, arbitrary value), year select, multi fuel
@@ -69,7 +68,7 @@ test.describe("Home", () => {
     await expect(page.getByTestId("home-adv-year-min")).toHaveValue("2015");
     await expect(page.getByTestId("home-adv-fuel_type-toggle")).toContainText("Benzin, Hibrid");
     // explicit Təmizlə clears everything
-    await page.getByTestId("home-adv-clear").click();
+    await page.locator('[data-testid="home-adv-clear"]:visible').first().click();
     await expect(page.getByTestId("home-adv-city")).toHaveValue("");
     await expect(page.getByTestId("home-adv-price-min")).toHaveValue("");
     await expect(page.getByTestId("home-adv-year-min")).toHaveValue("");
@@ -114,7 +113,7 @@ test.describe("Home", () => {
     await page.getByTestId("home-advanced-toggle").click();
     await page.getByTestId("home-adv-credit").click();
     await page.getByTestId("home-adv-barter").click();
-    await page.getByTestId("home-adv-clear").click();
+    await page.locator('[data-testid="home-adv-clear"]:visible').first().click();
     await expect(page.getByTestId("home-adv-credit")).toHaveAttribute("aria-pressed", "false");
     await expect(page.getByTestId("home-adv-barter")).toHaveAttribute("aria-pressed", "false");
   });
@@ -179,28 +178,34 @@ test.describe("Home", () => {
     await expect(fuelToggle).toHaveAttribute("aria-expanded", "false");
     await fuelToggle.press("Enter");
     await expect(fuelPanel).toBeVisible();
-    // one open at a time: fuel → transmission → color
+    await page.keyboard.press("Escape");
+    // one open at a time (panels overlay content per the approved
+    // design, so the chain moves upward: trans → fuel → color, each
+    // next trigger above/beside the previously open panel)
     await page.getByTestId("home-adv-transmission-toggle").click();
     await expect(page.getByTestId("home-adv-transmission-panel")).toBeVisible();
-    await expect(fuelPanel).toBeHidden();
+    await fuelToggle.click();
+    await expect(fuelPanel).toBeVisible();
+    await expect(page.getByTestId("home-adv-transmission-panel")).toBeHidden();
     await page.getByTestId("home-adv-color-toggle").click();
     await expect(page.getByTestId("home-adv-color-panel")).toBeVisible();
-    await expect(page.getByTestId("home-adv-transmission-panel")).toBeHidden();
+    await expect(fuelPanel).toBeHidden();
   });
 
   test("closed advanced controls share one geometry family (UAT-C1)", async ({ page }) => {
     await page.goto("/");
     await page.getByTestId("home-advanced-toggle").click();
     const heightOf = async (testid: string) => (await page.getByTestId(testid).boundingBox())!.height;
-    const reference = await heightOf("home-adv-city"); // standard select
-    for (const control of ["home-adv-price-min", "home-adv-mileage-max", "home-adv-fuel_type-toggle", "home-adv-transmission-toggle", "home-adv-color-toggle", "home-adv-engine-min", "home-adv-year-min", "home-adv-body_type_id", "home-adv-drive_type_id"]) {
+    const reference = await heightOf("home-adv-body_type_id"); // 1C standard control
+    for (const control of ["home-adv-price-min", "home-adv-mileage-max", "home-adv-fuel_type-toggle", "home-adv-transmission-toggle", "home-adv-color-toggle", "home-adv-engine-min", "home-adv-year-min", "home-adv-drive_type_id"]) {
       expect(Math.abs((await heightOf(control)) - reference), control).toBeLessThanOrEqual(2);
     }
-    // Price and Engine share the same primary min/max geometry
+    // Price and Engine share the same primary control recipe (height;
+    // widths differ by approved layout: spine-stacked at desk, twin
+    // columns in the band)
     const priceMin = (await page.getByTestId("home-adv-price-min").boundingBox())!;
     const engineMin = (await page.getByTestId("home-adv-engine-min").boundingBox())!;
     expect(Math.abs(priceMin.height - engineMin.height)).toBeLessThanOrEqual(2);
-    expect(Math.abs(priceMin.width - engineMin.width)).toBeLessThanOrEqual(8);
     // long summaries never grow the trigger
     await page.getByTestId("home-adv-color-toggle").click();
     for (const code of ["BLACK", "WHITE", "RED", "GREEN"]) {
@@ -228,6 +233,7 @@ test.describe("Home", () => {
     const s = seed();
     await page.goto("/");
     await page.getByTestId("home-advanced-toggle").click();
+    // non-panel fields first (no overlay open), including the final blocks
     await page.getByTestId("home-brand").selectOption(s.toyotaBrandId);
     await page.getByTestId("home-adv-city").selectOption(s.bakuCityId);
     await page.getByTestId("home-adv-price-min").fill("5000");
@@ -235,28 +241,28 @@ test.describe("Home", () => {
     await page.getByTestId("home-adv-mileage-max").fill("123500");
     await page.getByTestId("home-adv-engine-min").selectOption("1000");
     await page.getByTestId("home-adv-engine-max").selectOption("7000");
-    // two fuels + two transmissions + two colors (OR groups)
-    await page.getByTestId("home-adv-fuel_type-toggle").click();
-    const petrol = page.getByTestId("home-adv-fuel_type-opt-PETROL");
-    const hybrid = page.getByTestId("home-adv-fuel_type-opt-HYBRID");
-    await petrol.check();
-    await hybrid.check();
-    const fuelIds = [await petrol.inputValue(), await hybrid.inputValue()];
+    await page.getByTestId("home-adv-no-accident").click();
+    await page.getByTestId("home-adv-not-repainted").click();
+    // overlay panels bottom-up so each trigger stays reachable
     await page.getByTestId("home-adv-transmission-toggle").click();
     const at = page.getByTestId("home-adv-transmission-opt-AUTOMATIC");
     const robot = page.getByTestId("home-adv-transmission-opt-ROBOT");
     await at.check();
     await robot.check();
     const transIds = [await at.inputValue(), await robot.inputValue()];
+    await page.getByTestId("home-adv-fuel_type-toggle").click();
+    const petrol = page.getByTestId("home-adv-fuel_type-opt-PETROL");
+    const hybrid = page.getByTestId("home-adv-fuel_type-opt-HYBRID");
+    await petrol.check();
+    await hybrid.check();
+    const fuelIds = [await petrol.inputValue(), await hybrid.inputValue()];
     await page.getByTestId("home-adv-color-toggle").click();
     const black = page.getByTestId("home-adv-color-opt-BLACK");
     const white = page.getByTestId("home-adv-color-opt-WHITE");
     await black.check();
     await white.check();
     const colorIds = [await black.inputValue(), await white.inputValue()];
-    // both condition claims
-    await page.getByTestId("home-adv-no-accident").check();
-    await page.getByTestId("home-adv-not-repainted").check();
+    await page.keyboard.press("Escape");
     await page.getByTestId("home-search-submit").click();
     await page.waitForURL(/\/elanlar\?/);
     const url = new URL(page.url());

@@ -1,9 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, type FormEvent } from "react";
-import { Check, ChevronDown, ChevronUp } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
+import { Check, ChevronDown, ChevronUp, X } from "lucide-react";
 import { aznInputToMinor } from "@/lib/format";
 import { CATEGORY_LABELS, GROUP_LABELS, UI } from "@/lib/marketplace/labels";
 import { publicFetch } from "@/lib/marketplace/public-api";
@@ -12,26 +11,183 @@ import { MultiSelectField } from "@/components/marketplace/multi-select";
 import {
   csvFromIds,
   GROUP_TO_PARAM,
-  MULTI_SELECT_GROUPS,
   searchHref,
   visibleFilterGroups,
   type SearchFilterState,
 } from "@/lib/marketplace/search-params";
 import type { BrandDto, CategoryDto, CityDto, ModelDto, ReferenceOptionDto } from "@/services/catalog";
 
-const selectClass =
-  "mt-1.5 block min-h-12 w-full rounded-control border border-line-strong bg-raised px-3 text-sm text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none disabled:bg-sunken disabled:text-muted";
+/**
+ * Home search — approved Direction 1C (design_handoff_avtosh/
+ * advanced_search): compact core row (Marka · Model · Şəhər · Axtar),
+ * then the inline advanced zone with the mandated 1–10 DOM reading
+ * order. Visual placement (price spine at 1440/1024, price band at
+ * 768/390) is done with grid-template-areas so the source order never
+ * changes. All functional O.2 contracts (params, serializer,
+ * semantics, dismissal behaviors) are preserved unchanged.
+ */
 
-const advancedField =
-  "min-h-12 w-full rounded-control border border-line-strong bg-raised px-3 text-sm text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none";
+/** Direction 1C standard closed control: h40 desktop / h44 @390. */
+const control =
+  "min-h-10 w-full rounded-control border border-line-strong bg-raised px-3 text-[13px] text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none focus:shadow-[0_0_0_2px_rgba(20,122,78,0.25)] disabled:bg-sunken disabled:text-muted max-sm:min-h-11";
 
-function digitsOnly(event: FormEvent<HTMLInputElement>) {
-  const el = event.currentTarget;
-  const digits = el.value.replace(/\D/g, "");
-  if (el.value !== digits) el.value = digits;
+function digits(value: string): string {
+  return value.replace(/\D/g, "");
 }
 
-/** Server-loaded reference data for the inline advanced panel. */
+/** Field label per tokens.md (12/500 secondary, 6px gap). */
+function FieldLabel({ children }: { children: ReactNode }) {
+  return <span className="mb-1.5 block text-[12px] font-medium text-slate-strong">{children}</span>;
+}
+
+/** Native select in 1C clothing: custom chevron, optional ✕ clear. */
+function Select1C({
+  name,
+  ariaLabel,
+  placeholder,
+  optionItems,
+  clearable = false,
+  testid,
+}: {
+  name: string;
+  ariaLabel: string;
+  placeholder: string;
+  optionItems: { value: string; label: string }[];
+  clearable?: boolean;
+  testid: string;
+}) {
+  const [value, setValue] = useState("");
+  return (
+    <span className="relative block">
+      <select
+        name={name}
+        aria-label={ariaLabel}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className={`${control} appearance-none ${clearable && value !== "" ? "pr-14" : "pr-8"} ${value !== "" ? "font-medium" : "text-muted"}`}
+        data-testid={testid}
+      >
+        <option value="">{placeholder}</option>
+        {optionItems.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+      {clearable && value !== "" ? (
+        <button
+          type="button"
+          aria-label={`${ariaLabel} — təmizlə`}
+          onClick={() => setValue("")}
+          className="absolute right-7 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center text-muted transition-colors duration-150 hover:text-danger"
+          data-testid={`${testid}-clear`}
+        >
+          <X size={12} strokeWidth={2.5} aria-hidden="true" />
+        </button>
+      ) : null}
+      <ChevronDown size={14} aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted" />
+    </span>
+  );
+}
+
+/** Kredit/Barter word-toggle (components.md): h32 desktop, h40 @390. */
+function PriceToggle({
+  pressed,
+  onToggle,
+  testid,
+  children,
+}: {
+  pressed: boolean;
+  onToggle: () => void;
+  testid: string;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={onToggle}
+      className={`inline-flex min-h-8 items-center gap-1.5 rounded-control border px-3 text-[12.5px] transition-colors duration-150 focus:outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 max-sm:min-h-10 ${
+        pressed
+          ? "border-primary bg-primary-tint font-semibold text-primary-hover"
+          : "border-line-strong bg-raised font-medium text-slate-strong hover:border-primary hover:text-primary"
+      }`}
+      data-testid={testid}
+    >
+      {pressed ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : null}
+      {children}
+    </button>
+  );
+}
+
+/** Condition toggle: same recipe at standard control height (h40/h44). */
+function ConditionToggle({
+  pressed,
+  onToggle,
+  testid,
+  children,
+}: {
+  pressed: boolean;
+  onToggle: () => void;
+  testid: string;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={onToggle}
+      className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-control border px-3 text-[12.5px] transition-colors duration-150 focus:outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 max-sm:min-h-11 ${
+        pressed
+          ? "border-primary bg-primary-tint font-semibold text-primary-hover"
+          : "border-line-strong bg-raised font-medium text-slate-strong hover:border-primary hover:text-primary"
+      }`}
+      data-testid={testid}
+    >
+      {pressed ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : null}
+      {children}
+    </button>
+  );
+}
+
+/** Price field: standard geometry + Min/Maks prefix, AZN suffix, Condensed value. */
+function PriceField({
+  prefix,
+  value,
+  onChange,
+  ariaLabel,
+  testid,
+}: {
+  prefix: string;
+  value: string;
+  onChange: (next: string) => void;
+  ariaLabel: string;
+  testid: string;
+}) {
+  const filled = value !== "";
+  return (
+    <span className="relative block">
+      {filled ? (
+        <span aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-muted">
+          {prefix}
+        </span>
+      ) : null}
+      <input
+        type="text"
+        inputMode="numeric"
+        placeholder={prefix}
+        aria-label={ariaLabel}
+        value={value}
+        onChange={(e) => onChange(digits(e.target.value))}
+        className={`${control} pr-10 ${filled ? "pl-11 font-condensed text-[14px] font-semibold" : ""}`}
+        data-testid={testid}
+      />
+      <span aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-muted">
+        AZN
+      </span>
+    </span>
+  );
+}
+
+/** Server-loaded reference data for the advanced zone. */
 export interface HomeAdvancedCatalog {
   cities: CityDto[];
   /** Authoritative year options, newest first (server-computed). */
@@ -40,17 +196,6 @@ export interface HomeAdvancedCatalog {
   optionsByCategory: Record<string, Record<string, ReferenceOptionDto[]>>;
 }
 
-/**
- * Hero search (Phase 4.17O.2): category → brand → model plus an
- * inline expandable advanced panel — manual price/mileage entry (no
- * steppers, no spinners), authoritative year dropdowns, engine
- * displacement dropdowns, multi-select fuel/transmission/color (with
- * color swatches), and directly visible condition checkboxes.
- * Submission flows through the EXISTING URL-as-state serializer to
- * /elanlar — never a second search-state architecture. The advanced
- * region stays mounted and toggles via the `hidden` attribute, so
- * selections survive collapse/expand by construction.
- */
 export function HomeSearch({
   categories,
   initialBrands,
@@ -69,9 +214,15 @@ export function HomeSearch({
   const [modelId, setModelId] = useState("");
   const [loadingBrands, setLoadingBrands] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [mileage, setMileage] = useState("");
   const [credit, setCredit] = useState(false);
   const [barter, setBarter] = useState(false);
-  const [clearCount, setClearCount] = useState(0); // remounts multi-selects on Təmizlə
+  const [noAccident, setNoAccident] = useState(false);
+  const [notRepainted, setNotRepainted] = useState(false);
+  const [collapsedCount, setCollapsedCount] = useState(0);
+  const [clearCount, setClearCount] = useState(0); // remounts uncontrolled fields on Təmizlə
   const requestRef = useRef(0);
 
   async function loadBrands(nextCategory: string) {
@@ -117,26 +268,57 @@ export function HomeSearch({
     if (brandId !== "") next.brand_id = brandId;
     if (modelId !== "") next.model_id = modelId;
     const data = new FormData(event.currentTarget);
-    const scalar = ["city_id", "year_min", "year_max", "mileage_max", "engine_cc_min", "engine_cc_max"] as const;
+    const scalar = ["city_id", "year_min", "year_max", "engine_cc_min", "engine_cc_max",
+      "body_type_id", "drive_type_id", "motorcycle_type_id"] as const;
     for (const key of scalar) {
       const value = String(data.get(key) ?? "").trim();
       if (value.length > 0) next[key] = value;
     }
-    for (const key of ["price_min", "price_max"] as const) {
-      const minor = aznInputToMinor(String(data.get(key) ?? ""));
-      if (minor !== null) next[key] = minor;
-    }
+    if (mileage !== "") next.mileage_max = mileage;
+    const minMinor = aznInputToMinor(priceMin);
+    if (minMinor !== null) next.price_min = minMinor;
+    const maxMinor = aznInputToMinor(priceMax);
+    if (maxMinor !== null) next.price_max = maxMinor;
     for (const key of ["fuel_type_ids", "transmission_ids", "color_ids"] as const) {
       const values = data.getAll(key).map(String).filter((v) => v.length > 0);
       if (values.length > 0) next[key] = csvFromIds(values);
     }
-    // Positive claims only — unchecked emits nothing.
-    if (data.get("no_accident") === "on") next.no_accident = "true";
-    if (data.get("not_repainted") === "on") next.not_repainted = "true";
-    // Existing boolean filters (unchanged contract) — toggle-button state.
+    // Positive claims only — unselected emits nothing.
+    if (noAccident) next.no_accident = "true";
+    if (notRepainted) next.not_repainted = "true";
+    // Existing boolean filters (unchanged contract).
     if (credit) next.credit = "true";
     if (barter) next.barter = "true";
     router.push(searchHref(next));
+  }
+
+  /** Active-filter count for the collapsed toggle chip (derived from live form state). */
+  function countActiveFilters(): number {
+    let count = 0;
+    const form = formRef.current;
+    if (form !== null) {
+      const data = new FormData(form);
+      for (const key of ["city_id", "body_type_id", "drive_type_id", "motorcycle_type_id"]) {
+        if (String(data.get(key) ?? "").trim() !== "") count += 1;
+      }
+      if (String(data.get("year_min") ?? "") !== "" || String(data.get("year_max") ?? "") !== "") count += 1;
+      if (String(data.get("engine_cc_min") ?? "") !== "" || String(data.get("engine_cc_max") ?? "") !== "") count += 1;
+      for (const key of ["fuel_type_ids", "transmission_ids", "color_ids"]) {
+        if (data.getAll(key).length > 0) count += 1;
+      }
+    }
+    if (mileage !== "") count += 1;
+    if (priceMin !== "" || priceMax !== "") count += 1;
+    if (credit) count += 1;
+    if (barter) count += 1;
+    if (noAccident) count += 1;
+    if (notRepainted) count += 1;
+    return count;
+  }
+
+  function toggleExpanded() {
+    if (expanded) setCollapsedCount(countActiveFilters());
+    setExpanded((v) => !v);
   }
 
   /** Explicit reset only (Təmizlə) — collapse never clears values. */
@@ -145,225 +327,297 @@ export function HomeSearch({
     setBrandId("");
     setModelId("");
     setModels([]);
+    setPriceMin("");
+    setPriceMax("");
+    setMileage("");
     setCredit(false);
     setBarter(false);
+    setNoAccident(false);
+    setNotRepainted(false);
     setClearCount((c) => c + 1);
+  }
+
+  /** "Sıfırla": resets the price group (inputs + toggles) only. */
+  function resetPriceGroup() {
+    setPriceMin("");
+    setPriceMax("");
+    setCredit(false);
+    setBarter(false);
   }
 
   const groups = visibleFilterGroups(category);
   const options = advanced.optionsByCategory[category] ?? {};
+  const priceGroupActive = priceMin !== "" || priceMax !== "" || credit || barter;
+  const vehicleTypeGroup = groups.includes("BODY_TYPE") ? "BODY_TYPE" : "MOTORCYCLE_TYPE";
+
+  const actionButtons = (
+    <>
+      <button
+        type="submit"
+        className="inline-flex min-h-11 w-full items-center justify-center rounded-control bg-primary px-6 text-sm font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed max-sm:min-h-12 sm:w-auto desk:w-full"
+        data-testid="home-adv-submit"
+      >
+        {UI.search}
+      </button>
+      <button
+        type="button"
+        onClick={clearAll}
+        className="inline-flex min-h-10 items-center justify-center rounded-control px-3 text-[13px] font-semibold text-primary transition-colors duration-150 hover:text-primary-hover"
+        data-testid="home-adv-clear"
+      >
+        Təmizlə
+      </button>
+    </>
+  );
 
   return (
-    <form ref={formRef} onSubmit={submit} className="rounded-[12px] bg-raised p-4 shadow-overlay md:p-5" aria-label="Elan axtarışı">
-      <div role="radiogroup" aria-label="Kateqoriya" className="mb-4 flex gap-2">
-        {categories.map((c) => (
-          <button
-            key={c.code}
-            type="button"
-            role="radio"
-            aria-checked={category === c.code}
-            data-testid={`category-${c.code}`}
-            onClick={() => selectCategory(c.code)}
-            className={`min-h-12 flex-1 rounded-control border px-4 text-sm font-semibold transition-colors duration-150 ${category === c.code ? "border-primary bg-primary text-white" : "border-line-strong bg-raised text-ink hover:border-primary hover:text-primary"}`}
-          >
-            {CATEGORY_LABELS[c.code] ?? c.name}
-          </button>
-        ))}
-      </div>
-      <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-        <label className="block text-xs font-medium text-slate-strong">
-          <span className="mb-1 block">{UI.brandLabel}</span>
-          <select className={selectClass} value={brandId} onChange={(e) => void selectBrand(e.target.value)} disabled={loadingBrands} data-testid="home-brand">
-            <option value="">{UI.any}</option>
-            {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
-        </label>
-        <label className="block text-xs font-medium text-slate-strong">
-          <span className="mb-1 block">{UI.modelLabel}</span>
-          <select className={selectClass} value={modelId} onChange={(e) => setModelId(e.target.value)} disabled={brandId === ""} data-testid="home-model">
-            <option value="">{UI.any}</option>
-            {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
-        </label>
-        <div className="flex items-end">
-          <Button type="submit" className="w-full md:w-auto md:px-8" data-testid="home-search-submit">{UI.search}</Button>
+    <form ref={formRef} onSubmit={submit} className="rounded-[12px] bg-raised shadow-overlay" aria-label="Elan axtarışı">
+      {/* Compact core search: category · Marka · Model · Şəhər · Axtar. */}
+      <div className="p-4 pb-3 md:p-5 md:pb-3">
+        <div role="radiogroup" aria-label="Kateqoriya" className="mb-4 flex gap-2">
+          {categories.map((c) => (
+            <button
+              key={c.code}
+              type="button"
+              role="radio"
+              aria-checked={category === c.code}
+              data-testid={`category-${c.code}`}
+              onClick={() => selectCategory(c.code)}
+              className={`min-h-12 flex-1 rounded-control border px-4 text-sm font-semibold transition-colors duration-150 ${category === c.code ? "border-primary bg-primary text-white" : "border-line-strong bg-raised text-ink hover:border-primary hover:text-primary"}`}
+            >
+              {CATEGORY_LABELS[c.code] ?? c.name}
+            </button>
+          ))}
         </div>
-      </div>
-
-      {/* Inline advanced panel — stays mounted; `hidden` toggles it.
-          Owner-authoritative reading order (DOM = visual, no CSS order
-          tricks): general location first, then Ban → Yürüş → İl →
-          Mühərrik → Rəng → Qiymət(+Kredit/Barter) → Yanacaq → Ötürücü
-          → Sürətlər qutusu, closing with Avtomobil vəziyyəti as a
-          full-width final block. */}
-      <div id="home-advanced-filters" hidden={!expanded} data-testid="home-advanced-panel" className="mt-4 border-t border-line pt-4">
-        {/* General location filter (outside the vehicle-attribute sequence). */}
-        <div className="grid gap-3 md:grid-cols-2 desk:grid-cols-3">
-          <label className="block text-xs font-medium text-slate-strong">
-            <span className="mb-1 block">{UI.city}</span>
-            <select name="city_id" defaultValue="" className={advancedField} data-testid="home-adv-city">
+        <div className="grid gap-2.5 md:grid-cols-[1fr_1fr_1fr_auto]">
+          <label className="block">
+            <FieldLabel>{UI.brandLabel}</FieldLabel>
+            <select className={`${control} appearance-none pr-8 min-h-12`} value={brandId} onChange={(e) => void selectBrand(e.target.value)} disabled={loadingBrands} data-testid="home-brand">
+              <option value="">{UI.any}</option>
+              {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <FieldLabel>{UI.modelLabel}</FieldLabel>
+            <select className={`${control} appearance-none pr-8 min-h-12`} value={modelId} onChange={(e) => setModelId(e.target.value)} disabled={brandId === ""} data-testid="home-model">
+              <option value="">{UI.any}</option>
+              {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          </label>
+          <label className="block" key={`city-${clearCount}`}>
+            <FieldLabel>{UI.city}</FieldLabel>
+            <select name="city_id" defaultValue="" className={`${control} appearance-none pr-8 min-h-12`} data-testid="home-adv-city">
               <option value="">{UI.any}</option>
               {advanced.cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
+          <div className="flex items-end">
+            <button
+              type="submit"
+              className="inline-flex min-h-12 w-full items-center justify-center rounded-control bg-primary px-8 text-sm font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed md:w-auto"
+              data-testid="home-search-submit"
+            >
+              {UI.search}
+            </button>
+          </div>
         </div>
-        <div className="mt-3 grid items-start gap-3 md:grid-cols-2 desk:grid-cols-3">
-          {/* 1 — Ban növü (CAR) / Motosiklet növü (MOTO): existing catalog contract. */}
-          {groups.filter((group) => !MULTI_SELECT_GROUPS.has(group) && group !== "DRIVE_TYPE").map((group) => (
-            <label key={group} className="block text-xs font-medium text-slate-strong">
-              <span className="mb-1 block">{GROUP_LABELS[group]}</span>
-              <select name={GROUP_TO_PARAM[group]} defaultValue="" className={advancedField} data-testid={`home-adv-${GROUP_TO_PARAM[group]}`}>
-                <option value="">{UI.any}</option>
-                {(options[group] ?? []).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-              </select>
-            </label>
-          ))}
-          {/* 2 — Yürüş: manual input only. */}
-          <label className="block text-xs font-medium text-slate-strong">
-            <span className="mb-1 block">{UI.mileage}, km ({UI.max})</span>
-            <input name="mileage_max" type="text" inputMode="numeric" aria-label={`${UI.mileage} ${UI.max}`} onInput={digitsOnly} className={advancedField} data-testid="home-adv-mileage-max" />
-          </label>
-          {/* 3 — Buraxılış ili. */}
-          <fieldset>
-            <legend className="mb-1 text-xs font-medium text-slate-strong">{UI.year}</legend>
-            <div className="grid grid-cols-2 gap-2">
-              <select name="year_min" defaultValue="" aria-label="Minimum il" className={advancedField} data-testid="home-adv-year-min">
-                <option value="">Minimum il</option>
-                {advanced.years.map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
-              <select name="year_max" defaultValue="" aria-label="Maximum il" className={advancedField} data-testid="home-adv-year-max">
-                <option value="">Maximum il</option>
-                {advanced.years.map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </div>
-          </fieldset>
-          {/* 4 — Mühərrikin həcmi. */}
-          <fieldset>
-            <legend className="mb-1 text-xs font-medium text-slate-strong">{UI.engineCcTitle}</legend>
-            <div className="grid grid-cols-2 gap-2">
-              <select name="engine_cc_min" defaultValue="" aria-label={`${UI.engineCcTitle} ${UI.min}`} className={advancedField} data-testid="home-adv-engine-min">
-                <option value="">{UI.min}</option>
-                {engineCcOptions().map((v) => <option key={v} value={v}>{v}</option>)}
-              </select>
-              <select name="engine_cc_max" defaultValue="" aria-label={`${UI.engineCcTitle} ${UI.max}`} className={advancedField} data-testid="home-adv-engine-max">
-                <option value="">{UI.max}</option>
-                {engineCcOptions().map((v) => <option key={v} value={v}>{v}</option>)}
-              </select>
-            </div>
-          </fieldset>
-          {/* 5 — Rəng. */}
+        {/* Collapsed/expanded toggle (12.5/600 green + count chip + chevron). */}
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls="home-advanced-filters"
+          onClick={toggleExpanded}
+          className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-control text-[12.5px] font-semibold text-primary transition-colors duration-150 hover:text-primary-hover"
+          data-testid="home-advanced-toggle"
+        >
+          Ətraflı axtarış
+          {!expanded && collapsedCount > 0 ? (
+            <span className="rounded-pill bg-primary-tint px-1.5 py-0.5 text-[10px] font-semibold text-primary-hover" data-testid="home-adv-count">
+              {collapsedCount} filtr
+            </span>
+          ) : null}
+          {expanded ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
+        </button>
+      </div>
+
+      {/* Advanced zone — Direction 1C. DOM order is the mandated 1–10
+          (price is SOURCE position 6); grid-template-areas place the
+          price spine visually right at desk/xl and the full-width band
+          at md/390 without ever reordering the DOM. */}
+      <div
+        id="home-advanced-filters"
+        hidden={!expanded}
+        data-testid="home-advanced-panel"
+        className={
+          "border-t border-line p-4 md:px-4 md:py-3.5 desk:px-4 desk:py-3.5 xl:px-[18px] xl:py-4 " +
+          "grid grid-cols-1 gap-y-3 " +
+          "[grid-template-areas:'ban'_'mileage'_'year'_'engine'_'color'_'price'_'fuel'_'drive'_'trans'_'cond'_'actions'] " +
+          "md:grid-cols-2 md:gap-x-3.5 md:gap-y-3 " +
+          "md:[grid-template-areas:'ban_mileage'_'year_engine'_'color_.'_'price_price'_'fuel_drive'_'trans_cond'_'actions_actions'] " +
+          "desk:grid-cols-[1fr_1fr_300px] desk:gap-x-3.5 desk:gap-y-3 " +
+          "desk:[grid-template-areas:'ban_mileage_price'_'year_engine_price'_'color_fuel_price'_'drive_trans_price'_'cond_cond_price'] " +
+          "xl:grid-cols-[1fr_1fr_1fr_340px] xl:gap-x-4 xl:gap-y-3.5 " +
+          "xl:[grid-template-areas:'ban_mileage_year_price'_'engine_color_fuel_price'_'drive_trans_cond_price']"
+        }
+      >
+        {/* 1 — Ban növü / Motosiklet növü (existing catalog contract). */}
+        <div className="[grid-area:ban]">
+          <FieldLabel>{GROUP_LABELS[vehicleTypeGroup]}</FieldLabel>
+          <Select1C
+            key={`${vehicleTypeGroup}-${clearCount}`}
+            name={GROUP_TO_PARAM[vehicleTypeGroup]}
+            ariaLabel={GROUP_LABELS[vehicleTypeGroup]}
+            placeholder={UI.any}
+            optionItems={(options[vehicleTypeGroup] ?? []).map((o) => ({ value: o.id, label: o.name }))}
+            clearable
+            testid={`home-adv-${GROUP_TO_PARAM[vehicleTypeGroup]}`}
+          />
+        </div>
+        {/* 2 — Yürüş, km (manual only). */}
+        <div className="[grid-area:mileage]">
+          <FieldLabel>{UI.mileage}, km</FieldLabel>
+          <span className="relative block">
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="maks. 123 500"
+              aria-label={`${UI.mileage} ${UI.max}`}
+              value={mileage}
+              onChange={(e) => setMileage(digits(e.target.value))}
+              className={`${control} ${mileage !== "" ? "pr-9 font-medium" : ""}`}
+              data-testid="home-adv-mileage-max"
+            />
+            {mileage !== "" ? (
+              <button
+                type="button"
+                aria-label="Yürüş — təmizlə"
+                onClick={() => setMileage("")}
+                className="absolute right-2.5 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center text-muted transition-colors duration-150 hover:text-danger"
+              >
+                <X size={12} strokeWidth={2.5} aria-hidden="true" />
+              </button>
+            ) : null}
+          </span>
+        </div>
+        {/* 3 — Buraxılış ili (authoritative range). */}
+        <div className="[grid-area:year]">
+          <FieldLabel>{UI.year}</FieldLabel>
+          <div className="grid grid-cols-2 gap-2" key={`year-${clearCount}`}>
+            <Select1C name="year_min" ariaLabel="Minimum il" placeholder={UI.min} optionItems={advanced.years.map((y) => ({ value: String(y), label: String(y) }))} testid="home-adv-year-min" />
+            <Select1C name="year_max" ariaLabel="Maximum il" placeholder={UI.max} optionItems={advanced.years.map((y) => ({ value: String(y), label: String(y) }))} testid="home-adv-year-max" />
+          </div>
+        </div>
+        {/* 4 — Mühərrikin həcmi (shared generator). */}
+        <div className="[grid-area:engine]">
+          <FieldLabel>{UI.engineCcTitle}</FieldLabel>
+          <div className="grid grid-cols-2 gap-2" key={`engine-${clearCount}`}>
+            <Select1C name="engine_cc_min" ariaLabel={`${UI.engineCcTitle} ${UI.min}`} placeholder={UI.min} optionItems={engineCcOptions().map((v) => ({ value: String(v), label: String(v) }))} testid="home-adv-engine-min" />
+            <Select1C name="engine_cc_max" ariaLabel={`${UI.engineCcTitle} ${UI.max}`} placeholder={UI.max} optionItems={engineCcOptions().map((v) => ({ value: String(v), label: String(v) }))} testid="home-adv-engine-max" />
+          </div>
+        </div>
+        {/* 5 — Rəng (multi, swatches). */}
+        <div className="[grid-area:color]">
           <MultiSelectField
             key={`COLOR-${clearCount}`}
+            variant="1c"
             label={GROUP_LABELS.COLOR}
             name={GROUP_TO_PARAM.COLOR}
             options={options.COLOR ?? []}
             initialSelected={[]}
             swatches
-            triggerClassName="min-h-12"
             testid="home-adv-color"
           />
-          {/* 6 — Qiymət: same primary geometry as Engine; distinct via a
-              restrained sunken surface (net-zero footprint: -m-2 + p-2)
-              with the Kredit/Barter toggle buttons as a compact
-              secondary row. */}
-          <div className="-m-2 rounded-card border border-line-strong bg-sunken/50 p-2" data-testid="home-adv-price-block">
-          <fieldset>
-            <legend className="mb-1 text-xs font-semibold text-ink">{UI.price}, AZN</legend>
-            <div className="grid grid-cols-2 gap-2">
-              <input name="price_min" type="text" inputMode="numeric" placeholder={UI.min} aria-label={`${UI.price} ${UI.min}`} onInput={digitsOnly} className={advancedField} data-testid="home-adv-price-min" />
-              <input name="price_max" type="text" inputMode="numeric" placeholder={UI.max} aria-label={`${UI.price} ${UI.max}`} onInput={digitsOnly} className={advancedField} data-testid="home-adv-price-max" />
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
+        </div>
+        {/* 6 — Qiymət, AZN: spine at desk/xl, navy-rule band at md/390. */}
+        <div
+          className="[grid-area:price] rounded-r-lg border-l-[3px] border-navy bg-row-hover p-3 desk:-my-3.5 desk:flex desk:flex-col desk:rounded-none desk:border-l desk:border-line desk:bg-transparent desk:px-4 desk:py-3.5 xl:-my-4 xl:px-[18px] xl:py-4"
+          data-testid="home-adv-price-block"
+        >
+          <div className="flex items-center gap-2">
+            <span aria-hidden="true" className="rounded-[4px] bg-navy px-2 py-1 text-[10px] font-bold tracking-[0.06em] text-white">6</span>
+            <span className="text-[13.5px] font-bold text-navy xl:text-[14px]">{UI.price}, AZN</span>
+            {priceGroupActive ? (
               <button
                 type="button"
-                aria-pressed={credit}
-                onClick={() => setCredit((v) => !v)}
-                className={`inline-flex min-h-10 items-center gap-1.5 rounded-control border px-3 text-sm font-medium transition-colors duration-150 ${credit ? "border-primary bg-primary-tint font-semibold text-primary-pressed" : "border-line-strong bg-raised text-ink hover:border-primary hover:text-primary"}`}
-                data-testid="home-adv-credit"
+                onClick={resetPriceGroup}
+                className="ml-auto inline-flex min-h-8 items-center text-[11px] font-semibold text-primary transition-colors duration-150 hover:text-primary-hover"
+                data-testid="home-adv-price-reset"
               >
-                {credit ? <Check size={14} strokeWidth={2.5} aria-hidden="true" /> : null}
-                Kredit mümkündür
+                Sıfırla
               </button>
-              <button
-                type="button"
-                aria-pressed={barter}
-                onClick={() => setBarter((v) => !v)}
-                className={`inline-flex min-h-10 items-center gap-1.5 rounded-control border px-3 text-sm font-medium transition-colors duration-150 ${barter ? "border-primary bg-primary-tint font-semibold text-primary-pressed" : "border-line-strong bg-raised text-ink hover:border-primary hover:text-primary"}`}
-                data-testid="home-adv-barter"
-              >
-                {barter ? <Check size={14} strokeWidth={2.5} aria-hidden="true" /> : null}
-                {UI.barter}
-              </button>
-            </div>
-          </fieldset>
+            ) : null}
           </div>
-          {/* 7 — Yanacaq növü. */}
+          <div className="mt-2.5 grid grid-cols-2 gap-2 desk:grid-cols-1">
+            <PriceField prefix={UI.min} value={priceMin} onChange={setPriceMin} ariaLabel={`${UI.price} ${UI.min}`} testid="home-adv-price-min" />
+            <PriceField prefix={UI.max} value={priceMax} onChange={setPriceMax} ariaLabel={`${UI.price} ${UI.max}`} testid="home-adv-price-max" />
+          </div>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            <PriceToggle pressed={credit} onToggle={() => setCredit((v) => !v)} testid="home-adv-credit">
+              Kredit mümkündür
+            </PriceToggle>
+            <PriceToggle pressed={barter} onToggle={() => setBarter((v) => !v)} testid="home-adv-barter">
+              {UI.barter}
+            </PriceToggle>
+          </div>
+          <p className="mt-2 hidden text-[11px] leading-relaxed text-muted desk:block">Kredit və Barter qiymətə aiddir.</p>
+          {/* Actions live in the spine at desk+ (anchored to its foot). */}
+          <div className="mt-auto hidden flex-col items-stretch gap-2 pt-3.5 text-center desk:flex">{actionButtons}</div>
+        </div>
+        {/* 7 — Yanacaq növü (multi). */}
+        <div className="[grid-area:fuel]">
           <MultiSelectField
             key={`FUEL_TYPE-${clearCount}`}
-            label={GROUP_LABELS.FUEL_TYPE}
+            variant="1c"
+            label="Yanacaq növü"
             name={GROUP_TO_PARAM.FUEL_TYPE}
             options={options.FUEL_TYPE ?? []}
             initialSelected={[]}
-            triggerClassName="min-h-12"
             testid="home-adv-fuel_type"
           />
-          {/* 8 — Ötürücü (CAR only, existing drive-type contract). */}
-          {groups.includes("DRIVE_TYPE") ? (
-            <label className="block text-xs font-medium text-slate-strong">
-              <span className="mb-1 block">{GROUP_LABELS.DRIVE_TYPE}</span>
-              <select name={GROUP_TO_PARAM.DRIVE_TYPE} defaultValue="" className={advancedField} data-testid={`home-adv-${GROUP_TO_PARAM.DRIVE_TYPE}`}>
-                <option value="">{UI.any}</option>
-                {(options.DRIVE_TYPE ?? []).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-              </select>
-            </label>
-          ) : null}
-          {/* 9 — Sürətlər qutusu. */}
+        </div>
+        {/* 8 — Ötürücü (CAR only; existing drive-type contract). */}
+        {groups.includes("DRIVE_TYPE") ? (
+          <div className="[grid-area:drive]">
+            <FieldLabel>{GROUP_LABELS.DRIVE_TYPE}</FieldLabel>
+            <Select1C
+              key={`DRIVE_TYPE-${clearCount}`}
+              name={GROUP_TO_PARAM.DRIVE_TYPE}
+              ariaLabel={GROUP_LABELS.DRIVE_TYPE}
+              placeholder={UI.any}
+              optionItems={(options.DRIVE_TYPE ?? []).map((o) => ({ value: o.id, label: o.name }))}
+              clearable
+              testid={`home-adv-${GROUP_TO_PARAM.DRIVE_TYPE}`}
+            />
+          </div>
+        ) : null}
+        {/* 9 — Sürətlər qutusu (multi). */}
+        <div className="[grid-area:trans]">
           <MultiSelectField
             key={`TRANSMISSION-${clearCount}`}
+            variant="1c"
             label={GROUP_LABELS.TRANSMISSION}
             name={GROUP_TO_PARAM.TRANSMISSION}
             options={options.TRANSMISSION ?? []}
             initialSelected={[]}
-            triggerClassName="min-h-12"
             testid="home-adv-transmission"
           />
-          {/* 10 — Avtomobil vəziyyəti: the concluding full-width block. */}
-          <fieldset className="md:col-span-2 desk:col-span-3">
-            <legend className="mb-1 text-xs font-medium text-slate-strong">{UI.conditionTitle}</legend>
-            <div className="flex flex-wrap gap-4">
-              <label className="inline-flex min-h-12 items-center gap-2 text-sm text-ink">
-                <input type="checkbox" name="no_accident" className="size-5 accent-primary" data-testid="home-adv-no-accident" /> {UI.noAccident}
-              </label>
-              <label className="inline-flex min-h-12 items-center gap-2 text-sm text-ink">
-                <input type="checkbox" name="not_repainted" className="size-5 accent-primary" data-testid="home-adv-not-repainted" /> {UI.notRepainted}
-              </label>
-            </div>
-          </fieldset>
         </div>
-        <div className="mt-2 flex justify-end">
-          <button
-            type="button"
-            onClick={clearAll}
-            className="inline-flex min-h-12 items-center rounded-control px-3 text-sm font-medium text-slate-strong transition-colors duration-150 hover:text-ink"
-            data-testid="home-adv-clear"
-          >
-            Təmizlə
-          </button>
+        {/* 10 — Avtomobil vəziyyəti: visible toggle pair, final block. */}
+        <div className="[grid-area:cond]">
+          <FieldLabel>{UI.conditionTitle}</FieldLabel>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <ConditionToggle pressed={noAccident} onToggle={() => setNoAccident((v) => !v)} testid="home-adv-no-accident">
+              {UI.noAccident}
+            </ConditionToggle>
+            <ConditionToggle pressed={notRepainted} onToggle={() => setNotRepainted((v) => !v)} testid="home-adv-not-repainted">
+              {UI.notRepainted}
+            </ConditionToggle>
+          </div>
         </div>
-      </div>
-
-      <div className="mt-3 flex justify-start">
-        <button
-          type="button"
-          aria-expanded={expanded}
-          aria-controls="home-advanced-filters"
-          onClick={() => setExpanded((v) => !v)}
-          className="inline-flex min-h-12 items-center gap-1 rounded-control px-1 text-sm font-medium text-primary transition-colors duration-150 hover:text-primary-hover"
-          data-testid="home-advanced-toggle"
-        >
-          {expanded ? "Ətraflı axtarışı gizlət" : "Ətraflı axtarış"}
-          {expanded ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
-        </button>
+        {/* Actions in flow below desk (right-aligned @768, stacked @390). */}
+        <div className="[grid-area:actions] mt-1 flex flex-col gap-2 border-t border-sunken pt-3 sm:flex-row-reverse sm:items-center sm:justify-start sm:gap-2.5 desk:hidden">
+          {actionButtons}
+        </div>
       </div>
     </form>
   );

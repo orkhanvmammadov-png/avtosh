@@ -49,8 +49,8 @@ test.describe("advanced search visual artifacts", () => {
     await page.getByTestId("home-adv-fuel_type-opt-PETROL").check();
     await page.getByTestId("home-adv-fuel_type-opt-HYBRID").check();
     await page.getByTestId("home-adv-fuel_type-toggle").click();
-    await page.getByTestId("home-adv-no-accident").check();
-    await page.getByTestId("home-adv-not-repainted").check();
+    await page.getByTestId("home-adv-no-accident").click();
+    await page.getByTestId("home-adv-not-repainted").click();
     await page.getByTestId("home-adv-credit").click();
     await page.getByTestId("home-adv-barter").click();
     await page.evaluate(() => window.scrollTo(0, 0)); // avoid sticky-header repaint artifacts
