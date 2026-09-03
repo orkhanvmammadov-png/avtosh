@@ -240,6 +240,8 @@ export async function updateDraft(
     set.credit_available = patch.credit_available;
   if (patch.barter_available !== undefined)
     set.barter_available = patch.barter_available;
+  if (patch.no_accident !== undefined) set.no_accident = patch.no_accident;
+  if (patch.not_repainted !== undefined) set.not_repainted = patch.not_repainted;
   if (patch.description !== undefined) set.description = patch.description;
   if (patch.contact_phone !== undefined) {
     if (patch.contact_phone === null) {

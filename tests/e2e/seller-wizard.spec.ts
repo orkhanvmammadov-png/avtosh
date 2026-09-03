@@ -45,6 +45,30 @@ test("blocked seller sees a safe status message, no wizard", async ({ page, cont
   await expect(page.getByTestId("create-listing")).toHaveCount(0);
 });
 
+test("condition claims: check → autosave → reload → uncheck → null (4.17O.2)", async ({ page, context }, { project }) => {
+  await loginAs(context, testPhone(project.name, 38));
+  await page.goto("/elan-yerlesdir");
+  await page.getByTestId("create-category-CAR").check();
+  await page.getByTestId("create-listing-button").click();
+  await page.waitForURL(/\/elan-yerlesdir\/[0-9a-f-]{36}$/);
+  await page.getByTestId("wizard-step-2").click();
+  await page.getByTestId("wizard-no-accident").check();
+  await page.getByTestId("wizard-not-repainted").check();
+  await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+  // claims survive a full reload (stored as TRUE)
+  await page.reload();
+  await page.getByTestId("wizard-step-2").click();
+  await expect(page.getByTestId("wizard-no-accident")).toBeChecked();
+  await expect(page.getByTestId("wizard-not-repainted")).toBeChecked();
+  // removing a claim returns it to NULL (no negative claim stored)
+  await page.getByTestId("wizard-not-repainted").uncheck();
+  await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+  await page.reload();
+  await page.getByTestId("wizard-step-2").click();
+  await expect(page.getByTestId("wizard-no-accident")).toBeChecked();
+  await expect(page.getByTestId("wizard-not-repainted")).not.toBeChecked();
+});
+
 test("full seller journey: create → fill → photos → preview → FREE submit", async ({ page, context }, { project }) => {
   test.setTimeout(180_000);
   const s = seed();

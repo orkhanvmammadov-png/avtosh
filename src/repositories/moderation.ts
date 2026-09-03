@@ -46,6 +46,8 @@ export interface ModerationListingRow {
   color: string | null;
   city_name: string | null;
   credit_available: boolean;
+  no_accident: boolean | null;
+  not_repainted: boolean | null;
   barter_available: boolean;
   description: string | null;
   contact_phone_e164: string | null;
@@ -137,7 +139,7 @@ export async function getModerationListing(
            l.year, l.price_minor::text as price_minor, l.currency, l.mileage, l.engine_cc,
            ft.name_az as fuel_type, tr.name_az as transmission, bt.name_az as body_type,
            dt.name_az as drive_type, mt.name_az as motorcycle_type, co.name_az as color,
-           ci.name_az as city_name, l.credit_available, l.barter_available,
+           ci.name_az as city_name, l.credit_available, l.barter_available, l.no_accident, l.not_repainted,
            l.description, l.contact_phone_e164, l.submitted_at, l.published_at,
            l.current_expires_at,
            u.id as owner_id, u.phone_e164 as owner_phone,

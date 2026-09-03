@@ -41,6 +41,9 @@ export interface OwnerListingDto {
   colorId: string | null;
   cityId: string | null;
   creditAvailable: boolean;
+  /** Positive claims: true = claimed, null = no claim. */
+  noAccident: boolean | null;
+  notRepainted: boolean | null;
   barterAvailable: boolean;
   description: string | null;
   contactPhone: string | null;
@@ -103,6 +106,8 @@ export async function toOwnerListingDto(
     cityId: row.city_id,
     creditAvailable: row.credit_available,
     barterAvailable: row.barter_available,
+    noAccident: row.no_accident,
+    notRepainted: row.not_repainted,
     description: row.description,
     contactPhone: row.contact_phone_e164,
     featureIds,

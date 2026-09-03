@@ -325,6 +325,8 @@ export interface DetailRow {
   city: string | null;
   credit_available: boolean;
   barter_available: boolean;
+  no_accident: boolean | null;
+  not_repainted: boolean | null;
   description: string | null;
   contact_phone_e164: string | null;
   seller_display_name: string | null;
@@ -342,7 +344,7 @@ export async function getPublicDetail(
   const rows = await sql<DetailRow[]>`
     select l.id, l.public_id::text as public_id, l.status, l.current_expires_at,
            c.code as category, b.name as brand, m.name as model, l.year,
-           l.price_minor::text as price_minor, l.currency, l.mileage, l.engine_cc,
+           l.price_minor::text as price_minor, l.currency, l.mileage, l.engine_cc, l.no_accident, l.not_repainted,
            ft.name_az as fuel_type, tr.name_az as transmission, bt.name_az as body_type,
            dt.name_az as drive_type, mt.name_az as motorcycle_type, co.name_az as color,
            ci.name_az as city, l.credit_available, l.barter_available, l.description,

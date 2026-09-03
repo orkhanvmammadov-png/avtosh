@@ -462,6 +462,9 @@ export interface PublicDetailDto {
   color: string | null;
   creditAvailable: boolean | null;
   barterAvailable: boolean | null;
+  /** Positive seller claims (true = claimed; null = no claim/unknown). */
+  noAccident: boolean | null;
+  notRepainted: boolean | null;
   description: string | null;
   features: { code: string; name: string }[];
   seller: { displayName: string | null; contactPhoneMasked: string | null } | null;
@@ -531,6 +534,7 @@ export async function publicDetail(
         ...base,
         engineCc: null, fuelType: null, transmission: null, bodyType: null, driveType: null,
         motorcycleType: null, color: null, creditAvailable: null, barterAvailable: null,
+        noAccident: null, notRepainted: null,
         description: null, features: [], seller: null,
       },
       cacheControl,
@@ -552,6 +556,8 @@ export async function publicDetail(
     color: row.color,
     creditAvailable: row.credit_available,
     barterAvailable: row.barter_available,
+    noAccident: row.no_accident,
+    notRepainted: row.not_repainted,
     description: row.description,
     features,
     seller: {

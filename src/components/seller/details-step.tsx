@@ -4,7 +4,7 @@ import { aznInputToMinor, minorToAznInput } from "@/lib/format";
 import { SELLER } from "@/lib/marketplace/labels";
 import type { ListingEditor } from "@/components/seller/use-listing-editor";
 import { OPTION_GROUPS, type WizardCatalog } from "@/components/seller/use-wizard-catalog";
-import { CheckboxField, DeferredInput, SelectField } from "@/components/seller/wizard-fields";
+import { CheckboxField, DeferredCheckbox, DeferredInput, SelectField } from "@/components/seller/wizard-fields";
 
 /**
  * Step 2 — price/mileage/city, category-scoped option groups (only
@@ -76,6 +76,23 @@ export function DetailsStep({ editor, catalog }: { editor: ListingEditor; catalo
           />
         ))}
       </div>
+      <fieldset>
+        <legend className="mb-2 text-xs font-medium text-slate-strong">{SELLER.conditionTitle}</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <DeferredCheckbox
+            id="wizard-no-accident"
+            label={SELLER.noAccident}
+            initialChecked={dto.noAccident === true}
+            onValue={(checked) => editor.patch({ no_accident: checked ? true : null }, { immediate: true })}
+          />
+          <DeferredCheckbox
+            id="wizard-not-repainted"
+            label={SELLER.notRepainted}
+            initialChecked={dto.notRepainted === true}
+            onValue={(checked) => editor.patch({ not_repainted: checked ? true : null }, { immediate: true })}
+          />
+        </div>
+      </fieldset>
       <div className="grid gap-3 sm:grid-cols-2">
         <CheckboxField
           id="wizard-credit"
