@@ -32,6 +32,11 @@ const TRUST = [
  */
 async function loadAdvancedCatalog(categoryCodes: string[]): Promise<HomeAdvancedCatalog> {
   const cities = await getCities().catch(() => []);
+  // Accepted search bounds are 1900–2100 (validators/marketplace);
+  // options run newest→oldest from the current year, computed
+  // server-side so hydration sees one consistent list.
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 1900 + 1 }, (_, i) => currentYear - i);
   const optionsByCategory: HomeAdvancedCatalog["optionsByCategory"] = {};
   await Promise.all(
     categoryCodes.map(async (category) => {
@@ -43,7 +48,7 @@ async function loadAdvancedCatalog(categoryCodes: string[]): Promise<HomeAdvance
       groups.forEach((g, i) => { optionsByCategory[category][g] = lists[i]; });
     }),
   );
-  return { cities, optionsByCategory };
+  return { cities, years, optionsByCategory };
 }
 
 export default async function HomePage() {

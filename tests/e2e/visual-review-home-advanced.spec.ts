@@ -39,7 +39,7 @@ test.describe("home advanced search visual artifacts", () => {
     await page.getByTestId("home-brand").selectOption(s.toyotaBrandId);
     await page.getByTestId("home-adv-city").selectOption(s.bakuCityId);
     await page.getByTestId("home-adv-price-min").fill("5000");
-    await page.getByTestId("home-adv-year-min").fill("2015");
+    await page.getByTestId("home-adv-year-min").selectOption("2015");
     await page.getByTestId("home-adv-credit").check();
     await page.screenshot({ path: `${OUT}/home-advanced-1440-selected.png`, fullPage: true });
   });

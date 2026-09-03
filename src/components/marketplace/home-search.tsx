@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { aznInputToMinor } from "@/lib/format";
 import { CATEGORY_LABELS, GROUP_LABELS, UI } from "@/lib/marketplace/labels";
@@ -21,9 +21,77 @@ const selectClass =
 const advancedField =
   "min-h-12 w-full rounded-control border border-line-strong bg-raised px-3 text-sm text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none";
 
+/**
+ * Numeric field with owner-requested step behavior (UAT correction 1):
+ * the +/- controls and Arrow keys move by `step` FROM THE CURRENT
+ * VALUE (27 300 → +500 → 27 800 — no snapping to multiples), while
+ * typing stays free-form for any digits. This is UX only — no step
+ * validation, no rounding of typed values, no native step attribute
+ * (which would both snap and reject non-multiples). Descending
+ * through zero clears to the blank "any" state instead of
+ * serializing a meaningless 0.
+ */
+function SteppedNumberInput({
+  name,
+  step,
+  ariaLabel,
+  placeholder,
+  testid,
+}: {
+  name: string;
+  step: number;
+  ariaLabel: string;
+  placeholder?: string;
+  testid: string;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  function bump(direction: 1 | -1) {
+    const el = ref.current;
+    if (!el) return;
+    const digits = el.value.replace(/\D/g, "");
+    const current = digits === "" ? 0 : Number(digits);
+    const next = current + direction * step;
+    el.value = next > 0 ? String(next) : "";
+  }
+  const stepButton =
+    "flex h-12 w-12 shrink-0 items-center justify-center rounded-control border border-line-strong bg-raised text-slate-strong transition-colors duration-150 hover:border-primary hover:text-primary";
+  return (
+    <div className="flex items-center gap-1.5">
+      <button type="button" tabIndex={-1} aria-label={`${ariaLabel} — ${step} azalt`} className={stepButton} onClick={() => bump(-1)} data-testid={`${testid}-dec`}>
+        <Minus size={15} aria-hidden="true" />
+      </button>
+      <input
+        ref={ref}
+        name={name}
+        type="text"
+        inputMode="numeric"
+        placeholder={placeholder}
+        aria-label={ariaLabel}
+        className={`${advancedField} min-w-0 flex-1 text-center`}
+        data-testid={testid}
+        onInput={(e) => {
+          // digits only — matches the previous number-input constraint
+          const el = e.currentTarget;
+          const digits = el.value.replace(/\D/g, "");
+          if (el.value !== digits) el.value = digits;
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowUp") { e.preventDefault(); bump(1); }
+          if (e.key === "ArrowDown") { e.preventDefault(); bump(-1); }
+        }}
+      />
+      <button type="button" tabIndex={-1} aria-label={`${ariaLabel} — ${step} artır`} className={stepButton} onClick={() => bump(1)} data-testid={`${testid}-inc`}>
+        <Plus size={15} aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
 /** Server-loaded reference data for the inline advanced panel (4.17O.2). */
 export interface HomeAdvancedCatalog {
   cities: CityDto[];
+  /** Newest→oldest option list, computed server-side (SSR-consistent). */
+  years: number[];
   /** Reference options per category per group (existing catalog scoping). */
   optionsByCategory: Record<string, Record<string, ReferenceOptionDto[]>>;
 }
@@ -176,21 +244,27 @@ export function HomeSearch({
           </label>
           <fieldset>
             <legend className="mb-1 text-xs font-medium text-slate-strong">{UI.price}, AZN</legend>
-            <div className="grid grid-cols-2 gap-2">
-              <input name="price_min" type="number" inputMode="numeric" min={1} placeholder={UI.min} aria-label={`${UI.price} ${UI.min}`} className={advancedField} data-testid="home-adv-price-min" />
-              <input name="price_max" type="number" inputMode="numeric" min={1} placeholder={UI.max} aria-label={`${UI.price} ${UI.max}`} className={advancedField} data-testid="home-adv-price-max" />
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <SteppedNumberInput name="price_min" step={500} placeholder={UI.min} ariaLabel={`${UI.price} ${UI.min}`} testid="home-adv-price-min" />
+              <SteppedNumberInput name="price_max" step={500} placeholder={UI.max} ariaLabel={`${UI.price} ${UI.max}`} testid="home-adv-price-max" />
             </div>
           </fieldset>
           <fieldset>
             <legend className="mb-1 text-xs font-medium text-slate-strong">{UI.year}</legend>
             <div className="grid grid-cols-2 gap-2">
-              <input name="year_min" type="number" inputMode="numeric" min={1900} max={2100} placeholder={UI.min} aria-label={`${UI.year} ${UI.min}`} className={advancedField} data-testid="home-adv-year-min" />
-              <input name="year_max" type="number" inputMode="numeric" min={1900} max={2100} placeholder={UI.max} aria-label={`${UI.year} ${UI.max}`} className={advancedField} data-testid="home-adv-year-max" />
+              <select name="year_min" defaultValue="" aria-label="Minimum il" className={advancedField} data-testid="home-adv-year-min">
+                <option value="">Minimum il</option>
+                {advanced.years.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <select name="year_max" defaultValue="" aria-label="Maximum il" className={advancedField} data-testid="home-adv-year-max">
+                <option value="">Maximum il</option>
+                {advanced.years.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
             </div>
           </fieldset>
           <label className="block text-xs font-medium text-slate-strong">
             <span className="mb-1 block">{UI.mileage}, km ({UI.max})</span>
-            <input name="mileage_max" type="number" inputMode="numeric" min={0} className={advancedField} data-testid="home-adv-mileage-max" />
+            <SteppedNumberInput name="mileage_max" step={1000} ariaLabel={`${UI.mileage} ${UI.max}`} testid="home-adv-mileage-max" />
           </label>
           {groups.map((group) => (
             <label key={group} className="block text-xs font-medium text-slate-strong">

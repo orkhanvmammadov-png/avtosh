@@ -57,15 +57,81 @@ test.describe("Home", () => {
     // selections survive collapse/expand — collapse is NOT reset
     await page.getByTestId("home-adv-city").selectOption(s.bakuCityId);
     await page.getByTestId("home-adv-price-min").fill("5000");
+    await page.getByTestId("home-adv-year-min").selectOption("2020");
     await toggle.click();
     await expect(panel).toBeHidden();
     await toggle.click();
     await expect(page.getByTestId("home-adv-city")).toHaveValue(s.bakuCityId);
     await expect(page.getByTestId("home-adv-price-min")).toHaveValue("5000");
+    await expect(page.getByTestId("home-adv-year-min")).toHaveValue("2020");
     // explicit Təmizlə resets
     await page.getByTestId("home-adv-clear").click();
     await expect(page.getByTestId("home-adv-city")).toHaveValue("");
     await expect(page.getByTestId("home-adv-price-min")).toHaveValue("");
+  });
+
+  test("price/mileage steppers move ±500/±1000 from the CURRENT value; typing stays free (UAT correction 1)", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("home-advanced-toggle").click();
+    const price = page.getByTestId("home-adv-price-min");
+    // blank → +500 → 1000 → back to 500
+    await page.getByTestId("home-adv-price-min-inc").click();
+    await expect(price).toHaveValue("500");
+    await page.getByTestId("home-adv-price-min-inc").click();
+    await expect(price).toHaveValue("1000");
+    await page.getByTestId("home-adv-price-min-dec").click();
+    await expect(price).toHaveValue("500");
+    // manual arbitrary value is kept, never rounded; step moves FROM it
+    await price.fill("27300");
+    await page.getByTestId("home-adv-price-min-inc").click();
+    await expect(price).toHaveValue("27800");
+    await page.getByTestId("home-adv-price-min-dec").click();
+    await expect(price).toHaveValue("27300");
+    // ArrowUp/ArrowDown mirror the step
+    await price.focus();
+    await page.keyboard.press("ArrowUp");
+    await expect(price).toHaveValue("27800");
+    await page.keyboard.press("ArrowDown");
+    await expect(price).toHaveValue("27300");
+
+    const mileage = page.getByTestId("home-adv-mileage-max");
+    await page.getByTestId("home-adv-mileage-max-inc").click();
+    await expect(mileage).toHaveValue("1000");
+    await page.getByTestId("home-adv-mileage-max-inc").click();
+    await expect(mileage).toHaveValue("2000");
+    await mileage.fill("123500");
+    await page.getByTestId("home-adv-mileage-max-inc").click();
+    await expect(mileage).toHaveValue("124500");
+    await page.getByTestId("home-adv-mileage-max-dec").click();
+    await expect(mileage).toHaveValue("123500");
+  });
+
+  test("year controls are selects (newest first) and both bounds serialize + restore (UAT correction 1)", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("home-advanced-toggle").click();
+    const yearMin = page.getByTestId("home-adv-year-min");
+    const yearMax = page.getByTestId("home-adv-year-max");
+    // real <select> controls with neutral empty options
+    expect(await yearMin.evaluate((el) => el.tagName)).toBe("SELECT");
+    expect(await yearMax.evaluate((el) => el.tagName)).toBe("SELECT");
+    await expect(yearMin.locator("option").first()).toHaveText("Minimum il");
+    // newest year first after the neutral option
+    const currentYear = new Date().getFullYear();
+    await expect(yearMin.locator("option").nth(1)).toHaveText(String(currentYear));
+    await yearMin.selectOption("2020");
+    await yearMax.selectOption("2024");
+    // typed manual price value (non-multiple of 500) serializes untouched
+    await page.getByTestId("home-adv-price-min").fill("27300");
+    await page.getByTestId("home-search-submit").click();
+    await page.waitForURL(/\/elanlar\?/);
+    const url = new URL(page.url());
+    expect(url.searchParams.get("year_min")).toBe("2020");
+    expect(url.searchParams.get("year_max")).toBe("2024");
+    expect(url.searchParams.get("price_min")).toBe("2730000"); // minor units, no rounding
+    const form = page.getByTestId("filter-form").first();
+    await expect(form.locator('input[name="year_min"]')).toHaveValue("2020");
+    await expect(form.locator('input[name="year_max"]')).toHaveValue("2024");
+    await expect(form.getByTestId("filter-price-min")).toHaveValue("27300");
   });
 
   test("advanced Home submission lands on /elanlar with the existing URL contract (4.17O.2)", async ({ page }) => {
@@ -75,7 +141,7 @@ test.describe("Home", () => {
     await page.getByTestId("home-brand").selectOption(s.toyotaBrandId);
     await page.getByTestId("home-adv-city").selectOption(s.bakuCityId);
     await page.getByTestId("home-adv-price-min").fill("5000");
-    await page.getByTestId("home-adv-year-min").fill("2015");
+    await page.getByTestId("home-adv-year-min").selectOption("2015");
     await page.getByTestId("home-adv-credit").check();
     await page.getByTestId("home-search-submit").click();
     await page.waitForURL(/\/elanlar\?/);
