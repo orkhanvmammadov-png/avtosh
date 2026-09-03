@@ -1,5 +1,21 @@
 import { z } from "zod";
 
+/**
+ * Authoritative production-year policy (Phase 4.17O.2): listings and
+ * search accept model years from LISTING_YEAR_MIN through the current
+ * calendar year in Azerbaijan plus one. One rule for Seller Wizard,
+ * search validation and every year picker — no per-surface maxima.
+ */
+export const LISTING_YEAR_MIN = 1900;
+
+/** Current calendar year in Asia/Baku + 1 (e.g. 2027 during 2026). */
+export function listingYearMax(now: Date = new Date()): number {
+  const bakuYear = Number(
+    new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Baku", year: "numeric" }).format(now),
+  );
+  return bakuYear + 1;
+}
+
 const schema = z.object({
   MARKETPLACE_PAGE_SIZE: z.coerce.number().int().min(1).max(48).default(24),
   MARKETPLACE_MAX_PAGE_SIZE: z.coerce.number().int().min(1).max(100).default(48),

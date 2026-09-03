@@ -51,7 +51,7 @@ function FilterForm({ state, catalog, onApplied }: { state: SearchFilterState; c
     const data = new FormData(event.currentTarget);
     const next: SearchFilterState = { category, sort: state.sort };
     const scalar = ["brand_id", "model_id", "city_id", "year_min", "year_max", "mileage_max",
-      "fuel_type_id", "transmission_id", "body_type_id", "drive_type_id", "motorcycle_type_id", "color_id"] as const;
+      "fuel_type_ids", "transmission_ids", "body_type_id", "drive_type_id", "motorcycle_type_id", "color_ids"] as const;
     for (const key of scalar) {
       const value = String(data.get(key) ?? "").trim();
       if (value.length > 0) next[key] = value;

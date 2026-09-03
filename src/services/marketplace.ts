@@ -218,12 +218,25 @@ const REFERENCE_FILTERS: {
   group: string;
   assign: (filters: SearchFilters, value: string) => void;
 }[] = [
-  { key: "fuel_type_id", group: "FUEL_TYPE", assign: (f, v) => { f.fuelTypeId = v; } },
-  { key: "transmission_id", group: "TRANSMISSION", assign: (f, v) => { f.transmissionId = v; } },
   { key: "body_type_id", group: "BODY_TYPE", assign: (f, v) => { f.bodyTypeId = v; } },
   { key: "drive_type_id", group: "DRIVE_TYPE", assign: (f, v) => { f.driveTypeId = v; } },
   { key: "motorcycle_type_id", group: "MOTORCYCLE_TYPE", assign: (f, v) => { f.motorcycleTypeId = v; } },
-  { key: "color_id", group: "COLOR", assign: (f, v) => { f.colorId = v; } },
+];
+
+/**
+ * Multi-select groups (4.17O.2): the canonical plural CSV param and
+ * the legacy singular param merge into ONE deduplicated collection —
+ * both spellings address the same filter, never separate buckets.
+ */
+const MULTI_REFERENCE_FILTERS: {
+  pluralKey: "fuel_type_ids" | "transmission_ids" | "color_ids";
+  singularKey: "fuel_type_id" | "transmission_id" | "color_id";
+  group: string;
+  assign: (filters: SearchFilters, values: string[]) => void;
+}[] = [
+  { pluralKey: "fuel_type_ids", singularKey: "fuel_type_id", group: "FUEL_TYPE", assign: (f, v) => { f.fuelTypeIds = v; } },
+  { pluralKey: "transmission_ids", singularKey: "transmission_id", group: "TRANSMISSION", assign: (f, v) => { f.transmissionIds = v; } },
+  { pluralKey: "color_ids", singularKey: "color_id", group: "COLOR", assign: (f, v) => { f.colorIds = v; } },
 ];
 
 /** Validates filter relationships against current catalog data (catalog semantics reused). */
@@ -265,6 +278,19 @@ async function resolveFilters(query: SearchQuery): Promise<SearchFilters> {
     }
     ref.assign(filters, value);
   }
+  for (const ref of MULTI_REFERENCE_FILTERS) {
+    const merged = [
+      ...new Set([...(query[ref.pluralKey] ?? []), ...(query[ref.singularKey] !== undefined ? [query[ref.singularKey]] : [])]),
+    ] as string[];
+    if (merged.length === 0) continue;
+    for (const value of merged) {
+      const option = await findActiveReferenceOptionForCategory(value, ref.group, category.id);
+      if (option === undefined) {
+        throw new ApiError("CATALOG_INVALID_GROUP", `Invalid ${ref.group} filter for this category.`);
+      }
+    }
+    ref.assign(filters, merged);
+  }
   if (query.feature_ids !== undefined) {
     const valid = await filterActiveFeatureIdsForCategory(query.feature_ids, category.id);
     if (valid.length !== query.feature_ids.length) {
@@ -277,8 +303,13 @@ async function resolveFilters(query: SearchQuery): Promise<SearchFilters> {
   if (query.year_min !== undefined) filters.yearMin = query.year_min;
   if (query.year_max !== undefined) filters.yearMax = query.year_max;
   if (query.mileage_max !== undefined) filters.mileageMax = query.mileage_max;
+  if (query.engine_cc_min !== undefined) filters.engineCcMin = query.engine_cc_min;
+  if (query.engine_cc_max !== undefined) filters.engineCcMax = query.engine_cc_max;
   if (query.credit !== undefined) filters.credit = query.credit;
   if (query.barter !== undefined) filters.barter = query.barter;
+  // Positive-claim semantics: only TRUE ever filters (false = no filter).
+  if (query.no_accident === true) filters.noAccident = true;
+  if (query.not_repainted === true) filters.notRepainted = true;
   return filters;
 }
 

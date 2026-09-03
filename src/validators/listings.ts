@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LISTING_YEAR_MIN, listingYearMax } from "@/lib/config/marketplace";
 import { ACCEPTED_IMAGE_MIME_TYPES } from "@/lib/config/listing-images";
 
 /**
@@ -25,7 +26,7 @@ export const draftPatchSchema = z
     category: categoryCode.optional(),
     brand_id: z.uuid().nullable().optional(),
     model_id: z.uuid().nullable().optional(),
-    year: z.number().int().min(1900).max(2100).nullable().optional(),
+    year: z.number().int().min(LISTING_YEAR_MIN).max(listingYearMax()).nullable().optional(),
     price_minor: z
       .number()
       .int()
