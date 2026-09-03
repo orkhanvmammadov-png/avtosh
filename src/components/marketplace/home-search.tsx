@@ -255,8 +255,12 @@ export function HomeSearch({
             </label>
           ))}
         </div>
-        {/* Condition claims and boolean filters stay directly visible — never inside a menu. */}
-        <div className="mt-3 flex flex-wrap gap-x-10 gap-y-2">
+        {/* Condition claims and boolean filters stay directly visible —
+            never inside a menu. Two DISTINCT groups: stacked with a
+            clear gap on mobile, side by side with a hairline divider
+            at md+ so the group boundary stays obvious without an
+            oversized gap. */}
+        <div className="mt-3 flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start md:gap-y-2">
           <fieldset>
             <legend className="mb-1 text-xs font-medium text-slate-strong">{UI.conditionTitle}</legend>
             <div className="flex flex-wrap gap-4">
@@ -268,6 +272,7 @@ export function HomeSearch({
               </label>
             </div>
           </fieldset>
+          <div className="border-t border-line pt-3 md:ml-6 md:border-l md:border-t-0 md:pl-6 md:pt-0">
           <fieldset>
             <legend className="mb-1 text-xs font-medium text-slate-strong">Əlavə imkanlar</legend>
             <div className="flex flex-wrap gap-4">
@@ -279,6 +284,7 @@ export function HomeSearch({
               </label>
             </div>
           </fieldset>
+          </div>
         </div>
         <div className="mt-2 flex justify-end">
           <button
