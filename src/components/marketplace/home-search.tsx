@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { aznInputToMinor } from "@/lib/format";
 import { CATEGORY_LABELS, GROUP_LABELS, UI } from "@/lib/marketplace/labels";
@@ -69,6 +69,8 @@ export function HomeSearch({
   const [modelId, setModelId] = useState("");
   const [loadingBrands, setLoadingBrands] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [credit, setCredit] = useState(false);
+  const [barter, setBarter] = useState(false);
   const [clearCount, setClearCount] = useState(0); // remounts multi-selects on Təmizlə
   const requestRef = useRef(0);
 
@@ -131,9 +133,9 @@ export function HomeSearch({
     // Positive claims only — unchecked emits nothing.
     if (data.get("no_accident") === "on") next.no_accident = "true";
     if (data.get("not_repainted") === "on") next.not_repainted = "true";
-    // Existing boolean filters (unchanged contract).
-    if (data.get("credit") === "on") next.credit = "true";
-    if (data.get("barter") === "on") next.barter = "true";
+    // Existing boolean filters (unchanged contract) — toggle-button state.
+    if (credit) next.credit = "true";
+    if (barter) next.barter = "true";
     router.push(searchHref(next));
   }
 
@@ -143,6 +145,8 @@ export function HomeSearch({
     setBrandId("");
     setModelId("");
     setModels([]);
+    setCredit(false);
+    setBarter(false);
     setClearCount((c) => c + 1);
   }
 
@@ -186,8 +190,14 @@ export function HomeSearch({
         </div>
       </div>
 
-      {/* Inline advanced panel — stays mounted; `hidden` toggles it. */}
+      {/* Inline advanced panel — stays mounted; `hidden` toggles it.
+          Owner-authoritative reading order (DOM = visual, no CSS order
+          tricks): general location first, then Ban → Yürüş → İl →
+          Mühərrik → Rəng → Qiymət(+Kredit/Barter) → Yanacaq → Ötürücü
+          → Sürətlər qutusu, closing with Avtomobil vəziyyəti as a
+          full-width final block. */}
       <div id="home-advanced-filters" hidden={!expanded} data-testid="home-advanced-panel" className="mt-4 border-t border-line pt-4">
+        {/* General location filter (outside the vehicle-attribute sequence). */}
         <div className="grid gap-3 md:grid-cols-2 desk:grid-cols-3">
           <label className="block text-xs font-medium text-slate-strong">
             <span className="mb-1 block">{UI.city}</span>
@@ -196,13 +206,24 @@ export function HomeSearch({
               {advanced.cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
-          <fieldset>
-            <legend className="mb-1 text-xs font-medium text-slate-strong">{UI.price}, AZN</legend>
-            <div className="grid grid-cols-2 gap-2">
-              <input name="price_min" type="text" inputMode="numeric" placeholder={UI.min} aria-label={`${UI.price} ${UI.min}`} onInput={digitsOnly} className={advancedField} data-testid="home-adv-price-min" />
-              <input name="price_max" type="text" inputMode="numeric" placeholder={UI.max} aria-label={`${UI.price} ${UI.max}`} onInput={digitsOnly} className={advancedField} data-testid="home-adv-price-max" />
-            </div>
-          </fieldset>
+        </div>
+        <div className="mt-3 grid items-start gap-3 md:grid-cols-2 desk:grid-cols-3">
+          {/* 1 — Ban növü (CAR) / Motosiklet növü (MOTO): existing catalog contract. */}
+          {groups.filter((group) => !MULTI_SELECT_GROUPS.has(group) && group !== "DRIVE_TYPE").map((group) => (
+            <label key={group} className="block text-xs font-medium text-slate-strong">
+              <span className="mb-1 block">{GROUP_LABELS[group]}</span>
+              <select name={GROUP_TO_PARAM[group]} defaultValue="" className={advancedField} data-testid={`home-adv-${GROUP_TO_PARAM[group]}`}>
+                <option value="">{UI.any}</option>
+                {(options[group] ?? []).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </select>
+            </label>
+          ))}
+          {/* 2 — Yürüş: manual input only. */}
+          <label className="block text-xs font-medium text-slate-strong">
+            <span className="mb-1 block">{UI.mileage}, km ({UI.max})</span>
+            <input name="mileage_max" type="text" inputMode="numeric" aria-label={`${UI.mileage} ${UI.max}`} onInput={digitsOnly} className={advancedField} data-testid="home-adv-mileage-max" />
+          </label>
+          {/* 3 — Buraxılış ili. */}
           <fieldset>
             <legend className="mb-1 text-xs font-medium text-slate-strong">{UI.year}</legend>
             <div className="grid grid-cols-2 gap-2">
@@ -216,10 +237,7 @@ export function HomeSearch({
               </select>
             </div>
           </fieldset>
-          <label className="block text-xs font-medium text-slate-strong">
-            <span className="mb-1 block">{UI.mileage}, km ({UI.max})</span>
-            <input name="mileage_max" type="text" inputMode="numeric" aria-label={`${UI.mileage} ${UI.max}`} onInput={digitsOnly} className={advancedField} data-testid="home-adv-mileage-max" />
-          </label>
+          {/* 4 — Mühərrikin həcmi. */}
           <fieldset>
             <legend className="mb-1 text-xs font-medium text-slate-strong">{UI.engineCcTitle}</legend>
             <div className="grid grid-cols-2 gap-2">
@@ -233,35 +251,84 @@ export function HomeSearch({
               </select>
             </div>
           </fieldset>
-          {groups.filter((group) => MULTI_SELECT_GROUPS.has(group)).map((group) => (
-            <MultiSelectField
-              key={`${group}-${clearCount}`}
-              label={GROUP_LABELS[group]}
-              name={GROUP_TO_PARAM[group]}
-              options={options[group] ?? []}
-              initialSelected={[]}
-              swatches={group === "COLOR"}
-              triggerClassName="min-h-12"
-              testid={`home-adv-${group.toLowerCase()}`}
-            />
-          ))}
-          {groups.filter((group) => !MULTI_SELECT_GROUPS.has(group)).map((group) => (
-            <label key={group} className="block text-xs font-medium text-slate-strong">
-              <span className="mb-1 block">{GROUP_LABELS[group]}</span>
-              <select name={GROUP_TO_PARAM[group]} defaultValue="" className={advancedField} data-testid={`home-adv-${GROUP_TO_PARAM[group]}`}>
+          {/* 5 — Rəng. */}
+          <MultiSelectField
+            key={`COLOR-${clearCount}`}
+            label={GROUP_LABELS.COLOR}
+            name={GROUP_TO_PARAM.COLOR}
+            options={options.COLOR ?? []}
+            initialSelected={[]}
+            swatches
+            triggerClassName="min-h-12"
+            testid="home-adv-color"
+          />
+          {/* 6 — Qiymət: same primary geometry as Engine; distinct via a
+              restrained sunken surface (net-zero footprint: -m-2 + p-2)
+              with the Kredit/Barter toggle buttons as a compact
+              secondary row. */}
+          <div className="-m-2 rounded-card border border-line-strong bg-sunken/50 p-2" data-testid="home-adv-price-block">
+          <fieldset>
+            <legend className="mb-1 text-xs font-semibold text-ink">{UI.price}, AZN</legend>
+            <div className="grid grid-cols-2 gap-2">
+              <input name="price_min" type="text" inputMode="numeric" placeholder={UI.min} aria-label={`${UI.price} ${UI.min}`} onInput={digitsOnly} className={advancedField} data-testid="home-adv-price-min" />
+              <input name="price_max" type="text" inputMode="numeric" placeholder={UI.max} aria-label={`${UI.price} ${UI.max}`} onInput={digitsOnly} className={advancedField} data-testid="home-adv-price-max" />
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                aria-pressed={credit}
+                onClick={() => setCredit((v) => !v)}
+                className={`inline-flex min-h-10 items-center gap-1.5 rounded-control border px-3 text-sm font-medium transition-colors duration-150 ${credit ? "border-primary bg-primary-tint font-semibold text-primary-pressed" : "border-line-strong bg-raised text-ink hover:border-primary hover:text-primary"}`}
+                data-testid="home-adv-credit"
+              >
+                {credit ? <Check size={14} strokeWidth={2.5} aria-hidden="true" /> : null}
+                Kredit mümkündür
+              </button>
+              <button
+                type="button"
+                aria-pressed={barter}
+                onClick={() => setBarter((v) => !v)}
+                className={`inline-flex min-h-10 items-center gap-1.5 rounded-control border px-3 text-sm font-medium transition-colors duration-150 ${barter ? "border-primary bg-primary-tint font-semibold text-primary-pressed" : "border-line-strong bg-raised text-ink hover:border-primary hover:text-primary"}`}
+                data-testid="home-adv-barter"
+              >
+                {barter ? <Check size={14} strokeWidth={2.5} aria-hidden="true" /> : null}
+                {UI.barter}
+              </button>
+            </div>
+          </fieldset>
+          </div>
+          {/* 7 — Yanacaq növü. */}
+          <MultiSelectField
+            key={`FUEL_TYPE-${clearCount}`}
+            label={GROUP_LABELS.FUEL_TYPE}
+            name={GROUP_TO_PARAM.FUEL_TYPE}
+            options={options.FUEL_TYPE ?? []}
+            initialSelected={[]}
+            triggerClassName="min-h-12"
+            testid="home-adv-fuel_type"
+          />
+          {/* 8 — Ötürücü (CAR only, existing drive-type contract). */}
+          {groups.includes("DRIVE_TYPE") ? (
+            <label className="block text-xs font-medium text-slate-strong">
+              <span className="mb-1 block">{GROUP_LABELS.DRIVE_TYPE}</span>
+              <select name={GROUP_TO_PARAM.DRIVE_TYPE} defaultValue="" className={advancedField} data-testid={`home-adv-${GROUP_TO_PARAM.DRIVE_TYPE}`}>
                 <option value="">{UI.any}</option>
-                {(options[group] ?? []).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                {(options.DRIVE_TYPE ?? []).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
               </select>
             </label>
-          ))}
-        </div>
-        {/* Condition claims and boolean filters stay directly visible —
-            never inside a menu. Two DISTINCT groups: stacked with a
-            clear gap on mobile, side by side with a hairline divider
-            at md+ so the group boundary stays obvious without an
-            oversized gap. */}
-        <div className="mt-3 flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start md:gap-y-2">
-          <fieldset>
+          ) : null}
+          {/* 9 — Sürətlər qutusu. */}
+          <MultiSelectField
+            key={`TRANSMISSION-${clearCount}`}
+            label={GROUP_LABELS.TRANSMISSION}
+            name={GROUP_TO_PARAM.TRANSMISSION}
+            options={options.TRANSMISSION ?? []}
+            initialSelected={[]}
+            triggerClassName="min-h-12"
+            testid="home-adv-transmission"
+          />
+          {/* 10 — Avtomobil vəziyyəti: the concluding full-width block. */}
+          <fieldset className="md:col-span-2 desk:col-span-3">
             <legend className="mb-1 text-xs font-medium text-slate-strong">{UI.conditionTitle}</legend>
             <div className="flex flex-wrap gap-4">
               <label className="inline-flex min-h-12 items-center gap-2 text-sm text-ink">
@@ -272,19 +339,6 @@ export function HomeSearch({
               </label>
             </div>
           </fieldset>
-          <div className="border-t border-line pt-3 md:ml-6 md:border-l md:border-t-0 md:pl-6 md:pt-0">
-          <fieldset>
-            <legend className="mb-1 text-xs font-medium text-slate-strong">Əlavə imkanlar</legend>
-            <div className="flex flex-wrap gap-4">
-              <label className="inline-flex min-h-12 items-center gap-2 text-sm text-ink">
-                <input type="checkbox" name="credit" className="size-5 accent-primary" data-testid="home-adv-credit" /> Kredit mümkündür
-              </label>
-              <label className="inline-flex min-h-12 items-center gap-2 text-sm text-ink">
-                <input type="checkbox" name="barter" className="size-5 accent-primary" data-testid="home-adv-barter" /> {UI.barter}
-              </label>
-            </div>
-          </fieldset>
-          </div>
         </div>
         <div className="mt-2 flex justify-end">
           <button

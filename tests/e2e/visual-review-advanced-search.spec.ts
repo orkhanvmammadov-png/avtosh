@@ -51,10 +51,18 @@ test.describe("advanced search visual artifacts", () => {
     await page.getByTestId("home-adv-fuel_type-toggle").click();
     await page.getByTestId("home-adv-no-accident").check();
     await page.getByTestId("home-adv-not-repainted").check();
+    await page.getByTestId("home-adv-credit").click();
+    await page.getByTestId("home-adv-barter").click();
+    await page.evaluate(() => window.scrollTo(0, 0)); // avoid sticky-header repaint artifacts
     await page.screenshot({ path: `${OUT}/asv2-home-1440-selected.png`, fullPage: true });
+    // fuel multi-select open
+    await page.getByTestId("home-adv-fuel_type-toggle").click();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: `${OUT}/asv2-fuel-open-1440.png`, fullPage: true });
     // color multi-select open with circular swatches
     await page.getByTestId("home-adv-color-toggle").click();
     await expect(page.getByTestId("home-adv-color-opt-BLACK")).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: `${OUT}/asv2-color-swatches-open-1440.png`, fullPage: true });
   });
 

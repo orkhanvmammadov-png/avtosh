@@ -76,17 +76,27 @@ test.describe("Home", () => {
     await expect(page.getByTestId("home-adv-fuel_type-toggle")).toContainText("Hamısı");
   });
 
-  test("Kredit/Barter are back: preserved across collapse, cleared by Təmizlə, restored on results (UAT-C1)", async ({ page }, testInfo) => {
+  test("Kredit/Barter are toggle buttons in the Price block: collapse-safe, Təmizlə-cleared, restored on results", async ({ page }, testInfo) => {
     await page.goto("/");
     const toggle = page.getByTestId("home-advanced-toggle");
     await toggle.click();
-    await page.getByTestId("home-adv-credit").check();
-    await page.getByTestId("home-adv-barter").check();
+    const credit = page.getByTestId("home-adv-credit");
+    const barter = page.getByTestId("home-adv-barter");
+    // real toggle buttons inside the Price block — NO checkbox presentation on Home
+    expect(await credit.evaluate((el) => el.tagName)).toBe("BUTTON");
+    expect(await barter.evaluate((el) => el.tagName)).toBe("BUTTON");
+    expect(await page.locator('[data-testid="home-advanced-panel"] input[type="checkbox"][name="credit"], [data-testid="home-advanced-panel"] input[type="checkbox"][name="barter"]').count()).toBe(0);
+    await expect(page.getByTestId("home-adv-price-block").getByTestId("home-adv-credit")).toBeVisible(); // lives under the price inputs
+    await expect(credit).toHaveAttribute("aria-pressed", "false");
+    await credit.click();
+    await expect(credit).toHaveAttribute("aria-pressed", "true");
+    await barter.click();
+    await expect(barter).toHaveAttribute("aria-pressed", "true"); // both simultaneously
     // collapse is NOT reset
     await toggle.click();
     await toggle.click();
-    await expect(page.getByTestId("home-adv-credit")).toBeChecked();
-    await expect(page.getByTestId("home-adv-barter")).toBeChecked();
+    await expect(credit).toHaveAttribute("aria-pressed", "true");
+    await expect(barter).toHaveAttribute("aria-pressed", "true");
     // Axtar → existing canonical params; Search Results restores both
     await page.getByTestId("home-search-submit").click();
     await page.waitForURL(/credit=true/);
@@ -102,11 +112,47 @@ test.describe("Home", () => {
     // Təmizlə clears both
     await page.goto("/");
     await page.getByTestId("home-advanced-toggle").click();
-    await page.getByTestId("home-adv-credit").check();
-    await page.getByTestId("home-adv-barter").check();
+    await page.getByTestId("home-adv-credit").click();
+    await page.getByTestId("home-adv-barter").click();
     await page.getByTestId("home-adv-clear").click();
-    await expect(page.getByTestId("home-adv-credit")).not.toBeChecked();
-    await expect(page.getByTestId("home-adv-barter")).not.toBeChecked();
+    await expect(page.getByTestId("home-adv-credit")).toHaveAttribute("aria-pressed", "false");
+    await expect(page.getByTestId("home-adv-barter")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  test("CAR advanced filters follow the owner-authoritative reading order (UAT-C2)", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("home-advanced-toggle").click();
+    const ordered = [
+      "home-adv-body_type_id",   // Ban növü
+      "home-adv-mileage-max",    // Yürüş
+      "home-adv-year-min",       // Buraxılış ili
+      "home-adv-engine-min",     // Mühərrikin həcmi
+      "home-adv-color-toggle",   // Rəng
+      "home-adv-price-min",      // Qiymət
+      "home-adv-credit",         // Kredit (inside price block)
+      "home-adv-barter",
+      "home-adv-fuel_type-toggle",     // Yanacaq
+      "home-adv-drive_type_id",        // Ötürücü
+      "home-adv-transmission-toggle",  // Sürətlər qutusu
+      "home-adv-no-accident",          // Avtomobil vəziyyəti — final
+      "home-adv-not-repainted",
+    ];
+    const inDocumentOrder = await page.evaluate((ids) => {
+      const nodes = ids.map((id) => document.querySelector(`[data-testid="${id}"]`));
+      if (nodes.some((n) => n === null)) return "missing:" + ids.filter((_, i) => nodes[i] === null).join(",");
+      for (let i = 0; i < nodes.length - 1; i += 1) {
+        const rel = nodes[i]!.compareDocumentPosition(nodes[i + 1]!);
+        if (!(rel & Node.DOCUMENT_POSITION_FOLLOWING)) return `out-of-order:${ids[i]}>${ids[i + 1]}`;
+      }
+      return "ok";
+    }, ordered);
+    expect(inDocumentOrder).toBe("ok");
+    // condition block concludes the panel as a full-width final row
+    const panelBox = (await page.getByTestId("home-advanced-panel").boundingBox())!;
+    const conditionBox = (await page.getByTestId("home-adv-no-accident").boundingBox())!;
+    const fuelBox = (await page.getByTestId("home-adv-fuel_type-toggle").boundingBox())!;
+    expect(conditionBox.y).toBeGreaterThan(fuelBox.y);
+    expect(panelBox.y + panelBox.height).toBeGreaterThan(conditionBox.y);
   });
 
   test("multi-select closes on outside click / Escape; one open at a time; inside stays usable (UAT-C1)", async ({ page }) => {
@@ -147,9 +193,14 @@ test.describe("Home", () => {
     await page.getByTestId("home-advanced-toggle").click();
     const heightOf = async (testid: string) => (await page.getByTestId(testid).boundingBox())!.height;
     const reference = await heightOf("home-adv-city"); // standard select
-    for (const control of ["home-adv-price-min", "home-adv-mileage-max", "home-adv-fuel_type-toggle", "home-adv-transmission-toggle", "home-adv-color-toggle", "home-adv-engine-min", "home-adv-year-min"]) {
+    for (const control of ["home-adv-price-min", "home-adv-mileage-max", "home-adv-fuel_type-toggle", "home-adv-transmission-toggle", "home-adv-color-toggle", "home-adv-engine-min", "home-adv-year-min", "home-adv-body_type_id", "home-adv-drive_type_id"]) {
       expect(Math.abs((await heightOf(control)) - reference), control).toBeLessThanOrEqual(2);
     }
+    // Price and Engine share the same primary min/max geometry
+    const priceMin = (await page.getByTestId("home-adv-price-min").boundingBox())!;
+    const engineMin = (await page.getByTestId("home-adv-engine-min").boundingBox())!;
+    expect(Math.abs(priceMin.height - engineMin.height)).toBeLessThanOrEqual(2);
+    expect(Math.abs(priceMin.width - engineMin.width)).toBeLessThanOrEqual(8);
     // long summaries never grow the trigger
     await page.getByTestId("home-adv-color-toggle").click();
     for (const code of ["BLACK", "WHITE", "RED", "GREEN"]) {
