@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import { Container } from "@/components/ui/container";
-import { HomeSearch } from "@/components/marketplace/home-search";
+import { HomeSearch, type HomeAdvancedCatalog } from "@/components/marketplace/home-search";
 import { ListingCard } from "@/components/shared/listing-card";
 import { PremiumFeed } from "@/components/marketplace/premium-feed";
 import { PromotionBadge } from "@/components/ui/promotion-badge";
-import { getBrands } from "@/services/catalog";
+import { getBrands, getCities, getReferenceOptions } from "@/services/catalog";
+import { visibleFilterGroups } from "@/lib/marketplace/search-params";
 import { homeData, searchMarketplace } from "@/services/marketplace";
 
 export const dynamic = "force-dynamic";
@@ -23,14 +24,37 @@ const TRUST = [
   { title: "İlk 3 elan pulsuz", hint: "Sonrakı elanlar üçün sabit dərc haqqı." },
 ];
 
+/**
+ * Reference data for the inline advanced panel (4.17O.2): the same
+ * category-scoped catalog services the Search page uses — loaded for
+ * both categories so the client-side category switch needs no extra
+ * requests. No new API.
+ */
+async function loadAdvancedCatalog(categoryCodes: string[]): Promise<HomeAdvancedCatalog> {
+  const cities = await getCities().catch(() => []);
+  const optionsByCategory: HomeAdvancedCatalog["optionsByCategory"] = {};
+  await Promise.all(
+    categoryCodes.map(async (category) => {
+      const groups = visibleFilterGroups(category);
+      const lists = await Promise.all(
+        groups.map((g) => getReferenceOptions(g, category).catch(() => [])),
+      );
+      optionsByCategory[category] = {};
+      groups.forEach((g, i) => { optionsByCategory[category][g] = lists[i]; });
+    }),
+  );
+  return { cities, optionsByCategory };
+}
+
 export default async function HomePage() {
   const { home } = await homeData();
   const defaultCategory = home.categories[0]?.code ?? "CAR";
-  const [initialBrands, fresh] = await Promise.all([
+  const [initialBrands, fresh, advanced] = await Promise.all([
     getBrands(defaultCategory).catch(() => []),
     // "Yeni elanlar" — the accepted public search read model, newest
     // first (server-side service reuse; no new API).
     searchMarketplace({ category: "CAR", sort: "NEWEST", limit: 8 }).catch(() => null),
+    loadAdvancedCatalog(home.categories.map((c) => c.code)),
   ]);
   return (
     <>
@@ -49,13 +73,9 @@ export default async function HomePage() {
         </Container>
       </section>
       <Container className="-mt-14">
-        <HomeSearch categories={home.categories} initialBrands={initialBrands} />
+        <HomeSearch categories={home.categories} initialBrands={initialBrands} advanced={advanced} />
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/elanlar?category=CAR" className="inline-flex min-h-9 items-center gap-1 font-medium text-primary hover:text-primary-hover">
-              {"Ətraflı axtarış"}
-              <ArrowRight size={14} aria-hidden="true" />
-            </Link>
             <Link href="/elanlar?category=CAR&sort=PRICE_ASC" className="inline-flex min-h-9 items-center rounded-pill bg-raised px-3 text-xs font-medium text-slate-strong hover:text-primary">
               Sərfəli avtomobillər
             </Link>
