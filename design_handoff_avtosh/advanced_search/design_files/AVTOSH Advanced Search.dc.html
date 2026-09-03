@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/modernist-cf7ae464-5c45-401c-ae72-b0749af952b1/styles.css">
+<script src="_ds/modernist-cf7ae464-5c45-401c-ae72-b0749af952b1/_ds_bundle.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800&family=Fira+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E7E2;font-family:'Fira Sans',system-ui,sans-serif;color:#1B1E24}
+a{color:#147A4E}a:hover{color:#0F6440}
+.dv-turn{padding:40px 44px 32px}
+.dv-opt{scroll-margin-top:16px;margin-bottom:44px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.6);margin-bottom:12px}
+.frame{width:1440px;background:#F5F4F0;border:1px solid rgba(0,0,0,.09);box-shadow:0 1px 3px rgba(20,26,34,.06)}
+.notes{width:1440px;background:#fff;border:1px solid rgba(0,0,0,.09);padding:16px 22px;margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px 28px;font:400 12px/1.55 'Fira Sans';color:#3d4148}
+.lbl{font:500 12px 'Fira Sans';color:#565B63;margin-bottom:5px;display:flex;align-items:baseline;gap:6px}
+.num{font:600 9px ui-monospace,Menlo,monospace;color:#B9B4A8}
+.ctl{height:40px;border:1px solid #C6C2B6;border-radius:6px;background:#fff;display:flex;align-items:center;padding:0 12px;font:400 13px 'Fira Sans';color:#1B1E24;box-sizing:border-box}
+.ph{color:#8A8F98}
+.chev{margin-left:auto;color:#8A8F98;font-size:11px}
+.tgl{height:32px;border:1px solid #C6C2B6;border-radius:6px;background:#fff;display:inline-flex;align-items:center;padding:0 12px;font:500 12.5px 'Fira Sans';color:#3d4148;cursor:pointer;gap:6px}
+.tgl:hover{border-color:#147A4E;color:#147A4E}
+.tglon{background:#E7F2EC;border-color:#147A4E;color:#0F6440;font-weight:600}
+.sw{width:12px;height:12px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.15);flex:none}
+.val{color:#1B1E24;font-weight:500}
+.clrx{margin-left:auto;color:#8A8F98;font:600 11px 'Fira Sans';cursor:pointer;padding:2px 4px}
+.clrx:hover{color:#B3261E}
+.ctlon{border-color:#8A8F98}
+.pnl{position:absolute;left:0;right:0;top:calc(100% + 6px);background:#fff;border:1px solid #E3E0D8;border-radius:8px;box-shadow:0 16px 40px rgba(20,26,34,.2);padding:6px;z-index:8}
+.oprow{display:flex;align-items:center;gap:9px;height:36px;padding:0 9px;border-radius:5px;font:400 12.5px 'Fira Sans';cursor:pointer}
+.oprow:hover{background:#F5F4F0}
+.chk{width:16px;height:16px;border:1.5px solid #C6C2B6;border-radius:4px;flex:none;box-sizing:border-box}
+.chkon{width:16px;height:16px;border-radius:4px;flex:none;background:#147A4E;display:flex;align-items:center;justify-content:center;color:#fff;font:700 11px 'Fira Sans'}
+.pft{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #EDEBE4;margin-top:5px;padding:8px 9px 4px;font:600 12px 'Fira Sans';color:#147A4E}
+.cap2{font:600 10.5px ui-monospace,Menlo,monospace;letter-spacing:.06em;color:rgba(0,0,0,.45);margin:18px 0 6px;text-transform:uppercase}
+.focus{outline:2px solid rgba(20,122,78,.45);outline-offset:2px}
+</style>
+</helmet>
+<section class="dv-turn" id="t2">
+<div class="dv-opt" id="2a">
+<div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a><b style="color:#111">Stage 2 — Direction 1C (OX) responsive refinement + interaction states</b> · owner-selected; 1a/1b archived below for reference</div>
+<div style="max-width:1180px;background:#fff;border:1px solid rgba(0,0,0,.1);padding:16px 22px;margin-bottom:24px;font:12.5px/1.6 system-ui,sans-serif;color:#333;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 28px">
+  <div><b>1C preserved.</b> Two-zone composition survives every width that can afford it: spec grid left, price spine right with Kredit/Barter + actions stacked beneath — price → action stays one downward gesture. At 768/390 the spine becomes a full-width price band/block at position 6, keeping the literal 1–10 order.</div>
+  <div><b>Geometry.</b> One recipe everywhere: h40, border #C6C2B6, r6, 13px, label 12/500 above, chevron right; ranges = twin h40 fields; price inputs ≡ engine dropdowns. Multi-select triggers never grow — summaries truncate to "A, B +n" with a ✕ group-clear replacing nothing, sitting before the chevron.</div>
+  <div><b>Multi-select behavior.</b> Trigger click opens a checkbox panel (stays open across picks); closes on trigger re-click, outside click, Esc, or opening another (one open at a time). Panel footer "Təmizlə (n)" clears the group; unchecking a row removes one value. Toggles (Kredit/Barter/Vəziyyət) select with ✓ + fill, never color alone.</div>
+</div>
+<div class="cap2">1440 — collapsed (values persist) · expanded default</div>
+<div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+<div class="frame" style="width:1440px">
+  <div style="background:#141A22;color:#fff;padding:14px 40px 58px">
+    <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:18px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 17px 'Fira Sans'">AVTOSH<span style="font:700 11px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+    <div style="font:800 30px/1.05 'Fira Sans';letter-spacing:-.015em;margin-top:12px">Növbəti avtomobilinizi burada tapın.</div>
+  </div>
+  <div style="margin:-40px 40px 0;background:#fff;border:1px solid #E3E0D8;border-radius:12px;box-shadow:0 16px 40px rgba(20,26,34,.14);padding:16px 18px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 150px;gap:10px">
+      <div class="ctl"><span class="val">BMW</span><span class="chev">▾</span></div>
+      <div class="ctl ph"><span>Model</span><span class="chev">▾</span></div>
+      <div class="ctl"><span class="val">Bakı</span><span class="chev">▾</span></div>
+      <div style="background:#147A4E;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 14px 'Fira Sans';height:40px">Axtar</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:11px">
+      <span style="font:600 12.5px 'Fira Sans';color:#147A4E;display:inline-flex;gap:6px;align-items:center;cursor:pointer">Ətraflı axtarış <span style="background:#E7F2EC;color:#0F6440;font:600 10px 'Fira Sans';padding:2px 7px;border-radius:999px">4 filtr</span> <span style="font-size:10px">▼</span></span>
+      <span style="font:400 11.5px 'Fira Sans';color:#8A8F98">bağlıdır — seçilmiş dəyərlər saxlanılıb, sıfırlama yalnız Təmizlə ilə</span>
+    </div>
+  </div>
+  <div style="margin:18px 40px 22px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;opacity:.5">
+    <div><div style="aspect-ratio:16/11;background:#E4DFD4;border-radius:10px"></div><div style="font:700 15px 'Fira Sans Condensed';margin-top:6px">64 500 <span style="font:600 9px 'Fira Sans';color:#565B63">AZN</span></div></div>
+    <div><div style="aspect-ratio:16/11;background:#E4DFD4;border-radius:10px"></div><div style="font:700 15px 'Fira Sans Condensed';margin-top:6px">46 900 <span style="font:600 9px 'Fira Sans';color:#565B63">AZN</span></div></div>
+    <div><div style="aspect-ratio:16/11;background:#E4DFD4;border-radius:10px"></div><div style="font:700 15px 'Fira Sans Condensed';margin-top:6px">39 800 <span style="font:600 9px 'Fira Sans';color:#565B63">AZN</span></div></div>
+    <div><div style="aspect-ratio:16/11;background:#E4DFD4;border-radius:10px"></div><div style="font:700 15px 'Fira Sans Condensed';margin-top:6px">34 500 <span style="font:600 9px 'Fira Sans';color:#565B63">AZN</span></div></div>
+  </div>
+</div>
+<div class="frame" style="width:1440px">
+  <div style="margin:22px 40px 0;background:#fff;border:1px solid #E3E0D8;border-radius:12px;box-shadow:0 16px 40px rgba(20,26,34,.14)">
+    <div style="padding:16px 18px 0">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 150px;gap:10px">
+        <div class="ctl ph"><span>Marka</span><span class="chev">▾</span></div>
+        <div class="ctl ph"><span>Model</span><span class="chev">▾</span></div>
+        <div class="ctl ph"><span>Şəhər — hamısı</span><span class="chev">▾</span></div>
+        <div style="background:#147A4E;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 14px 'Fira Sans';height:40px">Axtar</div>
+      </div>
+      <div style="margin-top:11px;padding-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font:600 12.5px 'Fira Sans';color:#147A4E;display:inline-flex;gap:6px;align-items:center;cursor:pointer">Ətraflı axtarış <span style="font-size:10px">▲</span></span>
+        <span style="font:400 11.5px 'Fira Sans';color:#8A8F98">açıq — Home məzmunu təbii şəkildə aşağı sürüşür</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 340px;border-top:1px solid #E3E0D8">
+      <div style="padding:16px 18px 18px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px 16px">
+          <div><div class="lbl"><span class="num">1</span>Ban növü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+          <div><div class="lbl"><span class="num">2</span>Yürüş, km</div><div class="ctl ph"><span>maks. 123 500</span></div></div>
+          <div><div class="lbl"><span class="num">3</span>Buraxılış ili</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ph"><span>Min</span><span class="chev">▾</span></div><div class="ctl ph"><span>Maks</span><span class="chev">▾</span></div></div></div>
+          <div><div class="lbl"><span class="num">4</span>Mühərrikin həcmi, sm³</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ph"><span>Min</span><span class="chev">▾</span></div><div class="ctl ph"><span>Maks</span><span class="chev">▾</span></div></div></div>
+          <div><div class="lbl"><span class="num">5</span>Rəng</div><div class="ctl ph"><span style="display:inline-flex;gap:5px;align-items:center"><span class="sw" style="background:conic-gradient(#1B1E24 0 25%,#fff 0 50%,#2B5FD9 0 75%,#B3261E 0)"></span>Hamısı</span><span class="chev">▾</span></div></div>
+          <div><div class="lbl"><span class="num">7</span>Yanacaq növü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+          <div><div class="lbl"><span class="num">8</span>Ötürücü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+          <div><div class="lbl"><span class="num">9</span>Sürətlər qutusu</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+          <div><div class="lbl"><span class="num">10</span>Avtomobil vəziyyəti</div>
+            <div style="display:flex;gap:8px"><span class="tgl" style="height:40px">Vuruğu yoxdur</span><span class="tgl" style="height:40px">Rənglənməyib</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="border-left:1px solid #E3E0D8;padding:16px 18px 18px;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span style="background:#141A22;color:#fff;font:700 10px 'Fira Sans';letter-spacing:.06em;padding:4px 8px;border-radius:4px">6</span>
+          <span style="font:700 14px 'Fira Sans';color:#141A22">Qiymət, AZN</span>
+        </div>
+        <div style="display:grid;gap:8px">
+          <div class="ctl ph"><span>Minimum</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+          <div class="ctl ph"><span>Maksimum</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <span class="tgl">Kredit mümkündür</span>
+          <span class="tgl">Barter</span>
+        </div>
+        <div style="font:400 11px/1.5 'Fira Sans';color:#8A8F98;margin-top:10px">Kredit və Barter qiymətə aiddir.</div>
+        <div style="margin-top:auto;display:grid;gap:8px;padding-top:14px">
+          <span style="background:#147A4E;color:#fff;font:600 14px 'Fira Sans';padding:12px;border-radius:6px;text-align:center;cursor:pointer">Axtar</span>
+          <span style="font:600 13px 'Fira Sans';color:#147A4E;text-align:center;padding:6px;cursor:pointer">Təmizlə</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="margin:16px 40px 20px;height:64px;background:repeating-linear-gradient(-45deg,#EDEBE4 0 10px,#F1EFE9 10px 20px);border-radius:10px;display:flex;align-items:center;justify-content:center;font:500 11px 'Fira Sans';color:#8A8F98">Home məzmunu — aşağı sürüşüb</div>
+</div>
+</div>
+<div class="cap2">1440 — expanded, realistic selected state (§25) · price + toggles active · focus example</div>
+<div class="frame" style="width:1440px">
+  <div style="margin:22px 40px 22px;background:#fff;border:1px solid #E3E0D8;border-radius:12px;box-shadow:0 16px 40px rgba(20,26,34,.14)">
+    <div style="padding:16px 18px 0">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 150px;gap:10px">
+        <div class="ctl"><span class="val">BMW</span><span class="chev">▾</span></div>
+        <div class="ctl"><span class="val">5 seriyası</span><span class="chev">▾</span></div>
+        <div class="ctl"><span class="val">Bakı</span><span class="chev">▾</span></div>
+        <div style="background:#147A4E;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 14px 'Fira Sans';height:40px">Axtar</div>
+      </div>
+      <div style="margin-top:11px;padding-bottom:14px">
+        <span style="font:600 12.5px 'Fira Sans';color:#147A4E;display:inline-flex;gap:6px;align-items:center;cursor:pointer">Ətraflı axtarış <span style="font-size:10px">▲</span></span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 340px;border-top:1px solid #E3E0D8">
+      <div style="padding:16px 18px 18px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px 16px">
+          <div><div class="lbl"><span class="num">1</span>Ban növü</div><div class="ctl ctlon"><span class="val">Sedan</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+          <div><div class="lbl"><span class="num">2</span>Yürüş, km</div><div class="ctl ctlon"><span class="val">123 500</span><span class="clrx">✕</span></div></div>
+          <div><div class="lbl"><span class="num">3</span>Buraxılış ili</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ctlon"><span class="val">2020</span><span class="chev">▾</span></div><div class="ctl ctlon"><span class="val">2027</span><span class="chev">▾</span></div></div></div>
+          <div><div class="lbl"><span class="num">4</span>Mühərrikin həcmi, sm³</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ctlon"><span class="val">1 800</span><span class="chev">▾</span></div><div class="ctl ctlon"><span class="val">3 000</span><span class="chev">▾</span></div></div></div>
+          <div><div class="lbl"><span class="num">5</span>Rəng</div><div class="ctl ctlon"><span class="val" style="display:inline-flex;gap:6px;align-items:center;min-width:0"><span class="sw" style="background:#1B1E24"></span><span class="sw" style="background:#fff;margin-left:-9px"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Qara, Ağ</span></span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+          <div><div class="lbl"><span class="num">7</span>Yanacaq növü</div><div class="ctl ctlon"><span class="val" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Benzin, Hibrid</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+          <div><div class="lbl"><span class="num">8</span>Ötürücü</div><div class="ctl ctlon"><span class="val">Arxa</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+          <div><div class="lbl"><span class="num">9</span>Sürətlər qutusu</div><div class="ctl ctlon"><span class="val" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Avtomat (AT) +1</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+          <div><div class="lbl"><span class="num">10</span>Avtomobil vəziyyəti</div>
+            <div style="display:flex;gap:8px"><span class="tgl tglon" style="height:40px">✓ Vuruğu yoxdur</span><span class="tgl tglon" style="height:40px">✓ Rənglənməyib</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="border-left:1px solid #E3E0D8;padding:16px 18px 18px;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span style="background:#141A22;color:#fff;font:700 10px 'Fira Sans';letter-spacing:.06em;padding:4px 8px;border-radius:4px">6</span>
+          <span style="font:700 14px 'Fira Sans';color:#141A22">Qiymət, AZN</span>
+          <span style="margin-left:auto;font:600 11px 'Fira Sans';color:#147A4E;cursor:pointer">Sıfırla</span>
+        </div>
+        <div style="display:grid;gap:8px">
+          <div class="ctl ctlon"><span style="font:400 11px 'Fira Sans';color:#8A8F98;margin-right:8px">Min</span><span class="val" style="font-family:'Fira Sans Condensed';font-weight:600;font-size:14px">25 000</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+          <div class="ctl focus"><span style="font:400 11px 'Fira Sans';color:#8A8F98;margin-right:8px">Maks</span><span class="val" style="font-family:'Fira Sans Condensed';font-weight:600;font-size:14px">50 000</span><span style="width:1px;height:16px;background:#1B1E24;margin-left:1px"></span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <span class="tgl tglon">✓ Kredit mümkündür</span>
+          <span class="tgl tglon">✓ Barter</span>
+        </div>
+        <div style="font:400 11px/1.5 'Fira Sans';color:#8A8F98;margin-top:10px">Fokus: 2px yaşıl halqa (klaviatura ilə də görünür). Maks sahəsi yazılma halındadır.</div>
+        <div style="margin-top:auto;display:grid;gap:8px;padding-top:14px">
+          <span style="background:#147A4E;color:#fff;font:600 14px 'Fira Sans';padding:12px;border-radius:6px;text-align:center;cursor:pointer">Axtar</span>
+          <span style="font:600 13px 'Fira Sans';color:#147A4E;text-align:center;padding:6px;cursor:pointer">Təmizlə</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="cap2">1440 — multi-select open states (one at a time; closes on trigger, outside, Esc, or opening another)</div>
+<div class="frame" style="width:1440px;padding:22px 40px 200px;box-sizing:border-box">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1100px">
+    <div>
+      <div class="lbl"><span class="num">7</span>Yanacaq növü — açıq</div>
+      <div style="position:relative">
+        <div class="ctl ctlon" style="border-color:#147A4E"><span class="val">Benzin, Hibrid</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px;color:#147A4E">▴</span></div>
+        <div class="pnl">
+          <div class="oprow"><span class="chkon">✓</span>Benzin</div>
+          <div class="oprow"><span class="chk"></span>Dizel</div>
+          <div class="oprow"><span class="chk"></span>Qaz</div>
+          <div class="oprow"><span class="chk"></span>Hidrogen</div>
+          <div class="oprow"><span class="chk"></span>Elektro</div>
+          <div class="oprow"><span class="chkon">✓</span>Hibrid</div>
+          <div class="oprow"><span class="chk"></span>Plug-İn Hibrid</div>
+          <div class="oprow"><span class="chk"></span>Dizel-Hibrid</div>
+          <div class="pft"><span style="cursor:pointer">Təmizlə (2)</span><span style="font:400 10.5px 'Fira Sans';color:#8A8F98">seçimdə panel açıq qalır</span></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lbl"><span class="num">9</span>Sürətlər qutusu — açıq</div>
+      <div style="position:relative">
+        <div class="ctl ctlon" style="border-color:#147A4E"><span class="val">Avtomat (AT) +1</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px;color:#147A4E">▴</span></div>
+        <div class="pnl">
+          <div class="oprow"><span class="chk"></span>Avtomat (DHT)</div>
+          <div class="oprow"><span class="chkon">✓</span>Avtomat (AT)</div>
+          <div class="oprow"><span class="chkon">✓</span>Avtomatik (Robot)</div>
+          <div class="oprow"><span class="chk"></span>Avtomat (Reduktor)</div>
+          <div class="oprow"><span class="chk"></span>Mexaniki (MT)</div>
+          <div class="oprow"><span class="chk"></span>Avtomat (Variator)</div>
+          <div class="pft"><span style="cursor:pointer">Təmizlə (2)</span><span style="font:400 10.5px 'Fira Sans';color:#8A8F98">Esc bağlayır</span></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lbl"><span class="num">5</span>Rəng — açıq (20 dəyər, 2 sütun, daxili sürüşmə)</div>
+      <div style="position:relative">
+        <div class="ctl ctlon" style="border-color:#147A4E"><span class="val" style="display:inline-flex;gap:6px;align-items:center"><span class="sw" style="background:#1B1E24"></span><span class="sw" style="background:#fff;margin-left:-9px"></span>Qara, Ağ</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px;color:#147A4E">▴</span></div>
+        <div class="pnl" style="right:-140px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;max-height:296px;overflow:hidden">
+            <div class="oprow"><span class="chkon">✓</span><span class="sw" style="background:#1B1E24"></span>Qara</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#C9A227"></span>Qızılı</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#3A4A3F"></span>Yaşıl Asfalt</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#E8C931"></span>Sarı</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#8A8F98"></span>Boz</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#8A7F4A"></span>Xaki</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#C9CDD3"></span>Gümüşü</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#1F4D33"></span>Tünd yaşıl</div>
+            <div class="oprow"><span class="chkon">✓</span><span class="sw" style="background:#fff"></span>Ağ</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#2E7D4F"></span>Yaşıl</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#D9C9A8"></span>Bej</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#7FC98F"></span>Açıq Yaşıl</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#7A1F1F"></span>Tünd qırmızı</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#2B5FD9"></span>Mavi</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#C62828"></span>Qırmızı</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#6FA8DC"></span>Göy</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#E48FB1"></span>Çəhrayı</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#6A3FA0"></span>Bənövşəyi</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#E07B24"></span>Narıncı</div>
+            <div class="oprow"><span class="chk"></span><span class="sw" style="background:#6B4A2F"></span>Qəhvəyi</div>
+          </div>
+          <div class="pft"><span style="cursor:pointer">Təmizlə (2)</span><span style="font:400 10.5px 'Fira Sans';color:#8A8F98">açıq rənglər haşiyəli — hər dairənin etiketi var</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="font:400 11.5px/1.6 'Fira Sans';color:#565B63;max-width:900px;margin-top:390px">Açıq trigger: yaşıl haşiyə + yuxarı chevron. Panel r8, overlay kölgəsi, sıra hündürlüyü 36px. Fərdi seçimi silmək = paneldə çeki götürmək; bütün qrupu silmək = trigger-dəki ✕ və ya panelin "Təmizlə (n)". Klaviatura: Tab triggerlərlə gəzir, Enter/Space açır-seçir, ox düymələri sıralarda, Esc bağlayır.</div>
+</div>
+<!--S1024-->
+<div class="cap2">1024 — expanded default · selected (2-col specs + 300px price spine — 1C structure survives)</div>
+<div style="display:flex;gap:24px;align-items:flex-start">
+<div class="frame" style="width:1024px">
+  <div style="margin:20px 32px 22px;background:#fff;border:1px solid #E3E0D8;border-radius:12px;box-shadow:0 16px 40px rgba(20,26,34,.14)">
+    <div style="padding:14px 16px 0">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 130px;gap:9px">
+        <div class="ctl ph"><span>Marka</span><span class="chev">▾</span></div>
+        <div class="ctl ph"><span>Model</span><span class="chev">▾</span></div>
+        <div class="ctl ph"><span>Şəhər</span><span class="chev">▾</span></div>
+        <div style="background:#147A4E;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 13.5px 'Fira Sans';height:40px">Axtar</div>
+      </div>
+      <div style="margin-top:10px;padding-bottom:12px"><span style="font:600 12.5px 'Fira Sans';color:#147A4E">Ətraflı axtarış ▲</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 300px;border-top:1px solid #E3E0D8">
+      <div style="padding:14px 16px 16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px 14px">
+          <div><div class="lbl"><span class="num">1</span>Ban növü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+          <div><div class="lbl"><span class="num">2</span>Yürüş, km</div><div class="ctl ph"><span>maks. 123 500</span></div></div>
+          <div><div class="lbl"><span class="num">3</span>Buraxılış ili</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ph"><span>Min</span><span class="chev">▾</span></div><div class="ctl ph"><span>Maks</span><span class="chev">▾</span></div></div></div>
+          <div><div class="lbl"><span class="num">4</span>Mühərrikin həcmi, sm³</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ph"><span>Min</span><span class="chev">▾</span></div><div class="ctl ph"><span>Maks</span><span class="chev">▾</span></div></div></div>
+          <div><div class="lbl"><span class="num">5</span>Rəng</div><div class="ctl ph"><span style="display:inline-flex;gap:5px;align-items:center"><span class="sw" style="background:conic-gradient(#1B1E24 0 25%,#fff 0 50%,#2B5FD9 0 75%,#B3261E 0)"></span>Hamısı</span><span class="chev">▾</span></div></div>
+          <div><div class="lbl"><span class="num">7</span>Yanacaq növü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+          <div><div class="lbl"><span class="num">8</span>Ötürücü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+          <div><div class="lbl"><span class="num">9</span>Sürətlər qutusu</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+          <div style="grid-column:span 2"><div class="lbl"><span class="num">10</span>Avtomobil vəziyyəti</div>
+            <div style="display:flex;gap:8px"><span class="tgl" style="height:40px">Vuruğu yoxdur</span><span class="tgl" style="height:40px">Rənglənməyib</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="border-left:1px solid #E3E0D8;padding:14px 16px 16px;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">
+          <span style="background:#141A22;color:#fff;font:700 10px 'Fira Sans';letter-spacing:.06em;padding:4px 8px;border-radius:4px">6</span>
+          <span style="font:700 13.5px 'Fira Sans';color:#141A22">Qiymət, AZN</span>
+        </div>
+        <div style="display:grid;gap:8px">
+          <div class="ctl ph"><span>Minimum</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+          <div class="ctl ph"><span>Maksimum</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+        </div>
+        <div style="display:flex;gap:7px;margin-top:9px;flex-wrap:wrap">
+          <span class="tgl" style="font-size:12px">Kredit mümkündür</span>
+          <span class="tgl" style="font-size:12px">Barter</span>
+        </div>
+        <div style="margin-top:auto;display:grid;gap:8px;padding-top:12px">
+          <span style="background:#147A4E;color:#fff;font:600 13.5px 'Fira Sans';padding:11px;border-radius:6px;text-align:center">Axtar</span>
+          <span style="font:600 12.5px 'Fira Sans';color:#147A4E;text-align:center;padding:5px">Təmizlə</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="frame" style="width:1024px">
+  <div style="margin:20px 32px 22px;background:#fff;border:1px solid #E3E0D8;border-radius:12px;box-shadow:0 16px 40px rgba(20,26,34,.14)">
+    <div style="padding:14px 16px 12px;border-bottom:1px solid #E3E0D8"><span style="font:600 12.5px 'Fira Sans';color:#147A4E">Ətraflı axtarış ▲</span><span style="font:400 11px 'Fira Sans';color:#8A8F98;margin-left:12px">seçilmiş vəziyyət</span></div>
+    <div style="display:grid;grid-template-columns:1fr 300px">
+      <div style="padding:14px 16px 16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px 14px">
+          <div><div class="lbl"><span class="num">1</span>Ban növü</div><div class="ctl ctlon"><span class="val">Sedan</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+          <div><div class="lbl"><span class="num">2</span>Yürüş, km</div><div class="ctl ctlon"><span class="val">123 500</span><span class="clrx">✕</span></div></div>
+          <div><div class="lbl"><span class="num">3</span>Buraxılış ili</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ctlon"><span class="val">2020</span><span class="chev">▾</span></div><div class="ctl ctlon"><span class="val">2027</span><span class="chev">▾</span></div></div></div>
+          <div><div class="lbl"><span class="num">4</span>Mühərrikin həcmi, sm³</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ctlon"><span class="val">1 800</span><span class="chev">▾</span></div><div class="ctl ctlon"><span class="val">3 000</span><span class="chev">▾</span></div></div></div>
+          <div><div class="lbl"><span class="num">5</span>Rəng</div><div class="ctl ctlon"><span class="val" style="display:inline-flex;gap:6px;align-items:center"><span class="sw" style="background:#1B1E24"></span><span class="sw" style="background:#fff;margin-left:-9px"></span>Qara, Ağ</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+          <div><div class="lbl"><span class="num">7</span>Yanacaq növü</div><div class="ctl ctlon"><span class="val">Benzin, Hibrid</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+          <div><div class="lbl"><span class="num">8</span>Ötürücü</div><div class="ctl ctlon"><span class="val">Arxa</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+          <div><div class="lbl"><span class="num">9</span>Sürətlər qutusu</div><div class="ctl ctlon"><span class="val" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Avtomat (AT) +1</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+          <div style="grid-column:span 2"><div class="lbl"><span class="num">10</span>Avtomobil vəziyyəti</div>
+            <div style="display:flex;gap:8px"><span class="tgl tglon" style="height:40px">✓ Vuruğu yoxdur</span><span class="tgl tglon" style="height:40px">✓ Rənglənməyib</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="border-left:1px solid #E3E0D8;padding:14px 16px 16px;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">
+          <span style="background:#141A22;color:#fff;font:700 10px 'Fira Sans';letter-spacing:.06em;padding:4px 8px;border-radius:4px">6</span>
+          <span style="font:700 13.5px 'Fira Sans';color:#141A22">Qiymət, AZN</span>
+          <span style="margin-left:auto;font:600 11px 'Fira Sans';color:#147A4E">Sıfırla</span>
+        </div>
+        <div style="display:grid;gap:8px">
+          <div class="ctl ctlon"><span style="font:400 11px 'Fira Sans';color:#8A8F98;margin-right:8px">Min</span><span class="val" style="font-family:'Fira Sans Condensed';font-weight:600;font-size:14px">25 000</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+          <div class="ctl ctlon"><span style="font:400 11px 'Fira Sans';color:#8A8F98;margin-right:8px">Maks</span><span class="val" style="font-family:'Fira Sans Condensed';font-weight:600;font-size:14px">50 000</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+        </div>
+        <div style="display:flex;gap:7px;margin-top:9px;flex-wrap:wrap">
+          <span class="tgl tglon" style="font-size:12px">✓ Kredit mümkündür</span>
+          <span class="tgl tglon" style="font-size:12px">✓ Barter</span>
+        </div>
+        <div style="margin-top:auto;display:grid;gap:8px;padding-top:12px">
+          <span style="background:#147A4E;color:#fff;font:600 13.5px 'Fira Sans';padding:11px;border-radius:6px;text-align:center">Axtar</span>
+          <span style="font:600 12.5px 'Fira Sans';color:#147A4E;text-align:center;padding:5px">Təmizlə</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<div class="cap2">768 — spine becomes a full-width price band at position 6 (order literal); default · selected</div>
+<div style="display:flex;gap:24px;align-items:flex-start">
+<div class="frame" style="width:768px">
+  <div style="margin:18px 24px 20px;background:#fff;border:1px solid #E3E0D8;border-radius:12px;box-shadow:0 16px 40px rgba(20,26,34,.14)">
+    <div style="padding:14px 16px 12px;border-bottom:1px solid #E3E0D8"><span style="font:600 12.5px 'Fira Sans';color:#147A4E">Ətraflı axtarış ▲</span></div>
+    <div style="padding:14px 16px 16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px 14px">
+        <div><div class="lbl"><span class="num">1</span>Ban növü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+        <div><div class="lbl"><span class="num">2</span>Yürüş, km</div><div class="ctl ph"><span>maks. 123 500</span></div></div>
+        <div><div class="lbl"><span class="num">3</span>Buraxılış ili</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ph"><span>Min</span><span class="chev">▾</span></div><div class="ctl ph"><span>Maks</span><span class="chev">▾</span></div></div></div>
+        <div><div class="lbl"><span class="num">4</span>Mühərrikin həcmi, sm³</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ph"><span>Min</span><span class="chev">▾</span></div><div class="ctl ph"><span>Maks</span><span class="chev">▾</span></div></div></div>
+        <div style="grid-column:span 2"><div class="lbl"><span class="num">5</span>Rəng</div><div class="ctl ph" style="max-width:calc(50% - 7px)"><span style="display:inline-flex;gap:5px;align-items:center"><span class="sw" style="background:conic-gradient(#1B1E24 0 25%,#fff 0 50%,#2B5FD9 0 75%,#B3261E 0)"></span>Hamısı</span><span class="chev">▾</span></div></div>
+      </div>
+      <div style="border-left:3px solid #141A22;background:#FBFAF8;border-radius:0 8px 8px 0;padding:12px 14px;margin:14px 0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">
+          <span style="background:#141A22;color:#fff;font:700 10px 'Fira Sans';letter-spacing:.06em;padding:4px 8px;border-radius:4px">6</span>
+          <span style="font:700 13.5px 'Fira Sans';color:#141A22">Qiymət, AZN</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="ctl ph" style="background:#fff"><span>Minimum</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+          <div class="ctl ph" style="background:#fff"><span>Maksimum</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:9px"><span class="tgl">Kredit mümkündür</span><span class="tgl">Barter</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px 14px">
+        <div><div class="lbl"><span class="num">7</span>Yanacaq növü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+        <div><div class="lbl"><span class="num">8</span>Ötürücü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+        <div><div class="lbl"><span class="num">9</span>Sürətlər qutusu</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+        <div><div class="lbl"><span class="num">10</span>Avtomobil vəziyyəti</div>
+          <div style="display:flex;gap:8px"><span class="tgl" style="height:40px">Vuruğu yoxdur</span><span class="tgl" style="height:40px">Rənglənməyib</span></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #EDEBE4;margin-top:14px;padding-top:12px">
+        <span style="font:600 13px 'Fira Sans';color:#147A4E;padding:10px 12px">Təmizlə</span>
+        <span style="background:#147A4E;color:#fff;font:600 13.5px 'Fira Sans';padding:11px 32px;border-radius:6px">Axtar</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="frame" style="width:768px">
+  <div style="margin:18px 24px 20px;background:#fff;border:1px solid #E3E0D8;border-radius:12px;box-shadow:0 16px 40px rgba(20,26,34,.14)">
+    <div style="padding:14px 16px 12px;border-bottom:1px solid #E3E0D8"><span style="font:600 12.5px 'Fira Sans';color:#147A4E">Ətraflı axtarış ▲</span><span style="font:400 11px 'Fira Sans';color:#8A8F98;margin-left:12px">seçilmiş vəziyyət</span></div>
+    <div style="padding:14px 16px 16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px 14px">
+        <div><div class="lbl"><span class="num">1</span>Ban növü</div><div class="ctl ctlon"><span class="val">Sedan</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+        <div><div class="lbl"><span class="num">2</span>Yürüş, km</div><div class="ctl ctlon"><span class="val">123 500</span><span class="clrx">✕</span></div></div>
+        <div><div class="lbl"><span class="num">3</span>Buraxılış ili</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ctlon"><span class="val">2020</span><span class="chev">▾</span></div><div class="ctl ctlon"><span class="val">2027</span><span class="chev">▾</span></div></div></div>
+        <div><div class="lbl"><span class="num">4</span>Mühərrikin həcmi, sm³</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ctlon"><span class="val">1 800</span><span class="chev">▾</span></div><div class="ctl ctlon"><span class="val">3 000</span><span class="chev">▾</span></div></div></div>
+        <div style="grid-column:span 2"><div class="lbl"><span class="num">5</span>Rəng</div><div class="ctl ctlon" style="max-width:calc(50% - 7px)"><span class="val" style="display:inline-flex;gap:6px;align-items:center"><span class="sw" style="background:#1B1E24"></span><span class="sw" style="background:#fff;margin-left:-9px"></span>Qara, Ağ</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+      </div>
+      <div style="border-left:3px solid #141A22;background:#FBFAF8;border-radius:0 8px 8px 0;padding:12px 14px;margin:14px 0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">
+          <span style="background:#141A22;color:#fff;font:700 10px 'Fira Sans';letter-spacing:.06em;padding:4px 8px;border-radius:4px">6</span>
+          <span style="font:700 13.5px 'Fira Sans';color:#141A22">Qiymət, AZN</span>
+          <span style="margin-left:auto;font:600 11px 'Fira Sans';color:#147A4E">Sıfırla</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="ctl ctlon" style="background:#fff"><span style="font:400 11px 'Fira Sans';color:#8A8F98;margin-right:8px">Min</span><span class="val" style="font-family:'Fira Sans Condensed';font-weight:600;font-size:14px">25 000</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+          <div class="ctl ctlon" style="background:#fff"><span style="font:400 11px 'Fira Sans';color:#8A8F98;margin-right:8px">Maks</span><span class="val" style="font-family:'Fira Sans Condensed';font-weight:600;font-size:14px">50 000</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:9px"><span class="tgl tglon">✓ Kredit mümkündür</span><span class="tgl tglon">✓ Barter</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px 14px">
+        <div><div class="lbl"><span class="num">7</span>Yanacaq növü</div><div class="ctl ctlon"><span class="val">Benzin, Hibrid</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+        <div><div class="lbl"><span class="num">8</span>Ötürücü</div><div class="ctl ctlon"><span class="val">Arxa</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+        <div><div class="lbl"><span class="num">9</span>Sürətlər qutusu</div><div class="ctl ctlon"><span class="val" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Avtomat (AT) +1</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+        <div><div class="lbl"><span class="num">10</span>Avtomobil vəziyyəti</div>
+          <div style="display:flex;gap:8px"><span class="tgl tglon" style="height:40px">✓ Vuruğu yoxdur</span><span class="tgl tglon" style="height:40px">✓ Rənglənməyib</span></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #EDEBE4;margin-top:14px;padding-top:12px">
+        <span style="font:600 13px 'Fira Sans';color:#147A4E;padding:10px 12px">Təmizlə</span>
+        <span style="background:#147A4E;color:#fff;font:600 13.5px 'Fira Sans';padding:11px 32px;border-radius:6px">Axtar</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<div class="cap2">390 — collapsed · expanded default (inline, single column) · selected + open multi-select</div>
+<div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+<div class="frame" style="width:390px">
+  <div style="background:#141A22;color:#fff;padding:12px 16px 16px">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="width:8px;height:16px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 15px 'Fira Sans'">AVTOSH<span style="font:700 10px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+    <div style="background:#fff;border-radius:8px;padding:11px 12px;font:400 13px 'Fira Sans';color:#8A8F98">Marka, model axtar…</div>
+  </div>
+  <div style="padding:12px 16px 16px">
+    <div style="display:grid;gap:8px">
+      <div class="ctl ctlon" style="height:44px"><span class="val">BMW</span><span class="chev">▾</span></div>
+      <div class="ctl ph" style="height:44px"><span>Model</span><span class="chev">▾</span></div>
+      <div class="ctl ph" style="height:44px"><span>Şəhər — hamısı</span><span class="chev">▾</span></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:11px">
+      <span style="font:600 13px 'Fira Sans';color:#147A4E;display:inline-flex;gap:6px;align-items:center;padding:10px 0">Ətraflı axtarış <span style="background:#E7F2EC;color:#0F6440;font:600 10px 'Fira Sans';padding:2px 7px;border-radius:999px">4</span> <span style="font-size:10px">▼</span></span>
+    </div>
+    <span style="display:block;background:#147A4E;color:#fff;font:600 14px 'Fira Sans';padding:14px;border-radius:6px;text-align:center;margin-top:4px">Axtar</span>
+    <div style="font:400 10.5px 'Fira Sans';color:#8A8F98;margin-top:8px;text-align:center">bağlı — 4 seçilmiş dəyər saxlanılıb</div>
+  </div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="padding:12px 16px 16px">
+    <span style="font:600 13px 'Fira Sans';color:#147A4E;display:inline-flex;gap:6px;align-items:center;padding:6px 0 12px">Ətraflı axtarış <span style="font-size:10px">▲</span></span>
+    <div style="display:grid;gap:12px">
+      <div><div class="lbl"><span class="num">1</span>Ban növü</div><div class="ctl ph" style="height:44px"><span>Hamısı</span><span class="chev">▾</span></div></div>
+      <div><div class="lbl"><span class="num">2</span>Yürüş, km</div><div class="ctl ph" style="height:44px"><span>maks. 123 500</span></div></div>
+      <div><div class="lbl"><span class="num">3</span>Buraxılış ili</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ph" style="height:44px"><span>Min</span><span class="chev">▾</span></div><div class="ctl ph" style="height:44px"><span>Maks</span><span class="chev">▾</span></div></div></div>
+      <div><div class="lbl"><span class="num">4</span>Mühərrikin həcmi, sm³</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ph" style="height:44px"><span>Min</span><span class="chev">▾</span></div><div class="ctl ph" style="height:44px"><span>Maks</span><span class="chev">▾</span></div></div></div>
+      <div><div class="lbl"><span class="num">5</span>Rəng</div><div class="ctl ph" style="height:44px"><span style="display:inline-flex;gap:5px;align-items:center"><span class="sw" style="background:conic-gradient(#1B1E24 0 25%,#fff 0 50%,#2B5FD9 0 75%,#B3261E 0)"></span>Hamısı</span><span class="chev">▾</span></div></div>
+      <div style="border-left:3px solid #141A22;background:#FBFAF8;border-radius:0 8px 8px 0;padding:11px 12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="background:#141A22;color:#fff;font:700 10px 'Fira Sans';letter-spacing:.06em;padding:4px 8px;border-radius:4px">6</span>
+          <span style="font:700 13.5px 'Fira Sans';color:#141A22">Qiymət, AZN</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="ctl ph" style="height:44px;background:#fff"><span>Min</span></div>
+          <div class="ctl ph" style="height:44px;background:#fff"><span>Maks</span></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><span class="tgl" style="height:40px">Kredit mümkündür</span><span class="tgl" style="height:40px">Barter</span></div>
+      </div>
+      <div><div class="lbl"><span class="num">7</span>Yanacaq növü</div><div class="ctl ph" style="height:44px"><span>Hamısı</span><span class="chev">▾</span></div></div>
+      <div><div class="lbl"><span class="num">8</span>Ötürücü</div><div class="ctl ph" style="height:44px"><span>Hamısı</span><span class="chev">▾</span></div></div>
+      <div><div class="lbl"><span class="num">9</span>Sürətlər qutusu</div><div class="ctl ph" style="height:44px"><span>Hamısı</span><span class="chev">▾</span></div></div>
+      <div><div class="lbl"><span class="num">10</span>Avtomobil vəziyyəti</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><span class="tgl" style="height:44px;justify-content:center">Vuruğu yoxdur</span><span class="tgl" style="height:44px;justify-content:center">Rənglənməyib</span></div>
+      </div>
+    </div>
+    <span style="display:block;background:#147A4E;color:#fff;font:600 14px 'Fira Sans';padding:14px;border-radius:6px;text-align:center;margin-top:14px">Axtar</span>
+    <span style="display:block;font:600 13px 'Fira Sans';color:#147A4E;text-align:center;padding:12px 0 2px">Təmizlə</span>
+  </div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="padding:12px 16px 16px">
+    <span style="font:600 13px 'Fira Sans';color:#147A4E;display:inline-flex;gap:6px;align-items:center;padding:6px 0 12px">Ətraflı axtarış <span style="font-size:10px">▲</span></span><span style="font:400 11px 'Fira Sans';color:#8A8F98;margin-left:10px">seçilmiş + açıq panel</span>
+    <div style="display:grid;gap:12px">
+      <div><div class="lbl"><span class="num">1</span>Ban növü</div><div class="ctl ctlon" style="height:44px"><span class="val">Sedan</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+      <div><div class="lbl"><span class="num">5</span>Rəng</div><div class="ctl ctlon" style="height:44px"><span class="val" style="display:inline-flex;gap:6px;align-items:center"><span class="sw" style="background:#1B1E24"></span><span class="sw" style="background:#fff;margin-left:-9px"></span>Qara, Ağ</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px">▾</span></div></div>
+      <div style="border-left:3px solid #141A22;background:#FBFAF8;border-radius:0 8px 8px 0;padding:11px 12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="background:#141A22;color:#fff;font:700 10px 'Fira Sans';letter-spacing:.06em;padding:4px 8px;border-radius:4px">6</span>
+          <span style="font:700 13.5px 'Fira Sans';color:#141A22">Qiymət, AZN</span>
+          <span style="margin-left:auto;font:600 11px 'Fira Sans';color:#147A4E">Sıfırla</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="ctl ctlon" style="height:44px;background:#fff"><span class="val" style="font-family:'Fira Sans Condensed';font-weight:600;font-size:14px">25 000</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+          <div class="ctl ctlon" style="height:44px;background:#fff"><span class="val" style="font-family:'Fira Sans Condensed';font-weight:600;font-size:14px">50 000</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><span class="tgl tglon" style="height:40px">✓ Kredit mümkündür</span><span class="tgl tglon" style="height:40px">✓ Barter</span></div>
+      </div>
+      <div>
+        <div class="lbl"><span class="num">7</span>Yanacaq növü — açıq</div>
+        <div style="position:relative">
+          <div class="ctl ctlon" style="height:44px;border-color:#147A4E"><span class="val">Benzin, Hibrid</span><span class="clrx">✕</span><span class="chev" style="margin-left:6px;color:#147A4E">▴</span></div>
+          <div style="background:#fff;border:1px solid #E3E0D8;border-radius:8px;box-shadow:0 16px 40px rgba(20,26,34,.2);padding:6px;margin-top:6px">
+            <div class="oprow" style="height:44px"><span class="chkon">✓</span>Benzin</div>
+            <div class="oprow" style="height:44px"><span class="chk"></span>Dizel</div>
+            <div class="oprow" style="height:44px"><span class="chk"></span>Qaz</div>
+            <div class="oprow" style="height:44px"><span class="chk"></span>Hidrogen</div>
+            <div class="oprow" style="height:44px"><span class="chk"></span>Elektro</div>
+            <div class="oprow" style="height:44px"><span class="chkon">✓</span>Hibrid</div>
+            <div class="oprow" style="height:44px"><span class="chk"></span>Plug-İn Hibrid</div>
+            <div class="oprow" style="height:44px"><span class="chk"></span>Dizel-Hibrid</div>
+            <div class="pft"><span>Təmizlə (2)</span><span style="font:400 10.5px 'Fira Sans';color:#8A8F98">triggerə bağlı, modal deyil</span></div>
+          </div>
+        </div>
+      </div>
+      <div><div class="lbl"><span class="num">10</span>Avtomobil vəziyyəti</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><span class="tgl tglon" style="height:44px;justify-content:center">✓ Vuruğu yoxdur</span><span class="tgl tglon" style="height:44px;justify-content:center">✓ Rənglənməyib</span></div>
+      </div>
+    </div>
+    <span style="display:block;background:#147A4E;color:#fff;font:600 14px 'Fira Sans';padding:14px;border-radius:6px;text-align:center;margin-top:14px">Axtar</span>
+    <span style="display:block;font:600 13px 'Fira Sans';color:#147A4E;text-align:center;padding:12px 0 2px">Təmizlə</span>
+    <div style="font:400 10.5px/1.5 'Fira Sans';color:#8A8F98;margin-top:6px">Aralıq sıralar ixtisarla göstərilib — tam sıra 1–10 soldakı çərçivədəki kimidir. Panel sıraları 44px, üfüqi sürüşmə yoxdur.</div>
+  </div>
+</div>
+</div>
+<div style="max-width:1180px;background:#fff;border:1px solid rgba(0,0,0,.1);padding:16px 22px;margin-top:20px;font:12.5px/1.6 system-ui,sans-serif;color:#333;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 28px">
+  <div><b>Responsive reflow.</b> 1440: 3-col specs + 340px spine · 1024: 2-col specs + 300px spine (structure intact) · 768/390: spine → full-width price band with a 3px navy left rule + warm surface, placed literally at position 6; actions close the flow (full-width Axtar on 390, 48px target).</div>
+  <div><b>Density (selected state).</b> Fixed h40/h44 triggers with "A, B +n" truncation — no control ever grows; ✕ clears a group in place; Sıfırla resets price only; Təmizlə resets all. Collapsed trigger shows an "n filtr" count chip so persisted values are visible without expanding.</div>
+  <div><b>Condition & price relationship.</b> Vəziyyət toggles stay the visible closing block (never in a dropdown, never near Kredit/Barter). Kredit/Barter live inside the price surface at every width. Focus ring, ✓-marks and borders carry selection — never color alone; every swatch keeps its label.</div>
+</div>
+</div>
+</section>
+<section class="dv-turn" id="t1">
+<div style="max-width:1180px;background:#fff;border:1px solid rgba(0,0,0,.1);padding:18px 24px;margin-bottom:28px;font:13px/1.55 system-ui,sans-serif;color:#333">
+  <div style="font-weight:700;font-size:14px;color:#111;margin-bottom:6px">Phase 4.17O.2 — Home Advanced Search · Stage 1: three directions at 1440</div>
+  Same functional contract in all three (reading order 1–10, real option lists, no result counts, manual numeric inputs, word-toggles for Kredit/Barter). All controls share one geometry: h40, border #C6C2B6, r6, 13px Fira Sans, label 12/500 above. Differences are compositional: <a class="dv-oid" href="#1a">1a</a> ruled rows · <a class="dv-oid" href="#1b">1b</a> single flowing grid · <a class="dv-oid" href="#1c">1c</a> price spine. Shown expanded, default/no-selection state, inside the approved Home hero context (collapsed compact search above). Pick a direction or ask for a hybrid — responsive + interaction states follow after selection.
+</div>
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a><b style="color:#111">SIRA — Structured Marketplace Grid</b> · ruled rows on white, one hairline per zone, price gets its own row with an inset surface</div>
+<div class="frame">
+  <div style="background:#141A22;color:#fff;padding:18px 40px 64px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:18px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 17px 'Fira Sans'">AVTOSH<span style="font:700 11px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+      <div style="background:#147A4E;color:#fff;font:600 12.5px 'Fira Sans';padding:8px 14px;border-radius:6px">+ Elan yerləşdir</div>
+    </div>
+    <div style="font:800 34px/1.05 'Fira Sans';letter-spacing:-.015em">Növbəti avtomobilinizi burada tapın.</div>
+  </div>
+  <div style="margin:-44px 40px 0;background:#fff;border:1px solid #E3E0D8;border-radius:12px;box-shadow:0 16px 40px rgba(20,26,34,.14)">
+    <div style="padding:16px 18px 0">
+      <div style="display:flex;gap:18px;font:600 13px 'Fira Sans';margin-bottom:12px">
+        <span style="color:#147A4E;border-bottom:2px solid #147A4E;padding-bottom:6px">Avtomobillər</span>
+        <span style="color:#565B63;padding-bottom:6px">Motosikletlər</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 150px;gap:10px">
+        <div class="ctl"><span>Marka</span><span class="chev">▾</span></div>
+        <div class="ctl ph"><span>Model</span><span class="chev">▾</span></div>
+        <div class="ctl"><span>Bakı</span><span class="chev">▾</span></div>
+        <div class="ctl ph"><span>Şəhər — hamısı</span><span class="chev">▾</span></div>
+        <div style="grid-row:span 1;background:#147A4E;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:8px;font:600 14px 'Fira Sans';height:40px">Axtar</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:11px;padding-bottom:12px;border-bottom:1px solid #E3E0D8">
+        <span style="font:600 12.5px 'Fira Sans';color:#147A4E;display:inline-flex;gap:6px;align-items:center;cursor:pointer">Ətraflı axtarış <span style="font-size:10px">▲</span></span>
+        <span style="font:400 11.5px 'Fira Sans';color:#8A8F98">genişlənmiş — aşağıya açılır, dəyərlər bağlananda saxlanılır</span>
+      </div>
+    </div>
+    <div style="padding:16px 18px 18px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px 16px">
+        <div><div class="lbl"><span class="num">1</span>Ban növü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+        <div><div class="lbl"><span class="num">2</span>Yürüş, km</div><div class="ctl ph"><span>maks. 123 500</span></div></div>
+        <div><div class="lbl"><span class="num">3</span>Buraxılış ili</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ph"><span>Min</span><span class="chev">▾</span></div><div class="ctl ph"><span>Maks</span><span class="chev">▾</span></div></div></div>
+        <div><div class="lbl"><span class="num">4</span>Mühərrikin həcmi, sm³</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ph"><span>Min</span><span class="chev">▾</span></div><div class="ctl ph"><span>Maks</span><span class="chev">▾</span></div></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:16px;border-top:1px solid #EDEBE4;margin-top:14px;padding-top:14px;align-items:start">
+        <div><div class="lbl"><span class="num">5</span>Rəng</div><div class="ctl ph"><span style="display:inline-flex;gap:5px;align-items:center"><span class="sw" style="background:conic-gradient(#1B1E24 0 25%,#fff 0 50%,#2B5FD9 0 75%,#B3261E 0)"></span>Hamısı</span><span class="chev">▾</span></div></div>
+        <div style="background:#F5F4F0;border-radius:8px;padding:10px 14px 12px">
+          <div class="lbl" style="color:#141A22;font-weight:700"><span class="num">6</span>Qiymət, AZN</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="ctl ph" style="background:#fff"><span>Minimum · 25 000</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+            <div class="ctl ph" style="background:#fff"><span>Maksimum · 50 000</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:9px">
+            <span class="tgl">Kredit mümkündür</span>
+            <span class="tgl tglon">✓ Barter</span>
+          </div>
+        </div>
+        <div style="align-self:end;font:400 11px/1.5 'Fira Sans';color:#8A8F98;padding-bottom:2px">Qiymət bloku eyni h40 sahələrlə — vurğu inset səthdən və qalın başlıqdan gəlir, ölçüdən yox.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px 16px;border-top:1px solid #EDEBE4;margin-top:14px;padding-top:14px">
+        <div><div class="lbl"><span class="num">7</span>Yanacaq növü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+        <div><div class="lbl"><span class="num">8</span>Ötürücü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+        <div><div class="lbl"><span class="num">9</span>Sürətlər qutusu</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+        <div><div class="lbl"><span class="num">10</span>Avtomobil vəziyyəti</div>
+          <div style="display:flex;gap:8px"><span class="tgl" style="height:40px">Vuruğu yoxdur</span><span class="tgl" style="height:40px">Rənglənməyib</span></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #E3E0D8;margin-top:16px;padding-top:14px">
+        <span style="font:600 13px 'Fira Sans';color:#147A4E;padding:10px 12px;cursor:pointer">Təmizlə</span>
+        <span style="background:#147A4E;color:#fff;font:600 14px 'Fira Sans';padding:11px 34px;border-radius:6px;cursor:pointer">Axtar</span>
+      </div>
+    </div>
+  </div>
+  <div style="height:26px"></div>
+</div>
+<div class="notes">
+  <div><b style="color:#141A22">Hierarchy.</b> Three ruled zones: identity/ranges → color+price → drivetrain+condition. Hairlines (#EDEBE4) do the grouping — no cards inside the card.</div>
+  <div><b style="color:#141A22">Price.</b> Own center cell on a soft inset (#F5F4F0, r8) spanning 2 columns; inputs stay h40 = engine dropdowns. Kredit/Barter word-toggles sit inside the price surface.</div>
+  <div><b style="color:#141A22">Scan pattern.</b> Strict left-to-right rows, numbers 1–10 follow reading order exactly; 4-col rhythm, price row breaks it once intentionally.</div>
+  <div><b style="color:#141A22">Pros / risks.</b> + calmest, most "marketplace"; + easiest responsive collapse. − price emphasis is subtle; − 3 rules may read slightly administrative.</div>
+</div>
+</div>
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a><b style="color:#111">AXIN — Flowing Spec Grid</b> · one unbroken 6-column grid, no dividers; hierarchy from column spans and a green-ruled price group; city as a general filter in the top row</div>
+<div class="frame">
+  <div style="background:#141A22;color:#fff;padding:18px 40px 64px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:18px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 17px 'Fira Sans'">AVTOSH<span style="font:700 11px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+      <div style="background:#147A4E;color:#fff;font:600 12.5px 'Fira Sans';padding:8px 14px;border-radius:6px">+ Elan yerləşdir</div>
+    </div>
+    <div style="font:800 34px/1.05 'Fira Sans';letter-spacing:-.015em">Növbəti avtomobilinizi burada tapın.</div>
+  </div>
+  <div style="margin:-44px 40px 0;background:#fff;border:1px solid #E3E0D8;border-radius:12px;box-shadow:0 16px 40px rgba(20,26,34,.14)">
+    <div style="padding:16px 18px 0">
+      <div style="display:flex;gap:18px;font:600 13px 'Fira Sans';margin-bottom:12px">
+        <span style="color:#147A4E;border-bottom:2px solid #147A4E;padding-bottom:6px">Avtomobillər</span>
+        <span style="color:#565B63;padding-bottom:6px">Motosikletlər</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 150px;gap:10px">
+        <div class="ctl"><span>Marka</span><span class="chev">▾</span></div>
+        <div class="ctl ph"><span>Model</span><span class="chev">▾</span></div>
+        <div class="ctl ph"><span>Şəhər — hamısı</span><span class="chev">▾</span></div>
+        <div style="background:#147A4E;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 14px 'Fira Sans';height:40px">Axtar</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:11px;padding-bottom:14px">
+        <span style="font:600 12.5px 'Fira Sans';color:#147A4E;display:inline-flex;gap:6px;align-items:center;cursor:pointer">Ətraflı axtarış <span style="font-size:10px">▲</span></span>
+        <span style="font:400 11.5px 'Fira Sans';color:#8A8F98">Şəhər ümumi filtrdir — yuxarı sırada, 1–10 ardıcıllığından kənar</span>
+      </div>
+    </div>
+    <div style="padding:14px 18px 18px;background:#FBFAF8;border-top:1px solid #E3E0D8;border-radius:0 0 12px 12px">
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px 14px">
+        <div style="grid-column:span 2"><div class="lbl"><span class="num">1</span>Ban növü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+        <div style="grid-column:span 2"><div class="lbl"><span class="num">2</span>Yürüş, km</div><div class="ctl ph"><span>maks. 123 500</span></div></div>
+        <div style="grid-column:span 2"><div class="lbl"><span class="num">3</span>Buraxılış ili</div><div style="display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:center;border:1px solid #C6C2B6;border-radius:6px;background:#fff;height:40px;box-sizing:border-box"><span style="padding:0 12px;font:400 13px 'Fira Sans';color:#8A8F98">Min ▾</span><span style="width:1px;height:22px;background:#E3E0D8"></span><span style="padding:0 12px;font:400 13px 'Fira Sans';color:#8A8F98">Maks ▾</span></div></div>
+        <div style="grid-column:span 2"><div class="lbl"><span class="num">4</span>Mühərrikin həcmi, sm³</div><div style="display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:center;border:1px solid #C6C2B6;border-radius:6px;background:#fff;height:40px;box-sizing:border-box"><span style="padding:0 12px;font:400 13px 'Fira Sans';color:#8A8F98">Min ▾</span><span style="width:1px;height:22px;background:#E3E0D8"></span><span style="padding:0 12px;font:400 13px 'Fira Sans';color:#8A8F98">Maks ▾</span></div></div>
+        <div style="grid-column:span 2"><div class="lbl"><span class="num">5</span>Rəng</div><div class="ctl ph"><span style="display:inline-flex;gap:5px;align-items:center"><span class="sw" style="background:conic-gradient(#1B1E24 0 25%,#fff 0 50%,#2B5FD9 0 75%,#B3261E 0)"></span>Hamısı</span><span class="chev">▾</span></div></div>
+        <div style="grid-column:span 2;position:relative;padding-left:12px">
+          <span style="position:absolute;left:0;top:2px;bottom:2px;width:3px;background:#147A4E;border-radius:2px"></span>
+          <div class="lbl" style="color:#0F6440;font-weight:700"><span class="num" style="color:#7FB89E">6</span>Qiymət, AZN</div>
+          <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:center;border:1px solid #147A4E;border-radius:6px;background:#fff;height:40px;box-sizing:border-box">
+            <span style="padding:0 12px;font:400 13px 'Fira Sans';color:#8A8F98">25 000</span><span style="width:1px;height:22px;background:#E3E0D8"></span><span style="padding:0 12px;font:400 13px 'Fira Sans';color:#8A8F98">50 000</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <span class="tgl">Kredit mümkündür</span>
+            <span class="tgl">Barter</span>
+          </div>
+        </div>
+        <div style="grid-column:span 2"><div class="lbl"><span class="num">7</span>Yanacaq növü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+        <div style="grid-column:span 1"><div class="lbl"><span class="num">8</span>Ötürücü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+        <div style="grid-column:span 1"><div class="lbl"><span class="num">9</span>Sürətlər qutusu</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+        <div style="grid-column:span 2"><div class="lbl"><span class="num">10</span>Avtomobil vəziyyəti</div>
+          <div style="display:flex;gap:8px"><span class="tgl" style="height:40px">Vuruğu yoxdur</span><span class="tgl" style="height:40px">Rənglənməyib</span></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px">
+        <span style="font:400 11px/1.5 'Fira Sans';color:#8A8F98;max-width:520px">Qoşa Min/Maks sahələr bir gövdədə — aralıq filtrlər tək kontroldan böyük görünmür.</span>
+        <div style="display:flex;gap:10px">
+          <span style="font:600 13px 'Fira Sans';color:#147A4E;padding:10px 12px;cursor:pointer">Təmizlə</span>
+          <span style="background:#147A4E;color:#fff;font:600 14px 'Fira Sans';padding:11px 34px;border-radius:6px;cursor:pointer">Axtar</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="height:26px"></div>
+</div>
+<div class="notes">
+  <div><b style="color:#141A22">Hierarchy.</b> No dividers, no boxes: one 6-col grid on a faintly warmer ground (#FBFAF8) that separates advanced from compact. Range fields are fused twin controls — one border, inner divider.</div>
+  <div><b style="color:#141A22">Price.</b> Same fused-twin geometry as Year/Engine but with a green border, green bold label and a 3px green left rule; toggles hang under it. Emphasis by accent, zero extra size.</div>
+  <div><b style="color:#141A22">Scan pattern.</b> Z-pattern over equal 2-col cells (rows of 3); Ötürücü + Sürətlər share a cell pair; condition toggles close the flow. Numbers confirm 1–10.</div>
+  <div><b style="color:#141A22">Pros / risks.</b> + densest, most modern; + fused ranges kill the "assembled" look. − green border on price competes slightly with Axtar; − 1-col cells @8/9 are tight for long labels.</div>
+</div>
+</div>
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a><b style="color:#111">OX — Price Spine</b> · asymmetric two-zone composition: vehicle specs left (2×), a fixed price column right anchored by the navy label; condition + actions as the closing bar</div>
+<div class="frame">
+  <div style="background:#141A22;color:#fff;padding:18px 40px 64px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:18px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 17px 'Fira Sans'">AVTOSH<span style="font:700 11px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+      <div style="background:#147A4E;color:#fff;font:600 12.5px 'Fira Sans';padding:8px 14px;border-radius:6px">+ Elan yerləşdir</div>
+    </div>
+    <div style="font:800 34px/1.05 'Fira Sans';letter-spacing:-.015em">Növbəti avtomobilinizi burada tapın.</div>
+  </div>
+  <div style="margin:-44px 40px 0;background:#fff;border:1px solid #E3E0D8;border-radius:12px;box-shadow:0 16px 40px rgba(20,26,34,.14)">
+    <div style="padding:16px 18px 0">
+      <div style="display:flex;gap:18px;font:600 13px 'Fira Sans';margin-bottom:12px">
+        <span style="color:#147A4E;border-bottom:2px solid #147A4E;padding-bottom:6px">Avtomobillər</span>
+        <span style="color:#565B63;padding-bottom:6px">Motosikletlər</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 150px;gap:10px">
+        <div class="ctl"><span>Marka</span><span class="chev">▾</span></div>
+        <div class="ctl ph"><span>Model</span><span class="chev">▾</span></div>
+        <div class="ctl"><span>Bakı</span><span class="chev">▾</span></div>
+        <div style="background:#147A4E;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 14px 'Fira Sans';height:40px">Axtar</div>
+      </div>
+      <div style="margin-top:11px;padding-bottom:14px">
+        <span style="font:600 12.5px 'Fira Sans';color:#147A4E;display:inline-flex;gap:6px;align-items:center;cursor:pointer">Ətraflı axtarış <span style="font-size:10px">▲</span></span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 340px;border-top:1px solid #E3E0D8">
+      <div style="padding:16px 18px 18px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px 16px">
+          <div><div class="lbl"><span class="num">1</span>Ban növü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+          <div><div class="lbl"><span class="num">2</span>Yürüş, km</div><div class="ctl ph"><span>maks. 123 500</span></div></div>
+          <div><div class="lbl"><span class="num">3</span>Buraxılış ili</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ph"><span>Min</span><span class="chev">▾</span></div><div class="ctl ph"><span>Maks</span><span class="chev">▾</span></div></div></div>
+          <div><div class="lbl"><span class="num">4</span>Mühərrikin həcmi, sm³</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="ctl ph"><span>Min</span><span class="chev">▾</span></div><div class="ctl ph"><span>Maks</span><span class="chev">▾</span></div></div></div>
+          <div><div class="lbl"><span class="num">5</span>Rəng</div><div class="ctl ph"><span style="display:inline-flex;gap:5px;align-items:center"><span class="sw" style="background:conic-gradient(#1B1E24 0 25%,#fff 0 50%,#2B5FD9 0 75%,#B3261E 0)"></span>Hamısı</span><span class="chev">▾</span></div></div>
+          <div><div class="lbl"><span class="num">7</span>Yanacaq növü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+          <div><div class="lbl"><span class="num">8</span>Ötürücü</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+          <div><div class="lbl"><span class="num">9</span>Sürətlər qutusu</div><div class="ctl ph"><span>Hamısı</span><span class="chev">▾</span></div></div>
+          <div><div class="lbl"><span class="num">10</span>Avtomobil vəziyyəti</div>
+            <div style="display:flex;gap:8px"><span class="tgl" style="height:40px">Vuruğu yoxdur</span><span class="tgl" style="height:40px">Rənglənməyib</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="border-left:1px solid #E3E0D8;padding:16px 18px 18px;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span style="background:#141A22;color:#fff;font:700 10px 'Fira Sans';letter-spacing:.06em;padding:4px 8px;border-radius:4px">6</span>
+          <span style="font:700 14px 'Fira Sans';color:#141A22">Qiymət, AZN</span>
+        </div>
+        <div style="display:grid;gap:8px">
+          <div class="ctl ph"><span>Minimum · 25 000</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+          <div class="ctl ph"><span>Maksimum · 50 000</span><span style="margin-left:auto;font:600 11px 'Fira Sans';color:#8A8F98">AZN</span></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <span class="tgl">Kredit mümkündür</span>
+          <span class="tgl tglon">✓ Barter</span>
+        </div>
+        <div style="font:400 11px/1.5 'Fira Sans';color:#8A8F98;margin-top:10px">Kredit və Barter qiymətə aiddir.</div>
+        <div style="margin-top:auto;display:grid;gap:8px;padding-top:14px">
+          <span style="background:#147A4E;color:#fff;font:600 14px 'Fira Sans';padding:12px;border-radius:6px;text-align:center;cursor:pointer">Axtar</span>
+          <span style="font:600 13px 'Fira Sans';color:#147A4E;text-align:center;padding:6px;cursor:pointer">Təmizlə</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="height:26px"></div>
+</div>
+<div class="notes">
+  <div><b style="color:#141A22">Hierarchy.</b> Two zones split by one vertical rule: 3-col spec grid left, dedicated price column right. The eye lands on the price column first (navy numbered chip + bold label), then scans specs.</div>
+  <div><b style="color:#141A22">Price.</b> Fixed 340px column, stacked h40 Min/Maks identical to engine fields; toggles + Axtar/Təmizlə live in the same column, so price → action is one downward gesture.</div>
+  <div><b style="color:#141A22">Scan pattern.</b> Reading order preserved: specs run 1–5, price is 6 at the top of the right column (encountered alongside row 2), then 7–10 continue left. Actions bottom-right.</div>
+  <div><b style="color:#141A22">Pros / risks.</b> + strongest price focus without size games; + Axtar adjacency converts. − order 6 reads spatially "beside" 3–4 (acceptable: the column is visually announced); − needs care at 768 (column drops below grid).</div>
+</div>
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
