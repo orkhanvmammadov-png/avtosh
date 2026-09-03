@@ -60,6 +60,8 @@ export const UI = {
   features: "Təchizat",
   noAccident: "Vuruğu yoxdur",
   notRepainted: "Rənglənməyib",
+  conditionTitle: "Avtomobil vəziyyəti",
+  engineCcTitle: "Mühərrikin həcmi, sm³",
   specs: "Xüsusiyyətlər",
   any: "Hamısı",
   min: "min",

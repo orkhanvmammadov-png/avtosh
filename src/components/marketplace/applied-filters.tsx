@@ -3,7 +3,10 @@ import type { FilterCatalog } from "@/components/marketplace/search-filters";
 import { minorToAznInput } from "@/lib/format";
 import { GROUP_LABELS, UI } from "@/lib/marketplace/labels";
 import {
+  csvFromIds,
   GROUP_TO_PARAM,
+  idsFromCsv,
+  MULTI_SELECT_GROUPS,
   searchHref,
   visibleFilterGroups,
   type SearchFilterState,
@@ -67,12 +70,39 @@ export function appliedFilterChips(state: SearchFilterState, catalog: FilterCata
       href: without(state, ["mileage_max"]),
     });
   }
+  if (state.engine_cc_min !== undefined || state.engine_cc_max !== undefined) {
+    chips.push({
+      key: "engine",
+      label: `${UI.engineCcTitle}: ${state.engine_cc_min ?? "…"}–${state.engine_cc_max ?? "…"}`,
+      href: without(state, ["engine_cc_min", "engine_cc_max"]),
+    });
+  }
   for (const group of visibleFilterGroups(state.category ?? "CAR")) {
     const param = GROUP_TO_PARAM[group];
+    if (MULTI_SELECT_GROUPS.has(group)) {
+      // one removable chip PER selected value — removing one keeps the rest
+      const selectedIds = idsFromCsv(state[param]);
+      for (const id of selectedIds) {
+        const option = name(catalog.options[group] ?? [], id);
+        if (option === undefined) continue;
+        const rest = selectedIds.filter((v) => v !== id);
+        const next: SearchFilterState = { ...state };
+        if (rest.length > 0) next[param] = csvFromIds(rest);
+        else delete next[param];
+        chips.push({ key: `${param}-${id}`, label: option, href: searchHref(next) });
+      }
+      continue;
+    }
     const option = name(catalog.options[group] ?? [], state[param]);
     if (option !== undefined) {
       chips.push({ key: param, label: `${GROUP_LABELS[group]}: ${option}`, href: without(state, [param]) });
     }
+  }
+  if (state.no_accident === "true") {
+    chips.push({ key: "no_accident", label: UI.noAccident, href: without(state, ["no_accident"]) });
+  }
+  if (state.not_repainted === "true") {
+    chips.push({ key: "not_repainted", label: UI.notRepainted, href: without(state, ["not_repainted"]) });
   }
   if (state.credit === "true") chips.push({ key: "credit", label: UI.credit, href: without(state, ["credit"]) });
   if (state.barter === "true") chips.push({ key: "barter", label: UI.barter, href: without(state, ["barter"]) });

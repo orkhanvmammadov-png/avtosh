@@ -19,6 +19,7 @@ import {
   type SearchFilterState,
 } from "@/lib/marketplace/search-params";
 import { getBrands, getCategories, getCities, getFeatures, getModels, getReferenceOptions } from "@/services/catalog";
+import { LISTING_YEAR_MIN, listingYearMax } from "@/lib/config/marketplace";
 import { searchMarketplace, type SearchResultDto } from "@/services/marketplace";
 import { searchQuerySchema } from "@/validators/marketplace";
 
@@ -44,7 +45,11 @@ async function loadCatalog(state: SearchFilterState): Promise<FilterCatalog> {
   const options: FilterCatalog["options"] = {};
   visibleFilterGroups(category).forEach((g, i) => { options[g] = groups[i]; });
   const models = state.brand_id ? await getModels(category, state.brand_id).catch(() => []) : [];
-  return { categories, brands, models, cities, options, features };
+  // Authoritative year options, newest first (server-computed — one
+  // consistent list through SSR and hydration).
+  const yearMax = listingYearMax();
+  const years = Array.from({ length: yearMax - LISTING_YEAR_MIN + 1 }, (_, i) => yearMax - i);
+  return { categories, years, brands, models, cities, options, features };
 }
 
 export default async function SearchPage({ searchParams }: { searchParams: Promise<SearchParams> }) {

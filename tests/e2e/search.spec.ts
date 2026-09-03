@@ -28,6 +28,116 @@ test.describe("Search", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  async function openFilterForm(page: import("@playwright/test").Page, project: string) {
+    if (isMobile(project) || project === "tablet") {
+      await page.getByTestId("filters-open").click();
+      await expect(page.getByTestId("filters-drawer")).toBeVisible();
+    } else {
+      await expect(page.getByTestId("filters-desktop")).toBeVisible();
+    }
+    return page.locator('[data-testid="filter-form"]:visible').first();
+  }
+
+  async function closeFilterForm(page: import("@playwright/test").Page, project: string) {
+    if (isMobile(project) || project === "tablet") {
+      await page.getByTestId("filters-close").click();
+      await expect(page.getByTestId("filters-drawer")).toBeHidden();
+    }
+  }
+
+  test("multi-select fuel/transmission/color: OR values serialize, restore, remove one, clear group (4.17O.2)", async ({ page }, testInfo) => {
+    await page.goto("/elanlar?category=CAR");
+    let form = await openFilterForm(page, testInfo.project.name);
+    // fuel: two values through the disclosure panel
+    await form.getByTestId("filter-fuel_type-toggle").click();
+    const petrol = form.getByTestId("filter-fuel_type-opt-PETROL");
+    const hybrid = form.getByTestId("filter-fuel_type-opt-HYBRID");
+    await petrol.check();
+    await hybrid.check();
+    const petrolId = await petrol.inputValue();
+    const hybridId = await hybrid.inputValue();
+    await expect(form.getByTestId("filter-fuel_type-toggle")).toContainText("Benzin, Hibrid");
+    // color: swatches render before labels
+    await form.getByTestId("filter-color-toggle").click();
+    const black = form.getByTestId("filter-color-opt-BLACK");
+    await black.check();
+    const blackId = await black.inputValue();
+    await form.getByTestId("filter-apply").click();
+    await page.waitForURL(/fuel_type_ids=/);
+    let url = new URL(page.url());
+    expect(url.searchParams.get("fuel_type_ids")).toBe(`${petrolId},${hybridId}`);
+    expect(url.searchParams.get("color_ids")).toBe(blackId);
+
+    // reload restores every selection (URL-as-state)
+    await page.reload();
+    form = await openFilterForm(page, testInfo.project.name);
+    await form.getByTestId("filter-fuel_type-toggle").click();
+    await expect(form.getByTestId("filter-fuel_type-opt-PETROL")).toBeChecked();
+    await expect(form.getByTestId("filter-fuel_type-opt-HYBRID")).toBeChecked();
+    await expect(form.getByTestId("filter-fuel_type-toggle")).toContainText("Benzin, Hibrid");
+    await closeFilterForm(page, testInfo.project.name);
+
+    // removing ONE applied value keeps the others
+    await page.locator('[data-testid="applied-filter"]', { hasText: "Hibrid" }).first().click();
+    await page.waitForURL((u) => !u.searchParams.getAll("fuel_type_ids").join(",").includes(hybridId));
+    url = new URL(page.url());
+    expect(url.searchParams.get("fuel_type_ids")).toBe(petrolId);
+    expect(url.searchParams.get("color_ids")).toBe(blackId);
+
+    // clearing the fuel group keeps color
+    form = await openFilterForm(page, testInfo.project.name);
+    await form.getByTestId("filter-fuel_type-toggle").click();
+    await form.getByTestId("filter-fuel_type-clear").click();
+    await form.getByTestId("filter-apply").click();
+    await page.waitForURL((u) => u.searchParams.get("fuel_type_ids") === null);
+    url = new URL(page.url());
+    expect(url.searchParams.get("color_ids")).toBe(blackId);
+  });
+
+  test("condition, engine and year selects serialize and restore (4.17O.2)", async ({ page }, testInfo) => {
+    await page.goto("/elanlar?category=CAR");
+    let form = await openFilterForm(page, testInfo.project.name);
+    await form.getByTestId("filter-no-accident").check();
+    await form.getByTestId("filter-not-repainted").check();
+    await form.getByTestId("filter-engine-min").selectOption("1000");
+    await form.getByTestId("filter-engine-max").selectOption("7000"); // post-6500 step-500 tier
+    await form.getByTestId("filter-year-min").selectOption("2015");
+    await form.getByTestId("filter-apply").click();
+    await page.waitForURL(/no_accident=true/);
+    const url = new URL(page.url());
+    expect(url.searchParams.get("not_repainted")).toBe("true");
+    expect(url.searchParams.get("engine_cc_min")).toBe("1000");
+    expect(url.searchParams.get("engine_cc_max")).toBe("7000");
+    expect(url.searchParams.get("year_min")).toBe("2015");
+    await page.reload();
+    form = await openFilterForm(page, testInfo.project.name);
+    await expect(form.getByTestId("filter-no-accident")).toBeChecked();
+    await expect(form.getByTestId("filter-engine-min")).toHaveValue("1000");
+    await expect(form.getByTestId("filter-year-min")).toHaveValue("2015");
+    await closeFilterForm(page, testInfo.project.name);
+    // both condition chips exist independently; removing one keeps the other
+    await page.locator('[data-testid="applied-filter"]', { hasText: "Rənglənməyib" }).first().click();
+    await page.waitForURL((u) => u.searchParams.get("not_repainted") === null);
+    expect(new URL(page.url()).searchParams.get("no_accident")).toBe("true");
+  });
+
+  test("legacy singular URLs parse and re-serialize canonically (4.17O.2)", async ({ page }, testInfo) => {
+    await page.goto("/elanlar?category=CAR");
+    let form = await openFilterForm(page, testInfo.project.name);
+    await form.getByTestId("filter-fuel_type-toggle").click();
+    const petrolId = await form.getByTestId("filter-fuel_type-opt-PETROL").inputValue();
+    // legacy bookmarked URL with the singular param
+    await page.goto(`/elanlar?category=CAR&fuel_type_id=${petrolId}`);
+    form = await openFilterForm(page, testInfo.project.name);
+    await form.getByTestId("filter-fuel_type-toggle").click();
+    await expect(form.getByTestId("filter-fuel_type-opt-PETROL")).toBeChecked();
+    await expect(page.getByTestId("applied-filters")).toContainText("Benzin");
+    // legacy over-range year canonicalizes instead of crashing
+    await page.goto(`/elanlar?category=CAR&year_max=2100`);
+    await expect(page.getByTestId("sort-select")).toBeVisible();
+    await expect(page.getByTestId("organic-card").first()).toBeVisible();
+  });
+
   test("filters update the URL and results; sort works; clear keeps category", async ({ page }, testInfo) => {
     const s = seed();
     await page.goto("/elanlar?category=CAR");
