@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { UI } from "@/lib/marketplace/labels";
 import type { ReferenceOptionDto } from "@/services/catalog";
@@ -12,15 +12,27 @@ import type { ReferenceOptionDto } from "@/services/catalog";
  * the selection — no custom listbox semantics, no nested dialogs
  * (works inside the desktop rail, the mobile filter sheet and the
  * Home advanced panel alike). The panel stays mounted (hidden), so
- * collapsing never loses state. Color options render a circular
+ * closing never loses state. Color options render a circular
  * presentation swatch BEFORE the text label — never swatch-only.
+ *
+ * Closing behavior (UAT correction 1): trigger toggles; clicking
+ * OUTSIDE the component closes; Escape closes and returns focus to
+ * the trigger; opening one instance closes any other open instance
+ * (module-local coordination — no store). This is an inline
+ * disclosure, never a focus trap, so an outer <dialog> (the mobile
+ * filter sheet) is unaffected.
  */
+
+/** Smallest one-open-at-a-time mechanism: the currently open panel's closer. */
+let closeOpenMultiSelect: (() => void) | null = null;
+
 export function MultiSelectField({
   label,
   name,
   options,
   initialSelected,
   swatches = false,
+  triggerClassName = "",
   testid,
 }: {
   label: string;
@@ -28,13 +40,64 @@ export function MultiSelectField({
   options: ReferenceOptionDto[];
   initialSelected: string[];
   swatches?: boolean;
+  /** Surface-specific geometry (e.g. "min-h-12" on Home) appended to the trigger. */
+  triggerClassName?: string;
   testid: string;
 }) {
   const panelId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>(
     initialSelected.filter((id) => options.some((o) => o.id === id)),
   );
+  const closerRef = useRef<(() => void) | null>(null);
+
+  function openPanel() {
+    closeOpenMultiSelect?.(); // close any other open instance first
+    const closer = () => setOpen(false);
+    closerRef.current = closer;
+    closeOpenMultiSelect = closer;
+    setOpen(true);
+  }
+
+  function closePanel() {
+    // release the shared slot only if it is still ours
+    if (closeOpenMultiSelect === closerRef.current) closeOpenMultiSelect = null;
+    setOpen(false);
+  }
+
+  // Outside-click + Escape dismissal, active only while open;
+  // listeners are removed on close/unmount (no leaks). Interactions
+  // INSIDE the component root (trigger, checkboxes, swatches, clear)
+  // never dismiss. The listener rides the bubbling CLICK (not
+  // pointerdown) so the outside element's own action completes BEFORE
+  // the inline panel collapses the layout under the pointer.
+  useEffect(() => {
+    if (!open) return;
+    const onOutsideClick = (event: MouseEvent) => {
+      const root = rootRef.current;
+      if (root !== null && event.target instanceof Node && !root.contains(event.target)) {
+        closePanel();
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        // an inline disclosure: swallow the key so an outer <dialog>
+        // (mobile filter sheet) does not also close
+        event.stopPropagation();
+        event.preventDefault();
+        closePanel();
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("click", onOutsideClick);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("click", onOutsideClick);
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [open]);
 
   function toggle(id: string, checked: boolean) {
     setSelected((current) => (checked ? [...new Set([...current, id])] : current.filter((v) => v !== id)));
@@ -47,17 +110,18 @@ export function MultiSelectField({
     names.length === 0 ? UI.any : names.length <= 2 ? names.join(", ") : `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
 
   return (
-    <div className="block text-xs font-medium text-slate-strong">
+    <div ref={rootRef} className="block text-xs font-medium text-slate-strong">
       <span className="mb-1 block">{label}</span>
       <button
+        ref={triggerRef}
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={() => setOpen((v) => !v)}
-        className="flex min-h-10 w-full items-center justify-between gap-2 rounded-control border border-line-strong bg-raised px-3 text-left text-sm font-normal text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none max-md:min-h-12"
+        onClick={() => (open ? closePanel() : openPanel())}
+        className={`flex min-h-10 w-full items-center justify-between gap-2 rounded-control border border-line-strong bg-raised px-3 text-left text-sm font-normal text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none max-md:min-h-12 ${triggerClassName}`}
         data-testid={`${testid}-toggle`}
       >
-        <span className={`truncate ${names.length === 0 ? "text-muted" : ""}`}>{summary}</span>
+        <span className={`truncate whitespace-nowrap ${names.length === 0 ? "text-muted" : ""}`}>{summary}</span>
         {open ? <ChevronUp size={15} aria-hidden="true" className="shrink-0" /> : <ChevronDown size={15} aria-hidden="true" className="shrink-0" />}
       </button>
       <div

@@ -131,6 +131,9 @@ export function HomeSearch({
     // Positive claims only — unchecked emits nothing.
     if (data.get("no_accident") === "on") next.no_accident = "true";
     if (data.get("not_repainted") === "on") next.not_repainted = "true";
+    // Existing boolean filters (unchanged contract).
+    if (data.get("credit") === "on") next.credit = "true";
+    if (data.get("barter") === "on") next.barter = "true";
     router.push(searchHref(next));
   }
 
@@ -238,6 +241,7 @@ export function HomeSearch({
               options={options[group] ?? []}
               initialSelected={[]}
               swatches={group === "COLOR"}
+              triggerClassName="min-h-12"
               testid={`home-adv-${group.toLowerCase()}`}
             />
           ))}
@@ -251,18 +255,31 @@ export function HomeSearch({
             </label>
           ))}
         </div>
-        {/* Condition claims stay directly visible — never inside a menu. */}
-        <fieldset className="mt-3">
-          <legend className="mb-1 text-xs font-medium text-slate-strong">{UI.conditionTitle}</legend>
-          <div className="flex flex-wrap gap-4">
-            <label className="inline-flex min-h-12 items-center gap-2 text-sm text-ink">
-              <input type="checkbox" name="no_accident" className="size-5 accent-primary" data-testid="home-adv-no-accident" /> {UI.noAccident}
-            </label>
-            <label className="inline-flex min-h-12 items-center gap-2 text-sm text-ink">
-              <input type="checkbox" name="not_repainted" className="size-5 accent-primary" data-testid="home-adv-not-repainted" /> {UI.notRepainted}
-            </label>
-          </div>
-        </fieldset>
+        {/* Condition claims and boolean filters stay directly visible — never inside a menu. */}
+        <div className="mt-3 flex flex-wrap gap-x-10 gap-y-2">
+          <fieldset>
+            <legend className="mb-1 text-xs font-medium text-slate-strong">{UI.conditionTitle}</legend>
+            <div className="flex flex-wrap gap-4">
+              <label className="inline-flex min-h-12 items-center gap-2 text-sm text-ink">
+                <input type="checkbox" name="no_accident" className="size-5 accent-primary" data-testid="home-adv-no-accident" /> {UI.noAccident}
+              </label>
+              <label className="inline-flex min-h-12 items-center gap-2 text-sm text-ink">
+                <input type="checkbox" name="not_repainted" className="size-5 accent-primary" data-testid="home-adv-not-repainted" /> {UI.notRepainted}
+              </label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend className="mb-1 text-xs font-medium text-slate-strong">Əlavə imkanlar</legend>
+            <div className="flex flex-wrap gap-4">
+              <label className="inline-flex min-h-12 items-center gap-2 text-sm text-ink">
+                <input type="checkbox" name="credit" className="size-5 accent-primary" data-testid="home-adv-credit" /> Kredit mümkündür
+              </label>
+              <label className="inline-flex min-h-12 items-center gap-2 text-sm text-ink">
+                <input type="checkbox" name="barter" className="size-5 accent-primary" data-testid="home-adv-barter" /> {UI.barter}
+              </label>
+            </div>
+          </fieldset>
+        </div>
         <div className="mt-2 flex justify-end">
           <button
             type="button"

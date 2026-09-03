@@ -76,6 +76,90 @@ test.describe("Home", () => {
     await expect(page.getByTestId("home-adv-fuel_type-toggle")).toContainText("Hamısı");
   });
 
+  test("Kredit/Barter are back: preserved across collapse, cleared by Təmizlə, restored on results (UAT-C1)", async ({ page }, testInfo) => {
+    await page.goto("/");
+    const toggle = page.getByTestId("home-advanced-toggle");
+    await toggle.click();
+    await page.getByTestId("home-adv-credit").check();
+    await page.getByTestId("home-adv-barter").check();
+    // collapse is NOT reset
+    await toggle.click();
+    await toggle.click();
+    await expect(page.getByTestId("home-adv-credit")).toBeChecked();
+    await expect(page.getByTestId("home-adv-barter")).toBeChecked();
+    // Axtar → existing canonical params; Search Results restores both
+    await page.getByTestId("home-search-submit").click();
+    await page.waitForURL(/credit=true/);
+    const url = new URL(page.url());
+    expect(url.searchParams.get("credit")).toBe("true");
+    expect(url.searchParams.get("barter")).toBe("true");
+    if (isMobile(testInfo.project.name) || testInfo.project.name === "tablet") {
+      await page.getByTestId("filters-open").click();
+    }
+    const form = page.locator('[data-testid="filter-form"]:visible').first();
+    await expect(form.locator('input[name="credit"]')).toBeChecked();
+    await expect(form.locator('input[name="barter"]')).toBeChecked();
+    // Təmizlə clears both
+    await page.goto("/");
+    await page.getByTestId("home-advanced-toggle").click();
+    await page.getByTestId("home-adv-credit").check();
+    await page.getByTestId("home-adv-barter").check();
+    await page.getByTestId("home-adv-clear").click();
+    await expect(page.getByTestId("home-adv-credit")).not.toBeChecked();
+    await expect(page.getByTestId("home-adv-barter")).not.toBeChecked();
+  });
+
+  test("multi-select closes on outside click / Escape; one open at a time; inside stays usable (UAT-C1)", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("home-advanced-toggle").click();
+    const fuelToggle = page.getByTestId("home-adv-fuel_type-toggle");
+    const fuelPanel = page.getByTestId("home-adv-fuel_type-panel");
+    // inside interaction keeps the panel usable
+    await fuelToggle.click();
+    await expect(fuelPanel).toBeVisible();
+    await page.getByTestId("home-adv-fuel_type-opt-PETROL").check();
+    await expect(fuelPanel).toBeVisible();
+    await expect(fuelToggle).toContainText("Benzin");
+    // outside click closes (selection kept)
+    await page.getByTestId("home-adv-city").click();
+    await expect(fuelPanel).toBeHidden();
+    await expect(fuelToggle).toHaveAttribute("aria-expanded", "false");
+    await expect(fuelToggle).toContainText("Benzin");
+    // Escape closes and the trigger stays keyboard-usable
+    await fuelToggle.click();
+    await expect(fuelPanel).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(fuelPanel).toBeHidden();
+    await expect(fuelToggle).toHaveAttribute("aria-expanded", "false");
+    await fuelToggle.press("Enter");
+    await expect(fuelPanel).toBeVisible();
+    // one open at a time: fuel → transmission → color
+    await page.getByTestId("home-adv-transmission-toggle").click();
+    await expect(page.getByTestId("home-adv-transmission-panel")).toBeVisible();
+    await expect(fuelPanel).toBeHidden();
+    await page.getByTestId("home-adv-color-toggle").click();
+    await expect(page.getByTestId("home-adv-color-panel")).toBeVisible();
+    await expect(page.getByTestId("home-adv-transmission-panel")).toBeHidden();
+  });
+
+  test("closed advanced controls share one geometry family (UAT-C1)", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("home-advanced-toggle").click();
+    const heightOf = async (testid: string) => (await page.getByTestId(testid).boundingBox())!.height;
+    const reference = await heightOf("home-adv-city"); // standard select
+    for (const control of ["home-adv-price-min", "home-adv-mileage-max", "home-adv-fuel_type-toggle", "home-adv-transmission-toggle", "home-adv-color-toggle", "home-adv-engine-min", "home-adv-year-min"]) {
+      expect(Math.abs((await heightOf(control)) - reference), control).toBeLessThanOrEqual(2);
+    }
+    // long summaries never grow the trigger
+    await page.getByTestId("home-adv-color-toggle").click();
+    for (const code of ["BLACK", "WHITE", "RED", "GREEN"]) {
+      await page.getByTestId(`home-adv-color-opt-${code}`).check();
+    }
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("home-adv-color-toggle")).toContainText("+2");
+    expect(Math.abs((await heightOf("home-adv-color-toggle")) - reference)).toBeLessThanOrEqual(2);
+  });
+
   test("year dropdowns cover 1900 → currentYear+1 (4.17O.2)", async ({ page }) => {
     await page.goto("/");
     await page.getByTestId("home-advanced-toggle").click();

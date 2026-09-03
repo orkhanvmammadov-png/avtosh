@@ -121,6 +121,28 @@ test.describe("Search", () => {
     expect(new URL(page.url()).searchParams.get("no_accident")).toBe("true");
   });
 
+  test("multi-select dismissal inside the mobile filter sheet never closes the sheet (UAT-C1)", async ({ page }, testInfo) => {
+    test.skip(!isMobile(testInfo.project.name) && testInfo.project.name !== "tablet", "sheet exists below desk only");
+    await page.goto("/elanlar?category=CAR");
+    await page.getByTestId("filters-open").click();
+    const drawer = page.getByTestId("filters-drawer");
+    await expect(drawer).toBeVisible();
+    const form = page.locator('[data-testid="filter-form"]:visible').first();
+    await form.getByTestId("filter-fuel_type-toggle").click();
+    await expect(form.getByTestId("filter-fuel_type-panel")).toBeVisible();
+    await form.getByTestId("filter-fuel_type-opt-PETROL").check();
+    // Escape closes ONLY the multi-select panel, not the outer sheet
+    await page.keyboard.press("Escape");
+    await expect(form.getByTestId("filter-fuel_type-panel")).toBeHidden();
+    await expect(drawer).toBeVisible();
+    // clicking elsewhere INSIDE the sheet closes the panel, sheet stays healthy
+    await form.getByTestId("filter-fuel_type-toggle").click();
+    await form.getByTestId("filter-brand").click();
+    await expect(form.getByTestId("filter-fuel_type-panel")).toBeHidden();
+    await expect(drawer).toBeVisible();
+    await expect(form.getByTestId("filter-fuel_type-toggle")).toContainText("Benzin");
+  });
+
   test("legacy singular URLs parse and re-serialize canonically (4.17O.2)", async ({ page }, testInfo) => {
     await page.goto("/elanlar?category=CAR");
     let form = await openFilterForm(page, testInfo.project.name);
