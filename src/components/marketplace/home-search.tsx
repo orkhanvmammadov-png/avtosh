@@ -458,12 +458,12 @@ export function HomeSearch({
         hidden={!expanded}
         data-testid="home-advanced-panel"
         className={
-          "border-t border-line p-4 md:px-4 md:py-3.5 desk:px-4 desk:py-3.5 xl:px-[18px] xl:py-4 " +
+          "border-t border-line p-4 md:px-4 md:py-3.5 desk:px-4 desk:pt-3.5 desk:pb-4 xl:px-[18px] xl:py-4 " +
           "grid grid-cols-1 gap-y-3 " +
           "[grid-template-areas:'ban'_'mileage'_'year'_'engine'_'color'_'price'_'fuel'_'drive'_'trans'_'cond'_'actions'] " +
           "md:grid-cols-2 md:gap-x-3.5 md:gap-y-3 " +
           "md:[grid-template-areas:'ban_mileage'_'year_engine'_'color_.'_'price_price'_'fuel_drive'_'trans_cond'_'actions_actions'] " +
-          "desk:grid-cols-[1fr_1fr_300px] desk:gap-x-3.5 desk:gap-y-3 " +
+          "desk:grid-cols-[1fr_1fr_300px] desk:gap-x-3.5 desk:gap-y-[13px] " +
           "desk:[grid-template-areas:'ban_mileage_price'_'year_engine_price'_'color_fuel_price'_'drive_trans_price'_'cond_cond_price'] " +
           "xl:grid-cols-[1fr_1fr_1fr_340px] xl:gap-x-4 xl:gap-y-3.5 " +
           "xl:[grid-template-areas:'ban_mileage_year_price'_'engine_color_fuel_price'_'drive_trans_cond_price']"
