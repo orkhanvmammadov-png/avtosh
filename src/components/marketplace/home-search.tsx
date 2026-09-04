@@ -363,7 +363,7 @@ export function HomeSearch({
     <>
       <button
         type="submit"
-        className="inline-flex min-h-11 w-full items-center justify-center rounded-control bg-primary px-6 text-sm font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed max-sm:min-h-12 sm:w-auto desk:w-full"
+        className="inline-flex min-h-11 w-full items-center justify-center rounded-control bg-primary px-8 text-sm font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed max-sm:min-h-12 sm:w-auto desk:w-full"
         data-testid="home-adv-submit"
       >
         {UI.search}
@@ -458,10 +458,10 @@ export function HomeSearch({
         hidden={!expanded}
         data-testid="home-advanced-panel"
         className={
-          "border-t border-line p-4 md:px-4 md:py-3.5 desk:px-4 desk:pt-3.5 desk:pb-4 xl:px-[18px] xl:py-4 " +
+          "border-t border-line p-4 md:px-4 md:pt-3.5 md:pb-4 desk:px-4 desk:pt-3.5 desk:pb-4 xl:px-[18px] xl:py-4 " +
           "grid grid-cols-1 gap-y-3 " +
           "[grid-template-areas:'ban'_'mileage'_'year'_'engine'_'color'_'price'_'fuel'_'drive'_'trans'_'cond'_'actions'] " +
-          "md:grid-cols-2 md:gap-x-3.5 md:gap-y-3 " +
+          "md:grid-cols-2 md:gap-x-3.5 md:gap-y-[13px] " +
           "md:[grid-template-areas:'ban_mileage'_'year_engine'_'color_.'_'price_price'_'fuel_drive'_'trans_cond'_'actions_actions'] " +
           "desk:grid-cols-[1fr_1fr_300px] desk:gap-x-3.5 desk:gap-y-[13px] " +
           "desk:[grid-template-areas:'ban_mileage_price'_'year_engine_price'_'color_fuel_price'_'drive_trans_price'_'cond_cond_price'] " +
@@ -540,7 +540,7 @@ export function HomeSearch({
         </div>
         {/* 6 — Qiymət, AZN: spine at desk/xl, navy-rule band at md/390. */}
         <div
-          className="[grid-area:price] rounded-r-lg border-l-[3px] border-navy bg-row-hover p-3 desk:-my-3.5 desk:flex desk:flex-col desk:rounded-none desk:border-l desk:border-line desk:bg-transparent desk:px-4 desk:py-3.5 xl:-my-4 xl:px-[18px] xl:py-4"
+          className="[grid-area:price] rounded-r-lg border-l-[3px] border-navy bg-row-hover px-3.5 py-3 desk:-my-3.5 desk:flex desk:flex-col desk:rounded-none desk:border-l desk:border-line desk:bg-transparent desk:px-4 desk:py-3.5 xl:-my-4 xl:px-[18px] xl:py-4"
           data-testid="home-adv-price-block"
         >
           <div className="flex items-center gap-2">
