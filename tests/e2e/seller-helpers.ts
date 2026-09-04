@@ -33,6 +33,9 @@ export interface ListingFixtureOptions {
   images?: number;
   feeMinor?: number;
   review?: { decision: string; reasonCode: string; note: string | null };
+  /** Positive condition claims (4.17O.2): true = claimed, omitted = NULL. */
+  noAccident?: true;
+  notRepainted?: true;
 }
 
 /** Inserts an owner listing in a given lifecycle state; returns ids. */
@@ -49,13 +52,14 @@ export async function insertListingFixture(
     const published = ["ACTIVE", "SOLD", "EXPIRED", "SUSPENDED"].includes(status);
     const [row] = await sql`
       insert into listings (owner_id, category_id, brand_id, model_id, city_id, year,
-        price_minor, mileage, description, contact_phone_e164, status,
+        price_minor, mileage, no_accident, not_repainted, description, contact_phone_e164, status,
         submitted_at, published_at, current_expires_at, sold_at)
       values (${ownerId},
         (select id from categories where code = 'CAR'),
         ${complete ? s.toyotaBrandId : null}, ${complete ? s.corollaModelId : null},
         ${complete ? s.bakuCityId : null},
         ${complete ? 2021 : null}, ${complete ? 2500000 : null}, ${complete ? 64000 : null},
+        ${options.noAccident ?? null}, ${options.notRepainted ?? null},
         ${complete ? "E2E fixture təsviri" : null}, ${complete ? "+994501234567" : null},
         ${status}::listing_status,
         ${submitted ? sql`now()` : null},

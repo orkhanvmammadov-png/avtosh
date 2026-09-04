@@ -219,6 +219,8 @@ export async function getModerationDetail(listingId: string): Promise<Record<str
     color: row.color,
     cityName: row.city_name,
     creditAvailable: row.credit_available,
+    noAccident: row.no_accident,
+    notRepainted: row.not_repainted,
     barterAvailable: row.barter_available,
     description: row.description,
     contactPhone: row.contact_phone_e164,

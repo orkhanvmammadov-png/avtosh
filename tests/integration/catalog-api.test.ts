@@ -266,12 +266,16 @@ describe("GET /catalog/options", () => {
       `${BASE}/options?group=FUEL_TYPE`,
     );
     expect(status).toBe(200);
+    // 4.17O.2 owner-approved fuel catalog (order = sort_order)
     expect(body.data?.map((o) => o.code)).toEqual([
       "PETROL",
       "DIESEL",
       "GAS",
-      "HYBRID",
+      "HYDROGEN",
       "ELECTRIC",
+      "HYBRID",
+      "PLUGIN_HYBRID",
+      "DIESEL_HYBRID",
     ]);
   });
 
@@ -298,7 +302,7 @@ describe("GET /catalog/options", () => {
       getOptionsRoute,
       `${BASE}/options?group=COLOR&category=MOTORCYCLE`,
     );
-    expect(body.data?.length).toBe(12);
+    expect(body.data?.length).toBe(20); // 4.17O.2 approved 20-color catalog
   });
 
   it("rejects an unknown group", async () => {

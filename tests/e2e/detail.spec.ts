@@ -1,7 +1,27 @@
 import { expect, test } from "@playwright/test";
 import { expectNoHorizontalOverflow, seed } from "./helpers";
+import { loginAs, testPhone } from "./auth-helpers";
+import { insertListingFixture } from "./seller-helpers";
 
 test.describe("Listing detail", () => {
+  test("positive condition claims render; absence renders no negative (4.17O.2)", async ({ page, context }, { project }) => {
+    const { userId } = await loginAs(context, testPhone(project.name, 45));
+    const claimed = await insertListingFixture(userId, {
+      status: "ACTIVE", complete: true, images: 1, noAccident: true, notRepainted: true,
+    });
+    await context.clearCookies(); // public view
+    await page.goto(`/elan/${claimed.publicId}`);
+    const specs = page.getByTestId("specs");
+    await expect(specs).toContainText("Vuruğu yoxdur");
+    await expect(specs).toContainText("Rənglənməyib");
+    // a listing without claims shows NO condition rows at all
+    const s = seed();
+    await page.goto(`/elan/${s.activeCar}`);
+    await expect(page.getByTestId("specs")).not.toContainText("Vuruğu yoxdur");
+    await expect(page.getByTestId("specs")).not.toContainText("Rənglənməyib");
+  });
+
+
   test("ACTIVE listing renders gallery, price, specs, features, and reveals contact", async ({ page }) => {
     const s = seed();
     await page.goto(`/elan/${s.activeCar}`);

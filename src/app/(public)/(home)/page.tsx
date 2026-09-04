@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import { Container } from "@/components/ui/container";
-import { HomeSearch } from "@/components/marketplace/home-search";
+import { HomeSearch, type HomeAdvancedCatalog } from "@/components/marketplace/home-search";
 import { ListingCard } from "@/components/shared/listing-card";
 import { PremiumFeed } from "@/components/marketplace/premium-feed";
 import { PromotionBadge } from "@/components/ui/promotion-badge";
-import { getBrands } from "@/services/catalog";
+import { getBrands, getCities, getReferenceOptions } from "@/services/catalog";
+import { LISTING_YEAR_MIN, listingYearMax } from "@/lib/config/marketplace";
+import { visibleFilterGroups } from "@/lib/marketplace/search-params";
 import { homeData, searchMarketplace } from "@/services/marketplace";
 
 export const dynamic = "force-dynamic";
@@ -23,19 +25,45 @@ const TRUST = [
   { title: "İlk 3 elan pulsuz", hint: "Sonrakı elanlar üçün sabit dərc haqqı." },
 ];
 
+/**
+ * Reference data for the inline advanced panel: the same category-
+ * scoped catalog services the Search page uses — loaded for both
+ * categories so the client-side category switch needs no extra
+ * requests. No new API. Years are server-computed for one consistent
+ * SSR/hydration list.
+ */
+async function loadAdvancedCatalog(categoryCodes: string[]): Promise<HomeAdvancedCatalog> {
+  const cities = await getCities().catch(() => []);
+  const yearMax = listingYearMax();
+  const years = Array.from({ length: yearMax - LISTING_YEAR_MIN + 1 }, (_, i) => yearMax - i);
+  const optionsByCategory: HomeAdvancedCatalog["optionsByCategory"] = {};
+  await Promise.all(
+    categoryCodes.map(async (category) => {
+      const groups = visibleFilterGroups(category);
+      const lists = await Promise.all(
+        groups.map((g) => getReferenceOptions(g, category).catch(() => [])),
+      );
+      optionsByCategory[category] = {};
+      groups.forEach((g, i) => { optionsByCategory[category][g] = lists[i]; });
+    }),
+  );
+  return { cities, years, optionsByCategory };
+}
+
 export default async function HomePage() {
   const { home } = await homeData();
   const defaultCategory = home.categories[0]?.code ?? "CAR";
-  const [initialBrands, fresh] = await Promise.all([
+  const [initialBrands, fresh, advanced] = await Promise.all([
     getBrands(defaultCategory).catch(() => []),
     // "Yeni elanlar" — the accepted public search read model, newest
     // first (server-side service reuse; no new API).
     searchMarketplace({ category: "CAR", sort: "NEWEST", limit: 8 }).catch(() => null),
+    loadAdvancedCatalog(home.categories.map((c) => c.code)),
   ]);
   return (
     <>
       {/* Full-bleed navy stage; the search panel overlaps it by ~56px. */}
-      <section aria-labelledby="hero-title" className="bg-navy pb-14 pt-8 text-white md:pt-12">
+      <section aria-labelledby="hero-title" className="bg-navy pb-14 pt-8 text-white max-sm:pb-5 md:pt-12">
         <Container>
           <div className="max-w-2xl">
             <h1 id="hero-title" className="text-3xl font-extrabold leading-[1.05] tracking-[-0.015em] md:text-[44px]">
@@ -48,14 +76,10 @@ export default async function HomePage() {
           </div>
         </Container>
       </section>
-      <Container className="-mt-14">
-        <HomeSearch categories={home.categories} initialBrands={initialBrands} />
+      <Container className="-mt-14 max-sm:mt-0">
+        <HomeSearch categories={home.categories} initialBrands={initialBrands} advanced={advanced} />
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/elanlar?category=CAR" className="inline-flex min-h-9 items-center gap-1 font-medium text-primary hover:text-primary-hover">
-              {"Ətraflı axtarış"}
-              <ArrowRight size={14} aria-hidden="true" />
-            </Link>
             <Link href="/elanlar?category=CAR&sort=PRICE_ASC" className="inline-flex min-h-9 items-center rounded-pill bg-raised px-3 text-xs font-medium text-slate-strong hover:text-primary">
               Sərfəli avtomobillər
             </Link>

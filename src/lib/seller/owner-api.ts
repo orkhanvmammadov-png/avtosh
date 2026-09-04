@@ -27,6 +27,8 @@ export interface PatchBody {
   color_id?: string | null;
   city_id?: string | null;
   credit_available?: boolean;
+  no_accident?: true | null;
+  not_repainted?: true | null;
   barter_available?: boolean;
   description?: string | null;
   contact_phone?: string | null;

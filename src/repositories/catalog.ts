@@ -36,6 +36,8 @@ export interface ReferenceOptionRow {
   id: string;
   code: string;
   name_az: string;
+  /** Presentation-only swatch hex from metadata (colors); never identity. */
+  swatch: string | null;
 }
 
 export interface FeatureRow {
@@ -139,14 +141,14 @@ export async function listActiveReferenceOptions(
   const sql = getSql();
   if (categoryId === undefined) {
     return sql<ReferenceOptionRow[]>`
-      select id, code, name_az
+      select id, code, name_az, metadata->>'swatch' as swatch
       from reference_options
       where group_code = ${groupCode} and is_active
       order by sort_order, name_az
     `;
   }
   return sql<ReferenceOptionRow[]>`
-    select id, code, name_az
+    select id, code, name_az, metadata->>'swatch' as swatch
     from reference_options
     where group_code = ${groupCode}
       and is_active

@@ -51,6 +51,8 @@ export interface ReferenceOptionDto {
   id: string;
   code: string;
   name: string;
+  /** Presentation-only color swatch hex; null for non-color groups. */
+  swatch?: string | null;
 }
 
 export interface FeatureDto {
@@ -125,7 +127,7 @@ export async function getReferenceOptions(
       ? undefined
       : await resolveActiveCategory(categoryCode);
   const rows = await listActiveReferenceOptions(groupCode, category?.id);
-  return rows.map((row) => ({ id: row.id, code: row.code, name: row.name_az }));
+  return rows.map((row) => ({ id: row.id, code: row.code, name: row.name_az, swatch: row.swatch ?? null }));
 }
 
 export async function getFeatures(

@@ -20,6 +20,8 @@ export interface ModerationDetailView {
   color: string | null;
   cityName: string | null;
   creditAvailable: boolean;
+  noAccident: boolean | null;
+  notRepainted: boolean | null;
   barterAvailable: boolean;
   description: string | null;
   contactPhone: string | null;

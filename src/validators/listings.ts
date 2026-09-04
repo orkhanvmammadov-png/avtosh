@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LISTING_YEAR_MIN, listingYearMax } from "@/lib/config/marketplace";
 import { ACCEPTED_IMAGE_MIME_TYPES } from "@/lib/config/listing-images";
 
 /**
@@ -25,7 +26,7 @@ export const draftPatchSchema = z
     category: categoryCode.optional(),
     brand_id: z.uuid().nullable().optional(),
     model_id: z.uuid().nullable().optional(),
-    year: z.number().int().min(1900).max(2100).nullable().optional(),
+    year: z.number().int().min(LISTING_YEAR_MIN).max(listingYearMax()).nullable().optional(),
     price_minor: z
       .number()
       .int()
@@ -44,6 +45,11 @@ export const draftPatchSchema = z
     city_id: z.uuid().nullable().optional(),
     credit_available: z.boolean().optional(),
     barter_available: z.boolean().optional(),
+    // Positive seller claims (4.17O.2): checked → true, unchecked →
+    // null. FALSE is never stored — absence of a claim is not a
+    // factual negative.
+    no_accident: z.union([z.literal(true), z.null()]).optional(),
+    not_repainted: z.union([z.literal(true), z.null()]).optional(),
     description: z.string().max(5000).nullable().optional(),
     contact_phone: z.string().max(32).nullable().optional(),
     feature_ids: z.array(z.uuid()).max(100).optional(),

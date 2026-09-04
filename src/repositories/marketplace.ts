@@ -42,6 +42,14 @@ export interface SearchFilters {
   credit?: boolean;
   barter?: boolean;
   featureIds?: string[];
+  fuelTypeIds?: string[];
+  transmissionIds?: string[];
+  colorIds?: string[];
+  engineCcMin?: number;
+  engineCcMax?: number;
+  /** Positive-claim filters: only TRUE is ever passed (NULL rows never match). */
+  noAccident?: boolean;
+  notRepainted?: boolean;
 }
 
 export interface CardRow {
@@ -84,6 +92,21 @@ function filterFragment(sql: Sql, f: SearchFilters): Fragment {
   if (f.mileageMax !== undefined) parts.push(sql`l.mileage <= ${f.mileageMax}`);
   if (f.fuelTypeId !== undefined) parts.push(sql`l.fuel_type_id = ${f.fuelTypeId}`);
   if (f.transmissionId !== undefined) parts.push(sql`l.transmission_id = ${f.transmissionId}`);
+  // Multi-select groups: OR inside the group via = ANY(...), AND across groups.
+  if (f.fuelTypeIds !== undefined && f.fuelTypeIds.length > 0) {
+    parts.push(sql`l.fuel_type_id = any(${f.fuelTypeIds}::uuid[])`);
+  }
+  if (f.transmissionIds !== undefined && f.transmissionIds.length > 0) {
+    parts.push(sql`l.transmission_id = any(${f.transmissionIds}::uuid[])`);
+  }
+  if (f.colorIds !== undefined && f.colorIds.length > 0) {
+    parts.push(sql`l.color_id = any(${f.colorIds}::uuid[])`);
+  }
+  if (f.engineCcMin !== undefined) parts.push(sql`l.engine_cc >= ${f.engineCcMin}`);
+  if (f.engineCcMax !== undefined) parts.push(sql`l.engine_cc <= ${f.engineCcMax}`);
+  // IS TRUE: legacy NULL (no claim) rows never match a condition filter.
+  if (f.noAccident === true) parts.push(sql`l.no_accident is true`);
+  if (f.notRepainted === true) parts.push(sql`l.not_repainted is true`);
   if (f.bodyTypeId !== undefined) parts.push(sql`l.body_type_id = ${f.bodyTypeId}`);
   if (f.driveTypeId !== undefined) parts.push(sql`l.drive_type_id = ${f.driveTypeId}`);
   if (f.motorcycleTypeId !== undefined) parts.push(sql`l.motorcycle_type_id = ${f.motorcycleTypeId}`);
@@ -302,6 +325,8 @@ export interface DetailRow {
   city: string | null;
   credit_available: boolean;
   barter_available: boolean;
+  no_accident: boolean | null;
+  not_repainted: boolean | null;
   description: string | null;
   contact_phone_e164: string | null;
   seller_display_name: string | null;
@@ -319,7 +344,7 @@ export async function getPublicDetail(
   const rows = await sql<DetailRow[]>`
     select l.id, l.public_id::text as public_id, l.status, l.current_expires_at,
            c.code as category, b.name as brand, m.name as model, l.year,
-           l.price_minor::text as price_minor, l.currency, l.mileage, l.engine_cc,
+           l.price_minor::text as price_minor, l.currency, l.mileage, l.engine_cc, l.no_accident, l.not_repainted,
            ft.name_az as fuel_type, tr.name_az as transmission, bt.name_az as body_type,
            dt.name_az as drive_type, mt.name_az as motorcycle_type, co.name_az as color,
            ci.name_az as city, l.credit_available, l.barter_available, l.description,

@@ -1,0 +1,266 @@
+import { expect, test } from "@playwright/test";
+import { seed } from "./helpers";
+import { loginAs, testPhone } from "./auth-helpers";
+import { insertListingFixture } from "./seller-helpers";
+
+/**
+ * Phase 4.17O.2 — deterministic captures for owner UAT (artifacts
+ * only; test-results/visual-review is gitignored).
+ */
+const OUT = "test-results/visual-review";
+
+async function expandHome(page: import("@playwright/test").Page) {
+  await page.getByTestId("home-advanced-toggle").click();
+  await expect(page.getByTestId("home-advanced-panel")).toBeVisible();
+}
+
+test.describe("advanced search visual artifacts", () => {
+  test.beforeEach(async ({}, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "captures set explicit viewports");
+  });
+
+  for (const [name, width, height, expand] of [
+    ["asv2-home-390-collapsed", 390, 844, false],
+    ["asv2-home-390-expanded", 390, 844, true],
+    ["asv2-home-768-expanded", 768, 1024, true],
+    ["asv2-home-1024-expanded", 1024, 800, true],
+    ["asv2-home-1440-collapsed", 1440, 900, false],
+    ["asv2-home-1440-expanded", 1440, 900, true],
+  ] as const) {
+    test(name, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.goto("/");
+      if (expand) await expandHome(page);
+      await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true });
+    });
+  }
+
+  test("asv2-home-1440-selected + panels open", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/");
+    await expandHome(page);
+    // §21 realistic selected scenario (non-panel fields first, then
+    // overlay panels bottom-up so triggers stay reachable)
+    await page.getByTestId("home-adv-mileage-max").fill("123500");
+    await page.getByTestId("home-adv-year-min").selectOption("2020");
+    await page.getByTestId("home-adv-year-max").selectOption("2027");
+    await page.getByTestId("home-adv-engine-min").selectOption("1800");
+    await page.getByTestId("home-adv-engine-max").selectOption("3000");
+    await page.getByTestId("home-adv-price-min").fill("25000");
+    await page.getByTestId("home-adv-price-max").fill("50000");
+    await page.getByTestId("home-adv-credit").click();
+    await page.getByTestId("home-adv-barter").click();
+    await page.getByTestId("home-adv-no-accident").click();
+    await page.getByTestId("home-adv-not-repainted").click();
+    await page.getByTestId("home-adv-transmission-toggle").click();
+    await page.getByTestId("home-adv-transmission-opt-AUTOMATIC").check();
+    await page.getByTestId("home-adv-transmission-opt-ROBOT").check();
+    await page.getByTestId("home-adv-fuel_type-toggle").click();
+    await page.getByTestId("home-adv-fuel_type-opt-PETROL").check();
+    await page.getByTestId("home-adv-fuel_type-opt-HYBRID").check();
+    await page.getByTestId("home-adv-color-toggle").click();
+    await page.getByTestId("home-adv-color-opt-BLACK").check();
+    await page.getByTestId("home-adv-color-opt-WHITE").check();
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => window.scrollTo(0, 0)); // avoid sticky-header repaint artifacts
+    await page.screenshot({ path: `${OUT}/asv2-home-1440-selected.png`, fullPage: true });
+    // fuel multi-select open (trigger-width per approved design)
+    await page.getByTestId("home-adv-fuel_type-toggle").click();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: `${OUT}/asv2-fuel-open-1440.png`, fullPage: true });
+    // transmission open
+    await page.keyboard.press("Escape");
+    await page.getByTestId("home-adv-transmission-toggle").click();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: `${OUT}/asv2-transmission-open-1440.png`, fullPage: true });
+    // color multi-select open — approved WIDE palette, all 20 visible
+    await page.keyboard.press("Escape");
+    await page.getByTestId("home-adv-color-toggle").click();
+    await expect(page.getByTestId("home-adv-color-opt-BLACK")).toBeVisible();
+    await expect(page.getByTestId("home-adv-color-opt-BROWN")).toBeVisible(); // last color never scroll-cut
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: `${OUT}/asv2-color-swatches-open-1440.png`, fullPage: true });
+  });
+
+  test("asv2-home-1024-selected + color open", async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 1000 });
+    await page.goto("/");
+    await expandHome(page);
+    await page.getByTestId("home-adv-mileage-max").fill("123500");
+    await page.getByTestId("home-adv-year-min").selectOption("2020");
+    await page.getByTestId("home-adv-year-max").selectOption("2027");
+    await page.getByTestId("home-adv-engine-min").selectOption("1800");
+    await page.getByTestId("home-adv-engine-max").selectOption("3000");
+    await page.getByTestId("home-adv-price-min").fill("25000");
+    await page.getByTestId("home-adv-price-max").fill("50000");
+    await page.getByTestId("home-adv-credit").click();
+    await page.getByTestId("home-adv-barter").click();
+    await page.getByTestId("home-adv-no-accident").click();
+    await page.getByTestId("home-adv-not-repainted").click();
+    await page.getByTestId("home-adv-transmission-toggle").click();
+    await page.getByTestId("home-adv-transmission-opt-AUTOMATIC").check();
+    await page.getByTestId("home-adv-transmission-opt-ROBOT").check();
+    await page.getByTestId("home-adv-fuel_type-toggle").click();
+    await page.getByTestId("home-adv-fuel_type-opt-PETROL").check();
+    await page.getByTestId("home-adv-fuel_type-opt-HYBRID").check();
+    await page.getByTestId("home-adv-color-toggle").click();
+    await page.getByTestId("home-adv-color-opt-BLACK").check();
+    await page.getByTestId("home-adv-color-opt-WHITE").check();
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: `${OUT}/asv2-home-1024-selected.png`, fullPage: true });
+    // color palette open at 1024 — all 20 visible, no page overflow
+    await page.getByTestId("home-adv-color-toggle").click();
+    await expect(page.getByTestId("home-adv-color-opt-BROWN")).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: `${OUT}/asv2-color-open-1024.png`, fullPage: true });
+    // fuel stays trigger-width
+    await page.keyboard.press("Escape");
+    await page.getByTestId("home-adv-fuel_type-toggle").click();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: `${OUT}/asv2-fuel-open-1024.png`, fullPage: true });
+  });
+
+  test("asv2-home-768-selected + panels", async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1100 });
+    await page.goto("/");
+    await expandHome(page);
+    await page.getByTestId("home-adv-mileage-max").fill("123500");
+    await page.getByTestId("home-adv-year-min").selectOption("2020");
+    await page.getByTestId("home-adv-year-max").selectOption("2027");
+    await page.getByTestId("home-adv-engine-min").selectOption("1800");
+    await page.getByTestId("home-adv-engine-max").selectOption("3000");
+    await page.getByTestId("home-adv-price-min").fill("25000");
+    await page.getByTestId("home-adv-price-max").fill("50000");
+    await page.getByTestId("home-adv-credit").click();
+    await page.getByTestId("home-adv-barter").click();
+    await page.getByTestId("home-adv-no-accident").click();
+    await page.getByTestId("home-adv-not-repainted").click();
+    await page.getByTestId("home-adv-transmission-toggle").click();
+    await page.getByTestId("home-adv-transmission-opt-AUTOMATIC").check();
+    await page.getByTestId("home-adv-transmission-opt-ROBOT").check();
+    await page.getByTestId("home-adv-fuel_type-toggle").click();
+    await page.getByTestId("home-adv-fuel_type-opt-PETROL").check();
+    await page.getByTestId("home-adv-fuel_type-opt-HYBRID").check();
+    await page.getByTestId("home-adv-color-toggle").click();
+    await page.getByTestId("home-adv-color-opt-BLACK").check();
+    await page.getByTestId("home-adv-color-opt-WHITE").check();
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: `${OUT}/asv2-home-768-selected.png`, fullPage: true });
+    // color palette open at 768 — all 20 visible, no page overflow
+    await page.getByTestId("home-adv-color-toggle").click();
+    await expect(page.getByTestId("home-adv-color-opt-BROWN")).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: `${OUT}/asv2-color-open-768.png`, fullPage: true });
+    // fuel stays trigger-width
+    await page.keyboard.press("Escape");
+    await page.getByTestId("home-adv-fuel_type-toggle").click();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: `${OUT}/asv2-fuel-open-768.png`, fullPage: true });
+  });
+
+  test("asv2-home-390-selected + color open", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 1200 });
+    await page.goto("/");
+    await expandHome(page);
+    await page.getByTestId("home-adv-mileage-max").fill("123500");
+    await page.getByTestId("home-adv-year-min").selectOption("2020");
+    await page.getByTestId("home-adv-year-max").selectOption("2027");
+    await page.getByTestId("home-adv-engine-min").selectOption("1800");
+    await page.getByTestId("home-adv-engine-max").selectOption("3000");
+    await page.getByTestId("home-adv-price-min").fill("25000");
+    await page.getByTestId("home-adv-price-max").fill("50000");
+    await page.getByTestId("home-adv-credit").click();
+    await page.getByTestId("home-adv-barter").click();
+    await page.getByTestId("home-adv-no-accident").click();
+    await page.getByTestId("home-adv-not-repainted").click();
+    await page.getByTestId("home-adv-transmission-toggle").click();
+    await page.getByTestId("home-adv-transmission-opt-AUTOMATIC").check();
+    await page.getByTestId("home-adv-transmission-opt-ROBOT").check();
+    await page.getByTestId("home-adv-fuel_type-toggle").click();
+    await page.getByTestId("home-adv-fuel_type-opt-PETROL").check();
+    await page.getByTestId("home-adv-fuel_type-opt-HYBRID").check();
+    await page.getByTestId("home-adv-color-toggle").click();
+    await page.getByTestId("home-adv-color-opt-BLACK").check();
+    await page.getByTestId("home-adv-color-opt-WHITE").check();
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: `${OUT}/asv2-home-390-selected.png`, fullPage: true });
+    // color palette open at 390 — viewport-safe, no page overflow
+    await page.getByTestId("home-adv-color-toggle").click();
+    await expect(page.getByTestId("home-adv-color-opt-BLACK")).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+    await page.getByTestId("home-adv-color-toggle").scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${OUT}/asv2-color-open-390.png` });
+    // fuel panel viewport-safe too
+    await page.keyboard.press("Escape");
+    await page.getByTestId("home-adv-fuel_type-toggle").click();
+    const overflow2 = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow2).toBeLessThanOrEqual(1);
+    await page.getByTestId("home-adv-fuel_type-toggle").scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${OUT}/asv2-fuel-open-390.png` });
+  });
+
+  for (const [name, width, height] of [
+    ["asv2-search-390-multi", 390, 844],
+    ["asv2-search-1024-multi", 1024, 800],
+    ["asv2-search-1440-multi", 1440, 900],
+  ] as const) {
+    test(name, async ({ page }) => {
+      const s = seed();
+      await page.setViewportSize({ width, height });
+      await page.goto(
+        `/elanlar?category=CAR&city_id=${s.bakuCityId}&year_min=2015&no_accident=true&not_repainted=true&engine_cc_min=1000`,
+      );
+      await page.waitForLoadState("networkidle");
+      if (width < 1024) {
+        await page.getByTestId("filters-open").click();
+        await expect(page.getByTestId("filters-drawer")).toBeVisible();
+      }
+      await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: width >= 1024 });
+    });
+  }
+
+  test("asv2-seller-condition-fields-1440", async ({ page, context }) => {
+    await loginAs(context, testPhone("desktop", 46));
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/elan-yerlesdir");
+    await page.getByTestId("create-category-CAR").check();
+    await page.getByTestId("create-listing-button").click();
+    await page.waitForURL(/\/elan-yerlesdir\/[0-9a-f-]{36}$/);
+    await page.getByTestId("wizard-step-2").click();
+    await expect(page.getByTestId("wizard-no-accident")).toBeVisible();
+    await page.screenshot({ path: `${OUT}/asv2-seller-condition-fields-1440.png`, fullPage: true });
+  });
+
+  test("asv2-detail-condition-claims-1440", async ({ page, context }) => {
+    const { userId } = await loginAs(context, testPhone("desktop", 47));
+    const claimed = await insertListingFixture(userId, {
+      status: "ACTIVE", complete: true, images: 1, noAccident: true, notRepainted: true,
+    });
+    await context.clearCookies();
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/elan/${claimed.publicId}`);
+    await expect(page.getByTestId("specs")).toContainText("Vuruğu yoxdur");
+    await page.screenshot({ path: `${OUT}/asv2-detail-condition-claims-1440.png`, fullPage: true });
+  });
+
+  test("asv2-moderator-condition-review-1440", async ({ page, context }) => {
+    const seller = await loginAs(context, testPhone("desktop", 48));
+    const fixture = await insertListingFixture(seller.userId, {
+      status: "PENDING_MODERATION", complete: true, images: 1, noAccident: true,
+    });
+    await context.clearCookies();
+    await loginAs(context, testPhone("desktop", 49), { roles: ["MODERATOR"] });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/moderator/elanlar/${fixture.id}`);
+    await expect(page.getByTestId("review-specs")).toContainText("Qeyd edilib");
+    await page.screenshot({ path: `${OUT}/asv2-moderator-condition-review-1440.png`, fullPage: true });
+  });
+});

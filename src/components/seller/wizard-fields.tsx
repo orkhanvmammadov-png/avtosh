@@ -122,6 +122,42 @@ export function DeferredInput({
   );
 }
 
+/**
+ * Local-state checkbox that pushes patches upward (DeferredInput's
+ * philosophy): the visible state flips instantly while the serialized
+ * editor saves in the background; resetKey remounts adopt server
+ * state after conflict recovery.
+ */
+export function DeferredCheckbox({
+  id,
+  label,
+  initialChecked,
+  onValue,
+}: {
+  id: string;
+  label: string;
+  initialChecked: boolean;
+  onValue: (checked: boolean) => void;
+}) {
+  const [checked, setChecked] = useState(initialChecked);
+  return (
+    <label htmlFor={id} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-control border border-line-strong bg-raised px-3 transition-colors duration-150 hover:border-primary">
+      <input
+        id={id}
+        data-testid={id}
+        type="checkbox"
+        className="h-5 w-5 accent-primary"
+        checked={checked}
+        onChange={(e) => {
+          setChecked(e.target.checked);
+          onValue(e.target.checked);
+        }}
+      />
+      <span className="text-sm font-medium text-ink">{label}</span>
+    </label>
+  );
+}
+
 export function CheckboxField({
   id,
   label,

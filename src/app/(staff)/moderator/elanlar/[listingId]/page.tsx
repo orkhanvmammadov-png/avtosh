@@ -85,6 +85,8 @@ export default async function ModerationReviewPage({
     ["Moto növü", detail.motorcycleType],
     ["Rəng", detail.color],
     ["Şəhər", detail.cityName],
+    ["Vuruğu yoxdur", detail.noAccident === true ? "Qeyd edilib" : "Qeyd edilməyib"],
+    ["Rənglənməyib", detail.notRepainted === true ? "Qeyd edilib" : "Qeyd edilməyib"],
     ["Kredit", detail.creditAvailable ? "Var" : "Yoxdur"],
     ["Barter", detail.barterAvailable ? "Var" : "Yoxdur"],
     [STAFF.contactField, detail.contactPhone],

@@ -1,4 +1,4 @@
-import { SEARCH_SORTS, type SearchSort } from "@/lib/config/marketplace";
+import { LISTING_YEAR_MIN, listingYearMax, SEARCH_SORTS, type SearchSort } from "@/lib/config/marketplace";
 
 /**
  * URL ⇄ search-filter model. URL parameter names are EXACTLY the Phase
@@ -17,14 +17,24 @@ export const FILTER_KEYS = [
   "year_min",
   "year_max",
   "mileage_max",
+  "engine_cc_min",
+  "engine_cc_max",
+  // Legacy singular spellings are PARSED for bookmarked URLs but
+  // normalized into the canonical plural CSV keys below — serialized
+  // state never carries them (see filtersFromSearchParams).
   "fuel_type_id",
   "transmission_id",
+  "color_id",
+  "fuel_type_ids",
+  "transmission_ids",
+  "color_ids",
   "body_type_id",
   "drive_type_id",
   "motorcycle_type_id",
-  "color_id",
   "credit",
   "barter",
+  "no_accident",
+  "not_repainted",
   "feature_ids",
   "sort",
 ] as const;
@@ -50,7 +60,49 @@ export function filtersFromSearchParams(
       state[key] = value;
     }
   }
+  // Canonicalize legacy singular params into the plural CSV keys
+  // (merged + deduplicated) so one representation flows everywhere.
+  const LEGACY: [FilterKey, FilterKey][] = [
+    ["fuel_type_id", "fuel_type_ids"],
+    ["transmission_id", "transmission_ids"],
+    ["color_id", "color_ids"],
+  ];
+  for (const [singular, plural] of LEGACY) {
+    const single = state[singular];
+    if (single === undefined) continue;
+    state[plural] = [...new Set([...idsFromCsv(state[plural]), single])].join(",");
+    delete state[singular];
+  }
+  // Condition params carry positive claims only.
+  if (state.no_accident !== "true") delete state.no_accident;
+  if (state.not_repainted !== "true") delete state.not_repainted;
+  // Legacy year URLs (pre-4.17O.2 allowed up to 2100): canonicalize
+  // out-of-range years to the accepted boundary instead of failing
+  // the page; re-serialized URLs then carry the legal value.
+  for (const key of ["year_min", "year_max"] as const) {
+    const raw = state[key];
+    if (raw === undefined) continue;
+    const year = Number(raw);
+    if (!Number.isInteger(year)) {
+      delete state[key];
+    } else if (year < LISTING_YEAR_MIN) {
+      state[key] = String(LISTING_YEAR_MIN);
+    } else if (year > listingYearMax()) {
+      state[key] = String(listingYearMax());
+    }
+  }
   return state;
+}
+
+/** CSV state value → deduplicated id array ("" and undefined → []). */
+export function idsFromCsv(value: string | undefined): string[] {
+  if (value === undefined) return [];
+  return [...new Set(value.split(",").map((s) => s.trim()).filter((s) => s.length > 0))];
+}
+
+/** Deterministic canonical CSV for multi-select state (dedup, insertion order). */
+export function csvFromIds(ids: string[]): string {
+  return [...new Set(ids)].join(",");
 }
 
 /** Deterministic, minimal query string (known keys, fixed order, no empties). */
@@ -86,13 +138,16 @@ export function visibleFilterGroups(category: string): string[] {
 }
 
 export const GROUP_TO_PARAM: Record<string, FilterKey> = {
-  FUEL_TYPE: "fuel_type_id",
-  TRANSMISSION: "transmission_id",
+  FUEL_TYPE: "fuel_type_ids",
+  TRANSMISSION: "transmission_ids",
   BODY_TYPE: "body_type_id",
   DRIVE_TYPE: "drive_type_id",
   MOTORCYCLE_TYPE: "motorcycle_type_id",
-  COLOR: "color_id",
+  COLOR: "color_ids",
 };
+
+/** Groups whose param carries a CSV of ids (multi-select, OR semantics). */
+export const MULTI_SELECT_GROUPS = new Set(["FUEL_TYPE", "TRANSMISSION", "COLOR"]);
 
 /** Drops filters that no longer apply when the category changes. */
 export function filtersForCategoryChange(state: SearchFilterState, category: string): SearchFilterState {

@@ -158,6 +158,20 @@ test("correction round-trip: seller-safe note reaches the seller, escaped as pla
   expect(await page.locator("script", { hasText: "alert(1)" }).count()).toBe(0);
 });
 
+test("review shows condition claims without treating absence as a negative (4.17O.2)", async ({ page }, { project }) => {
+  const { userId } = await loginAsStub(project.name, 119);
+  const fixture = await insertListingFixture(userId, {
+    status: "PENDING_MODERATION", complete: true, images: 1, noAccident: true,
+  });
+  await moderatorLogin(page, project.name, 120);
+  await page.goto(`/moderator/elanlar/${fixture.id}`);
+  const specs = page.getByTestId("review-specs");
+  await expect(specs).toContainText("Vuruğu yoxdur");
+  await expect(specs).toContainText("Qeyd edilib");
+  await expect(specs).toContainText("Rənglənməyib");
+  await expect(specs).toContainText("Qeyd edilməyib");
+});
+
 test("reject requires a reason and lands in history", async ({ page }, { project }) => {
   const { fixture } = await pendingFixture(project.name, 119);
   await moderatorLogin(page, project.name, 120);

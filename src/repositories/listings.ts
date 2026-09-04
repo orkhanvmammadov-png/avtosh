@@ -30,6 +30,8 @@ export interface ListingRow {
   city_id: string | null;
   credit_available: boolean;
   barter_available: boolean;
+  no_accident: boolean | null;
+  not_repainted: boolean | null;
   description: string | null;
   contact_phone_e164: string | null;
   status: string;
@@ -64,7 +66,7 @@ export async function getOwnedListing(
       l.brand_id, l.model_id, l.year, l.price_minor::text as price_minor,
       l.currency, l.mileage, l.engine_cc, l.fuel_type_id, l.transmission_id,
       l.body_type_id, l.drive_type_id, l.motorcycle_type_id, l.color_id,
-      l.city_id, l.credit_available, l.barter_available, l.description,
+      l.city_id, l.credit_available, l.barter_available, l.no_accident, l.not_repainted, l.description,
       l.contact_phone_e164, l.status, l.revision, l.created_at, l.updated_at
     from listings l
     join categories c on c.id = l.category_id
@@ -190,7 +192,7 @@ export async function getOwnedListingRowForUpdate(
       l.brand_id, l.model_id, l.year, l.price_minor::text as price_minor,
       l.currency, l.mileage, l.engine_cc, l.fuel_type_id, l.transmission_id,
       l.body_type_id, l.drive_type_id, l.motorcycle_type_id, l.color_id,
-      l.city_id, l.credit_available, l.barter_available, l.description,
+      l.city_id, l.credit_available, l.barter_available, l.no_accident, l.not_repainted, l.description,
       l.contact_phone_e164, l.status, l.revision, l.created_at, l.updated_at
     from listings l
     join categories c on c.id = l.category_id

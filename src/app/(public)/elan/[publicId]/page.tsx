@@ -74,6 +74,9 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     [SPEC_LABELS.motorcycleType, listing.motorcycleType],
     [SPEC_LABELS.color, listing.color],
     [SPEC_LABELS.engineCc, listing.engineCc === null ? null : `${listing.engineCc} sm³`],
+    // Positive condition claims only — no negative is ever rendered.
+    [UI.noAccident, listing.noAccident === true ? "Bəli" : null],
+    [UI.notRepainted, listing.notRepainted === true ? "Bəli" : null],
     [SPEC_LABELS.credit, listing.creditAvailable === null ? null : listing.creditAvailable ? "Var" : "Yoxdur"],
     [SPEC_LABELS.barter, listing.barterAvailable === null ? null : listing.barterAvailable ? "Var" : "Yoxdur"],
   ];
