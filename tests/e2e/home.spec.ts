@@ -64,7 +64,7 @@ test.describe("Home", () => {
     await expect(panel).toBeHidden();
     await toggle.click();
     await expect(page.getByTestId("home-adv-city")).toHaveValue(s.bakuCityId);
-    await expect(page.getByTestId("home-adv-price-min")).toHaveValue("27350");
+    await expect(page.getByTestId("home-adv-price-min")).toHaveValue("27 350"); // approved thousands display
     await expect(page.getByTestId("home-adv-year-min")).toHaveValue("2015");
     await expect(page.getByTestId("home-adv-fuel_type-toggle")).toContainText("Benzin, Hibrid");
     // explicit Təmizlə clears everything

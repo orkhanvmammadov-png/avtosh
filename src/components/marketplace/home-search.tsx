@@ -29,10 +29,15 @@ import type { BrandDto, CategoryDto, CityDto, ModelDto, ReferenceOptionDto } fro
 
 /** Direction 1C standard closed control: h40 desktop / h44 @390. */
 const control =
-  "min-h-10 w-full rounded-control border border-line-strong bg-raised px-3 text-[13px] text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none focus:shadow-[0_0_0_2px_rgba(20,122,78,0.25)] disabled:bg-sunken disabled:text-muted max-sm:min-h-11";
+  "min-h-10 w-full rounded-control border border-line-strong bg-raised px-3 text-[13px] text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none focus:shadow-[0_0_0_2px_rgba(20,122,78,0.25)] disabled:bg-raised disabled:text-muted disabled:border-line max-sm:min-h-11";
 
 function digits(value: string): string {
   return value.replace(/\D/g, "");
+}
+
+/** Display grouping per the approved frames ("25 000", "123 500"). */
+function groupThousands(raw: string): string {
+  return raw.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
 /** Field label per tokens.md (12/500 secondary, 6px gap). */
@@ -108,7 +113,7 @@ function PriceToggle({
       className={`inline-flex min-h-8 items-center gap-1.5 rounded-control border px-3 text-[12.5px] transition-colors duration-150 focus:outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 max-sm:min-h-10 ${
         pressed
           ? "border-primary bg-primary-tint font-semibold text-primary-hover"
-          : "border-line-strong bg-raised font-medium text-slate-strong hover:border-primary hover:text-primary"
+          : "border-line-strong bg-raised font-medium text-[#3D4148] hover:border-primary hover:text-primary"
       }`}
       data-testid={testid}
     >
@@ -138,7 +143,7 @@ function ConditionToggle({
       className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-control border px-3 text-[12.5px] transition-colors duration-150 focus:outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 max-sm:min-h-11 ${
         pressed
           ? "border-primary bg-primary-tint font-semibold text-primary-hover"
-          : "border-line-strong bg-raised font-medium text-slate-strong hover:border-primary hover:text-primary"
+          : "border-line-strong bg-raised font-medium text-[#3D4148] hover:border-primary hover:text-primary"
       }`}
       data-testid={testid}
     >
@@ -151,12 +156,16 @@ function ConditionToggle({
 /** Price field: standard geometry + Min/Maks prefix, AZN suffix, Condensed value. */
 function PriceField({
   prefix,
+  placeholder,
   value,
   onChange,
   ariaLabel,
   testid,
 }: {
+  /** Short muted prefix shown when filled ("Min"/"Maks"). */
   prefix: string;
+  /** Full-word placeholder per the approved spine ("Minimum"/"Maksimum"). */
+  placeholder: string;
   value: string;
   onChange: (next: string) => void;
   ariaLabel: string;
@@ -173,11 +182,11 @@ function PriceField({
       <input
         type="text"
         inputMode="numeric"
-        placeholder={prefix}
+        placeholder={placeholder}
         aria-label={ariaLabel}
-        value={value}
+        value={groupThousands(value)}
         onChange={(e) => onChange(digits(e.target.value))}
-        className={`${control} pr-10 ${filled ? "pl-11 font-condensed text-[14px] font-semibold" : ""}`}
+        className={`${control} pr-10 ${filled ? "pl-12 font-condensed text-[14px] font-semibold" : ""}`}
         data-testid={testid}
       />
       <span aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-muted">
@@ -482,7 +491,7 @@ export function HomeSearch({
               inputMode="numeric"
               placeholder="maks. 123 500"
               aria-label={`${UI.mileage} ${UI.max}`}
-              value={mileage}
+              value={groupThousands(mileage)}
               onChange={(e) => setMileage(digits(e.target.value))}
               className={`${control} ${mileage !== "" ? "pr-9 font-medium" : ""}`}
               data-testid="home-adv-mileage-max"
@@ -503,16 +512,16 @@ export function HomeSearch({
         <div className="[grid-area:year]">
           <FieldLabel>{UI.year}</FieldLabel>
           <div className="grid grid-cols-2 gap-2" key={`year-${clearCount}`}>
-            <Select1C name="year_min" ariaLabel="Minimum il" placeholder={UI.min} optionItems={advanced.years.map((y) => ({ value: String(y), label: String(y) }))} testid="home-adv-year-min" />
-            <Select1C name="year_max" ariaLabel="Maximum il" placeholder={UI.max} optionItems={advanced.years.map((y) => ({ value: String(y), label: String(y) }))} testid="home-adv-year-max" />
+            <Select1C name="year_min" ariaLabel="Minimum il" placeholder="Min" optionItems={advanced.years.map((y) => ({ value: String(y), label: String(y) }))} testid="home-adv-year-min" />
+            <Select1C name="year_max" ariaLabel="Maximum il" placeholder="Maks" optionItems={advanced.years.map((y) => ({ value: String(y), label: String(y) }))} testid="home-adv-year-max" />
           </div>
         </div>
         {/* 4 — Mühərrikin həcmi (shared generator). */}
         <div className="[grid-area:engine]">
           <FieldLabel>{UI.engineCcTitle}</FieldLabel>
           <div className="grid grid-cols-2 gap-2" key={`engine-${clearCount}`}>
-            <Select1C name="engine_cc_min" ariaLabel={`${UI.engineCcTitle} ${UI.min}`} placeholder={UI.min} optionItems={engineCcOptions().map((v) => ({ value: String(v), label: String(v) }))} testid="home-adv-engine-min" />
-            <Select1C name="engine_cc_max" ariaLabel={`${UI.engineCcTitle} ${UI.max}`} placeholder={UI.max} optionItems={engineCcOptions().map((v) => ({ value: String(v), label: String(v) }))} testid="home-adv-engine-max" />
+            <Select1C name="engine_cc_min" ariaLabel={`${UI.engineCcTitle} ${UI.min}`} placeholder="Min" optionItems={engineCcOptions().map((v) => ({ value: String(v), label: String(v) }))} testid="home-adv-engine-min" />
+            <Select1C name="engine_cc_max" ariaLabel={`${UI.engineCcTitle} ${UI.max}`} placeholder="Maks" optionItems={engineCcOptions().map((v) => ({ value: String(v), label: String(v) }))} testid="home-adv-engine-max" />
           </div>
         </div>
         {/* 5 — Rəng (multi, swatches). */}
@@ -525,6 +534,7 @@ export function HomeSearch({
             options={options.COLOR ?? []}
             initialSelected={[]}
             swatches
+            panelWide
             testid="home-adv-color"
           />
         </div>
@@ -548,8 +558,8 @@ export function HomeSearch({
             ) : null}
           </div>
           <div className="mt-2.5 grid grid-cols-2 gap-2 desk:grid-cols-1">
-            <PriceField prefix={UI.min} value={priceMin} onChange={setPriceMin} ariaLabel={`${UI.price} ${UI.min}`} testid="home-adv-price-min" />
-            <PriceField prefix={UI.max} value={priceMax} onChange={setPriceMax} ariaLabel={`${UI.price} ${UI.max}`} testid="home-adv-price-max" />
+            <PriceField prefix="Min" placeholder="Minimum" value={priceMin} onChange={setPriceMin} ariaLabel={`${UI.price} ${UI.min}`} testid="home-adv-price-min" />
+            <PriceField prefix="Maks" placeholder="Maksimum" value={priceMax} onChange={setPriceMax} ariaLabel={`${UI.price} ${UI.max}`} testid="home-adv-price-max" />
           </div>
           <div className="mt-2.5 flex flex-wrap gap-2">
             <PriceToggle pressed={credit} onToggle={() => setCredit((v) => !v)} testid="home-adv-credit">
@@ -559,7 +569,7 @@ export function HomeSearch({
               {UI.barter}
             </PriceToggle>
           </div>
-          <p className="mt-2 hidden text-[11px] leading-relaxed text-muted desk:block">Kredit və Barter qiymətə aiddir.</p>
+          <p className="mt-2.5 hidden text-[11px] leading-relaxed text-muted desk:block">Kredit və Barter qiymətə aiddir.</p>
           {/* Actions live in the spine at desk+ (anchored to its foot). */}
           <div className="mt-auto hidden flex-col items-stretch gap-2 pt-3.5 text-center desk:flex">{actionButtons}</div>
         </div>

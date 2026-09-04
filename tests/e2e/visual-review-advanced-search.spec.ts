@@ -35,33 +35,49 @@ test.describe("advanced search visual artifacts", () => {
     });
   }
 
-  test("asv2-home-1440-selected + color panel with swatches", async ({ page }) => {
-    const s = seed();
-    await page.setViewportSize({ width: 1440, height: 900 });
+  test("asv2-home-1440-selected + panels open", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/");
     await expandHome(page);
-    await page.getByTestId("home-brand").selectOption(s.toyotaBrandId);
-    await page.getByTestId("home-adv-city").selectOption(s.bakuCityId);
-    await page.getByTestId("home-adv-price-min").fill("27350");
-    await page.getByTestId("home-adv-year-min").selectOption("2015");
-    await page.getByTestId("home-adv-engine-min").selectOption("1000");
+    // §21 realistic selected scenario (non-panel fields first, then
+    // overlay panels bottom-up so triggers stay reachable)
+    await page.getByTestId("home-adv-mileage-max").fill("123500");
+    await page.getByTestId("home-adv-year-min").selectOption("2020");
+    await page.getByTestId("home-adv-year-max").selectOption("2027");
+    await page.getByTestId("home-adv-engine-min").selectOption("1800");
+    await page.getByTestId("home-adv-engine-max").selectOption("3000");
+    await page.getByTestId("home-adv-price-min").fill("25000");
+    await page.getByTestId("home-adv-price-max").fill("50000");
+    await page.getByTestId("home-adv-credit").click();
+    await page.getByTestId("home-adv-barter").click();
+    await page.getByTestId("home-adv-no-accident").click();
+    await page.getByTestId("home-adv-not-repainted").click();
+    await page.getByTestId("home-adv-transmission-toggle").click();
+    await page.getByTestId("home-adv-transmission-opt-AUTOMATIC").check();
+    await page.getByTestId("home-adv-transmission-opt-ROBOT").check();
     await page.getByTestId("home-adv-fuel_type-toggle").click();
     await page.getByTestId("home-adv-fuel_type-opt-PETROL").check();
     await page.getByTestId("home-adv-fuel_type-opt-HYBRID").check();
-    await page.getByTestId("home-adv-fuel_type-toggle").click();
-    await page.getByTestId("home-adv-no-accident").click();
-    await page.getByTestId("home-adv-not-repainted").click();
-    await page.getByTestId("home-adv-credit").click();
-    await page.getByTestId("home-adv-barter").click();
+    await page.getByTestId("home-adv-color-toggle").click();
+    await page.getByTestId("home-adv-color-opt-BLACK").check();
+    await page.getByTestId("home-adv-color-opt-WHITE").check();
+    await page.keyboard.press("Escape");
     await page.evaluate(() => window.scrollTo(0, 0)); // avoid sticky-header repaint artifacts
     await page.screenshot({ path: `${OUT}/asv2-home-1440-selected.png`, fullPage: true });
-    // fuel multi-select open
+    // fuel multi-select open (trigger-width per approved design)
     await page.getByTestId("home-adv-fuel_type-toggle").click();
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: `${OUT}/asv2-fuel-open-1440.png`, fullPage: true });
-    // color multi-select open with circular swatches
+    // transmission open
+    await page.keyboard.press("Escape");
+    await page.getByTestId("home-adv-transmission-toggle").click();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: `${OUT}/asv2-transmission-open-1440.png`, fullPage: true });
+    // color multi-select open — approved WIDE palette, all 20 visible
+    await page.keyboard.press("Escape");
     await page.getByTestId("home-adv-color-toggle").click();
     await expect(page.getByTestId("home-adv-color-opt-BLACK")).toBeVisible();
+    await expect(page.getByTestId("home-adv-color-opt-BROWN")).toBeVisible(); // last color never scroll-cut
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: `${OUT}/asv2-color-swatches-open-1440.png`, fullPage: true });
   });

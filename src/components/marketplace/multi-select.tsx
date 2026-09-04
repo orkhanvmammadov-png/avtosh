@@ -50,6 +50,7 @@ export function MultiSelectField({
   initialSelected,
   swatches = false,
   variant = "inline",
+  panelWide = false,
   triggerClassName = "",
   testid,
 }: {
@@ -59,6 +60,10 @@ export function MultiSelectField({
   initialSelected: string[];
   swatches?: boolean;
   variant?: "inline" | "1c";
+  /** Approved Rəng geometry: panel extends ~140px beyond the trigger
+      at desk+ and shows every option without a scroll cut (design
+      source: .pnl right:-140px). Other groups stay trigger-width. */
+  panelWide?: boolean;
   /** Surface-specific geometry appended to the trigger. */
   triggerClassName?: string;
   testid: string;
@@ -130,7 +135,7 @@ export function MultiSelectField({
     ? `flex min-h-10 w-full items-center gap-2 rounded-control border bg-raised px-3 text-left text-[13px] font-normal transition-colors duration-150 focus:outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 max-sm:min-h-11 ${open ? "border-primary" : "border-line-strong hover:border-muted"} ${triggerClassName}`
     : `flex min-h-10 w-full items-center justify-between gap-2 rounded-control border border-line-strong bg-raised px-3 text-left text-sm font-normal text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none max-md:min-h-12 ${triggerClassName}`;
   const panelClasses = is1c
-    ? "absolute inset-x-0 top-full z-30 mt-1.5 max-h-80 min-w-full overflow-y-auto rounded-lg border border-line bg-raised p-1.5 shadow-overlay max-sm:max-h-[60vh]"
+    ? `absolute left-0 right-0 top-full z-30 mt-1.5 max-h-80 min-w-full overflow-y-auto rounded-lg border border-line bg-raised p-1.5 shadow-overlay max-sm:max-h-[60vh] ${panelWide ? "desk:-right-[140px] desk:max-h-none desk:overflow-visible" : ""}`
     : "mt-1 max-h-64 overflow-y-auto rounded-control border border-line-strong bg-raised p-1.5";
   const optionRow = is1c
     ? "flex min-h-9 cursor-pointer items-center gap-[9px] rounded-[5px] px-[9px] text-[12.5px] font-normal text-ink transition-colors duration-150 hover:bg-surface max-sm:min-h-11"
@@ -230,7 +235,7 @@ export function MultiSelectField({
             ) : (
               <span />
             )}
-            <span className="text-[11px] text-muted">Bir neçə seçim mümkündür</span>
+            <span className="text-[11px] text-muted">Esc bağlayır</span>
           </div>
         ) : selected.length > 0 ? (
           <button
