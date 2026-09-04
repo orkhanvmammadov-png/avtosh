@@ -380,9 +380,9 @@ export function HomeSearch({
   );
 
   return (
-    <form ref={formRef} onSubmit={submit} className="rounded-[12px] bg-raised shadow-overlay" aria-label="Elan axtarışı">
+    <form ref={formRef} onSubmit={submit} className="rounded-[12px] bg-raised shadow-overlay max-sm:rounded-none max-sm:bg-transparent max-sm:shadow-none" aria-label="Elan axtarışı">
       {/* Compact core search: category · Marka · Model · Şəhər · Axtar. */}
-      <div className="p-4 pb-3 md:p-5 md:pb-3">
+      <div className="p-4 pb-3 max-sm:px-0 md:p-5 md:pb-3">
         <div role="radiogroup" aria-label="Kateqoriya" className="mb-4 flex gap-2">
           {categories.map((c) => (
             <button
@@ -420,7 +420,7 @@ export function HomeSearch({
               {advanced.cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
-          <div className="flex items-end">
+          <div className="flex items-end max-sm:order-5">
             <button
               type="submit"
               className="inline-flex min-h-12 w-full items-center justify-center rounded-control bg-primary px-8 text-sm font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed md:w-auto"
@@ -429,24 +429,28 @@ export function HomeSearch({
               {UI.search}
             </button>
           </div>
+          {/* Toggle sits between Şəhər and Axtar on mobile (approved
+              390 frame) and drops under the row at md+ — compact-area
+              composition only; filter DOM order 1–10 is untouched. */}
+          <div className="max-sm:order-4 md:col-span-4">
+            <button
+              type="button"
+              aria-expanded={expanded}
+              aria-controls="home-advanced-filters"
+              onClick={toggleExpanded}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-control text-[12.5px] font-semibold text-primary transition-colors duration-150 hover:text-primary-hover md:mt-1"
+              data-testid="home-advanced-toggle"
+            >
+              Ətraflı axtarış
+              {!expanded && collapsedCount > 0 ? (
+                <span className="rounded-pill bg-primary-tint px-1.5 py-0.5 text-[10px] font-semibold text-primary-hover" data-testid="home-adv-count">
+                  {collapsedCount} filtr
+                </span>
+              ) : null}
+              {expanded ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
+            </button>
+          </div>
         </div>
-        {/* Collapsed/expanded toggle (12.5/600 green + count chip + chevron). */}
-        <button
-          type="button"
-          aria-expanded={expanded}
-          aria-controls="home-advanced-filters"
-          onClick={toggleExpanded}
-          className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-control text-[12.5px] font-semibold text-primary transition-colors duration-150 hover:text-primary-hover"
-          data-testid="home-advanced-toggle"
-        >
-          Ətraflı axtarış
-          {!expanded && collapsedCount > 0 ? (
-            <span className="rounded-pill bg-primary-tint px-1.5 py-0.5 text-[10px] font-semibold text-primary-hover" data-testid="home-adv-count">
-              {collapsedCount} filtr
-            </span>
-          ) : null}
-          {expanded ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
-        </button>
       </div>
 
       {/* Advanced zone — Direction 1C. DOM order is the mandated 1–10
@@ -458,7 +462,7 @@ export function HomeSearch({
         hidden={!expanded}
         data-testid="home-advanced-panel"
         className={
-          "border-t border-line p-4 md:px-4 md:pt-3.5 md:pb-4 desk:px-4 desk:pt-3.5 desk:pb-4 xl:px-[18px] xl:py-4 " +
+          "border-t border-line p-4 max-sm:px-0 md:px-4 md:pt-3.5 md:pb-4 desk:px-4 desk:pt-3.5 desk:pb-4 xl:px-[18px] xl:py-4 " +
           "grid grid-cols-1 gap-y-3 " +
           "[grid-template-areas:'ban'_'mileage'_'year'_'engine'_'color'_'price'_'fuel'_'drive'_'trans'_'cond'_'actions'] " +
           "md:grid-cols-2 md:gap-x-3.5 md:gap-y-[13px] " +

@@ -63,7 +63,7 @@ export default async function HomePage() {
   return (
     <>
       {/* Full-bleed navy stage; the search panel overlaps it by ~56px. */}
-      <section aria-labelledby="hero-title" className="bg-navy pb-14 pt-8 text-white md:pt-12">
+      <section aria-labelledby="hero-title" className="bg-navy pb-14 pt-8 text-white max-sm:pb-5 md:pt-12">
         <Container>
           <div className="max-w-2xl">
             <h1 id="hero-title" className="text-3xl font-extrabold leading-[1.05] tracking-[-0.015em] md:text-[44px]">
@@ -76,7 +76,7 @@ export default async function HomePage() {
           </div>
         </Container>
       </section>
-      <Container className="-mt-14">
+      <Container className="-mt-14 max-sm:mt-0">
         <HomeSearch categories={home.categories} initialBrands={initialBrands} advanced={advanced} />
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
           <div className="flex flex-wrap items-center gap-2">
