@@ -7,6 +7,9 @@ export interface CatalogItem {
   id: string;
   name: string;
   code?: string;
+  /** Presentation-only color swatch hex (already returned by the
+      options API since O.2); exposed for the seller color palette. */
+  swatch?: string | null;
 }
 
 export const OPTION_GROUPS = [
