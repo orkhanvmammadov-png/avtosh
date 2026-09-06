@@ -36,6 +36,8 @@ export interface ListingFixtureOptions {
   /** Positive condition claims (4.17O.2): true = claimed, omitted = NULL. */
   noAccident?: true;
   notRepainted?: true;
+  /** Explicit engine_cc (4.17O.3 legacy-value scenarios); omitted = NULL. */
+  engineCc?: number;
 }
 
 /** Inserts an owner listing in a given lifecycle state; returns ids. */
@@ -51,14 +53,14 @@ export async function insertListingFixture(
     const submitted = ["PENDING_MODERATION", "CORRECTION_REQUIRED", "REJECTED", "ACTIVE", "SOLD", "EXPIRED", "SUSPENDED"].includes(status);
     const published = ["ACTIVE", "SOLD", "EXPIRED", "SUSPENDED"].includes(status);
     const [row] = await sql`
-      insert into listings (owner_id, category_id, brand_id, model_id, city_id, year,
+      insert into listings (owner_id, category_id, brand_id, model_id, city_id, year, engine_cc,
         price_minor, mileage, no_accident, not_repainted, description, contact_phone_e164, status,
         submitted_at, published_at, current_expires_at, sold_at)
       values (${ownerId},
         (select id from categories where code = 'CAR'),
         ${complete ? s.toyotaBrandId : null}, ${complete ? s.corollaModelId : null},
         ${complete ? s.bakuCityId : null},
-        ${complete ? 2021 : null}, ${complete ? 2500000 : null}, ${complete ? 64000 : null},
+        ${complete ? 2021 : null}, ${options.engineCc ?? null}, ${complete ? 2500000 : null}, ${complete ? 64000 : null},
         ${options.noAccident ?? null}, ${options.notRepainted ?? null},
         ${complete ? "E2E fixture təsviri" : null}, ${complete ? "+994501234567" : null},
         ${status}::listing_status,
@@ -196,6 +198,15 @@ export async function getListingYear(listingId: string): Promise<number | null> 
   const sql = db();
   try {
     return (await sql`select year from listings where id = ${listingId}`)[0].year as number | null;
+  } finally {
+    await sql.end();
+  }
+}
+
+export async function getListingEngineCc(listingId: string): Promise<number | null> {
+  const sql = db();
+  try {
+    return (await sql`select engine_cc from listings where id = ${listingId}`)[0].engine_cc as number | null;
   } finally {
     await sql.end();
   }

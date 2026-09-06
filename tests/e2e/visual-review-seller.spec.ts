@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { loginAs } from "./auth-helpers";
+import { expectNoHorizontalOverflow } from "./helpers";
 import { insertListingFixture, makeTestJpeg } from "./seller-helpers";
 
 /**
@@ -72,6 +73,81 @@ test.describe("seller visual review artifacts", () => {
       });
     });
   }
+
+  // Phase 4.17O.3 — vehicle attribute controls (own DRAFT fixture so
+  // the later submit capture cannot invalidate these states). Every
+  // width also proves no horizontal page overflow with a panel open.
+  test("o3-vehicle-attribute-captures", async ({ page, context }) => {
+    test.setTimeout(120_000);
+    const { userId } = await loginAs(context, PHONE);
+    const draft = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 0 });
+    const saved = () =>
+      expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+
+    // 1440 — Step 1 Year open
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/elan-yerlesdir/${draft.id}?addim=1`);
+    await expect(page.getByTestId("wizard-brand")).toBeEnabled();
+    await page.getByTestId("wizard-year").click();
+    await expect(page.getByTestId("wizard-year-panel")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o3-year-open-1440.png` });
+    await page.keyboard.press("Escape");
+
+    // 1440 — Step 2 Engine open
+    await page.getByTestId("wizard-step-2").click();
+    await page.getByTestId("wizard-engine").click();
+    await expect(page.getByTestId("wizard-engine-panel")).toBeVisible();
+    await page.screenshot({ path: `${OUT}/o3-engine-open-1440.png` });
+    await page.keyboard.press("Escape");
+
+    // 1440 — Step 2 Color open, then selected
+    await page.getByTestId("wizard-color_id").scrollIntoViewIfNeeded();
+    await page.getByTestId("wizard-color_id").click();
+    await expect(page.getByTestId("wizard-color_id-panel")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o3-color-open-1440.png` });
+    await page.getByTestId("wizard-color_id-opt-BLACK").click();
+    await saved();
+    await expect(page.getByTestId("wizard-color_id")).toContainText("Qara");
+    await page.screenshot({ path: `${OUT}/o3-color-selected-1440.png` });
+
+    // 768 — Step 2 Color open
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.getByTestId("wizard-color_id").scrollIntoViewIfNeeded();
+    await page.getByTestId("wizard-color_id").click();
+    await expect(page.getByTestId("wizard-color_id-panel")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o3-color-open-768.png` });
+    await page.keyboard.press("Escape");
+
+    // 390 — Year open, Engine open, Color open + selected
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByTestId("wizard-step-1").click();
+    await page.getByTestId("wizard-year").scrollIntoViewIfNeeded();
+    await page.getByTestId("wizard-year").click();
+    await expect(page.getByTestId("wizard-year-panel")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o3-year-open-390.png` });
+    await page.keyboard.press("Escape");
+
+    await page.getByTestId("wizard-step-2").click();
+    await page.getByTestId("wizard-engine").scrollIntoViewIfNeeded();
+    await page.getByTestId("wizard-engine").click();
+    await expect(page.getByTestId("wizard-engine-panel")).toBeVisible();
+    await page.screenshot({ path: `${OUT}/o3-engine-open-390.png` });
+    await page.keyboard.press("Escape");
+
+    await page.getByTestId("wizard-color_id").scrollIntoViewIfNeeded();
+    await page.getByTestId("wizard-color_id").click();
+    await expect(page.getByTestId("wizard-color_id-panel")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o3-color-open-390.png` });
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("wizard-color_id-panel")).toBeHidden();
+    await page.getByTestId("wizard-color_id").scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${OUT}/o3-color-selected-390.png` });
+  });
 
   for (const [name, width, height] of [
     ["wizard-correction-desktop-1440", 1440, 900],
