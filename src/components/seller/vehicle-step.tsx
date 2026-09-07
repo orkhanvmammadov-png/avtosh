@@ -32,6 +32,7 @@ export function VehicleStep({ editor, catalog }: { editor: ListingEditor; catalo
         value={dto.category}
         placeholder={SELLER.select}
         items={catalog.categories}
+        valueField="code"
         onChange={(code) => {
           if (code !== null && code !== dto.category) {
             editor.patch({ category: code }, { immediate: true });

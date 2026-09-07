@@ -203,6 +203,32 @@ export async function getListingYear(listingId: string): Promise<number | null> 
   }
 }
 
+/** The five reference_options-backed listing columns (4.17O.4). */
+export async function getListingCatalogIds(listingId: string): Promise<{
+  body_type_id: string | null;
+  fuel_type_id: string | null;
+  transmission_id: string | null;
+  drive_type_id: string | null;
+  motorcycle_type_id: string | null;
+}> {
+  const sql = db();
+  try {
+    const [row] = await sql`
+      select body_type_id, fuel_type_id, transmission_id, drive_type_id, motorcycle_type_id
+      from listings where id = ${listingId}
+    `;
+    return row as {
+      body_type_id: string | null;
+      fuel_type_id: string | null;
+      transmission_id: string | null;
+      drive_type_id: string | null;
+      motorcycle_type_id: string | null;
+    };
+  } finally {
+    await sql.end();
+  }
+}
+
 export async function getListingEngineCc(listingId: string): Promise<number | null> {
   const sql = db();
   try {

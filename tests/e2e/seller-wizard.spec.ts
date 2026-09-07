@@ -4,6 +4,7 @@ import { loginAs, testPhone } from "./auth-helpers";
 import {
   bumpListingRevision,
   consumeFreePublications,
+  getListingCatalogIds,
   getListingEngineCc,
   getListingYear,
   insertListingFixture,
@@ -438,4 +439,100 @@ test("motorcycle drafts use the same year/engine/color controls (4.17O.3)", asyn
   await expect(page.getByTestId("wizard-color_id")).toContainText("Qırmızı");
   await page.getByTestId("wizard-step-1").click();
   await expect(page.getByTestId("wizard-year")).toContainText("2022");
+});
+
+test("catalog option selects persist UUIDs, not codes — CAR (4.17O.4)", async ({ page, context }, { project }) => {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f-]{27}$/;
+  const { userId } = await loginAs(context, testPhone(project.name, 41));
+  const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 0 });
+  // the defect made these PATCHes die at Zod with 400 — record any
+  const badPatches: string[] = [];
+  page.on("response", (r) => {
+    if (r.request().method() === "PATCH" && r.url().includes("/api/v1/me/listings/") && r.status() === 400) {
+      badPatches.push(r.url());
+    }
+  });
+  await page.goto(`/elan-yerlesdir/${fixture.id}?addim=2`);
+
+  await page.getByTestId("wizard-body_type_id").selectOption({ label: "Sedan" });
+  await saveSettled(page);
+  await page.getByTestId("wizard-fuel_type_id").selectOption({ label: "Benzin" });
+  await saveSettled(page);
+  await page.getByTestId("wizard-transmission_id").selectOption({ label: "Avtomat (AT)" });
+  await saveSettled(page);
+  await page.getByTestId("wizard-drive_type_id").selectOption({ label: "Tam" });
+  await saveSettled(page);
+  expect(badPatches).toEqual([]);
+
+  // DB holds the option UUIDs (never SEDAN/PETROL/AUTOMATIC codes),
+  // and they equal exactly what the selects submitted
+  const ids = await getListingCatalogIds(fixture.id);
+  expect(ids.body_type_id).toMatch(uuid);
+  expect(ids.fuel_type_id).toMatch(uuid);
+  expect(ids.transmission_id).toMatch(uuid);
+  expect(ids.drive_type_id).toMatch(uuid);
+  expect(ids.body_type_id).toBe(await page.getByTestId("wizard-body_type_id").inputValue());
+  expect(ids.fuel_type_id).toBe(await page.getByTestId("wizard-fuel_type_id").inputValue());
+
+  // reload restore: persisted UUID → matching option renders selected
+  await page.reload();
+  await expect(page.getByTestId("wizard-body_type_id")).toHaveValue(ids.body_type_id!);
+  await expect(page.getByTestId("wizard-fuel_type_id")).toHaveValue(ids.fuel_type_id!);
+  await expect(page.getByTestId("wizard-transmission_id")).toHaveValue(ids.transmission_id!);
+  await expect(page.getByTestId("wizard-drive_type_id")).toHaveValue(ids.drive_type_id!);
+});
+
+test("catalog option selects persist UUIDs — MOTORCYCLE (4.17O.4)", async ({ page, context }, { project }) => {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f-]{27}$/;
+  await loginAs(context, testPhone(project.name, 42));
+  await page.goto("/elan-yerlesdir");
+  await page.getByTestId("create-category-MOTORCYCLE").check();
+  await page.getByTestId("create-listing-button").click();
+  await page.waitForURL(/\/elan-yerlesdir\/[0-9a-f-]{36}$/);
+  const listingId = page.url().match(/([0-9a-f-]{36})$/)![1];
+
+  await page.getByTestId("wizard-step-2").click();
+  await page.waitForURL(/addim=2/);
+  await page.getByTestId("wizard-motorcycle_type_id").selectOption({ label: "Sport" });
+  await saveSettled(page);
+  await page.getByTestId("wizard-fuel_type_id").selectOption({ label: "Benzin" });
+  await saveSettled(page);
+  await page.getByTestId("wizard-transmission_id").selectOption({ label: "Avtomat (AT)" });
+  await saveSettled(page);
+
+  const ids = await getListingCatalogIds(listingId);
+  expect(ids.motorcycle_type_id).toMatch(uuid);
+  expect(ids.fuel_type_id).toMatch(uuid);
+  expect(ids.transmission_id).toMatch(uuid);
+
+  await page.reload();
+  await expect(page.getByTestId("wizard-motorcycle_type_id")).toHaveValue(ids.motorcycle_type_id!);
+  await expect(page.getByTestId("wizard-fuel_type_id")).toHaveValue(ids.fuel_type_id!);
+  await expect(page.getByTestId("wizard-transmission_id")).toHaveValue(ids.transmission_id!);
+});
+
+test("category switch clears persisted CAR body type; category stays code-backed (4.17O.4)", async ({ page, context }, { project }) => {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f-]{27}$/;
+  const { userId } = await loginAs(context, testPhone(project.name, 43));
+  const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 0 });
+  await page.goto(`/elan-yerlesdir/${fixture.id}?addim=2`);
+  await page.getByTestId("wizard-body_type_id").selectOption({ label: "Sedan" });
+  await saveSettled(page);
+  expect((await getListingCatalogIds(fixture.id)).body_type_id).toMatch(uuid);
+
+  // category PATCH still sends the CODE ("MOTORCYCLE") — the switch
+  // succeeding at the server proves the code contract survives the
+  // default-id SelectField change
+  await page.goto(`/elan-yerlesdir/${fixture.id}?addim=1`);
+  await page.getByTestId("wizard-category").selectOption("MOTORCYCLE");
+  await expect(page.getByTestId("wizard-brand")).toHaveValue("", { timeout: 15_000 });
+  await expect(page.getByTestId("wizard-category")).toHaveValue("MOTORCYCLE");
+
+  // server-side clearing removed the CAR-scoped value — no stale UUID
+  expect((await getListingCatalogIds(fixture.id)).body_type_id).toBeNull();
+
+  // the CAR-only control is gone; the MOTORCYCLE control is available
+  await page.goto(`/elan-yerlesdir/${fixture.id}?addim=2`);
+  await expect(page.getByTestId("wizard-motorcycle_type_id")).toBeVisible();
+  await expect(page.getByTestId("wizard-body_type_id")).toHaveCount(0);
 });
