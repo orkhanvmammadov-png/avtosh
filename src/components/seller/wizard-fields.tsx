@@ -43,6 +43,7 @@ export function SelectField({
   placeholder,
   disabled = false,
   items,
+  valueField = "id",
   onChange,
 }: {
   id: string;
@@ -51,6 +52,15 @@ export function SelectField({
   placeholder: string;
   disabled?: boolean;
   items: { id: string; name: string; code?: string }[];
+  /**
+   * What each option submits (4.17O.4). Default "id": UUID-backed
+   * fields (brand/model/city and every reference_options group) —
+   * their PATCH contract is the catalog UUID. Only a caller whose API
+   * contract genuinely is the catalog CODE (Category) opts into
+   * "code"; the old implicit `code ?? id` fallback made the
+   * reference-option selects submit codes the server rejects.
+   */
+  valueField?: "id" | "code";
   onChange: (value: string | null) => void;
 }) {
   return (
@@ -65,7 +75,7 @@ export function SelectField({
       >
         <option value="">{placeholder}</option>
         {items.map((item) => (
-          <option key={item.id} value={item.code ?? item.id}>
+          <option key={item.id} value={valueField === "code" ? (item.code ?? item.id) : item.id}>
             {item.name}
           </option>
         ))}
