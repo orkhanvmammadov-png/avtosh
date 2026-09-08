@@ -33,8 +33,8 @@ test.describe("home premium feed visual review", () => {
           where l.status = 'ACTIVE' and l.current_expires_at > now()
             and not exists (select 1 from listing_promotions p where p.listing_id = l.id and p.type = 'PREMIUM')
         ), pays as (
-          insert into payments (user_id, listing_id, type, amount_minor, idempotency_key, status)
-          select ${s.sellerId}, c.id, 'PREMIUM', 0, 'o5cap:' || c.id, 'CREATED' from candidates c
+          insert into payments (user_id, listing_id, type, amount_minor, idempotency_key, status, provider)
+          select ${s.sellerId}, c.id, 'PREMIUM', 0, 'o5cap:' || c.id, 'SUCCESS', 'KAPITAL' from candidates c
           returning id, listing_id
         )
         insert into listing_promotions (listing_id, type, payment_id, starts_at, ends_at, status, purchased_duration_days, purchased_price_minor)

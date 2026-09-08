@@ -335,8 +335,8 @@ test.describe("Home", () => {
           where l.status = 'ACTIVE' and l.current_expires_at > now()
             and not exists (select 1 from listing_promotions p where p.listing_id = l.id and p.type = 'PREMIUM')
         ), pays as (
-          insert into payments (user_id, listing_id, type, amount_minor, idempotency_key, status)
-          select ${s.sellerId}, c.id, 'PREMIUM', 0, 'o5lm:' || c.id, 'CREATED' from candidates c
+          insert into payments (user_id, listing_id, type, amount_minor, idempotency_key, status, provider)
+          select ${s.sellerId}, c.id, 'PREMIUM', 0, 'o5lm:' || c.id, 'SUCCESS', 'KAPITAL' from candidates c
           returning id, listing_id
         )
         insert into listing_promotions (listing_id, type, payment_id, starts_at, ends_at, status, purchased_duration_days, purchased_price_minor)
@@ -348,10 +348,20 @@ test.describe("Home", () => {
       expect(firstPage).toBe(24); // exactly one server page
       const loadMore = page.getByTestId("premium-load-more");
       await expect(loadMore).toBeVisible();
-      await loadMore.click();
-      await expect(loadMore).toHaveCount(0); // honest end after the last page
+      // walk the cursor to the honest end: each click must append at
+      // least one card (button is disabled while loading, so one click
+      // is one page); the loop is bounded, never a retry crutch —
+      // earlier suites may have grown the premium pool past two pages
+      let clicks = 0;
+      while ((await loadMore.count()) > 0) {
+        expect(clicks++).toBeLessThan(10);
+        const before = await cards.count();
+        await loadMore.click();
+        await expect(cards.nth(before)).toBeVisible(); // page appended
+      }
       const total = await cards.count();
       expect(total).toBeGreaterThan(firstPage); // feed actually continued
+      await expect(loadMore).toHaveCount(0); // honest end — no fake continuation
       // no duplicate cards across pages: every card is a distinct listing
       const publicIds = await cards.evaluateAll((els) =>
         els.map((el) => el.getAttribute("data-public-id") ?? ""),
