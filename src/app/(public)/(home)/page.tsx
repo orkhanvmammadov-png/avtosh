@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { HomeSearch, type HomeAdvancedCatalog } from "@/components/marketplace/home-search";
-import { ListingCard } from "@/components/shared/listing-card";
 import { PremiumFeed } from "@/components/marketplace/premium-feed";
 import { PromotionBadge } from "@/components/ui/promotion-badge";
 import { getBrands, getCities, getReferenceOptions } from "@/services/catalog";
 import { LISTING_YEAR_MIN, listingYearMax } from "@/lib/config/marketplace";
 import { visibleFilterGroups } from "@/lib/marketplace/search-params";
-import { homeData, searchMarketplace } from "@/services/marketplace";
+import { homeData } from "@/services/marketplace";
 
 export const dynamic = "force-dynamic";
 
@@ -53,11 +52,8 @@ async function loadAdvancedCatalog(categoryCodes: string[]): Promise<HomeAdvance
 export default async function HomePage() {
   const { home } = await homeData();
   const defaultCategory = home.categories[0]?.code ?? "CAR";
-  const [initialBrands, fresh, advanced] = await Promise.all([
+  const [initialBrands, advanced] = await Promise.all([
     getBrands(defaultCategory).catch(() => []),
-    // "Yeni elanlar" — the accepted public search read model, newest
-    // first (server-side service reuse; no new API).
-    searchMarketplace({ category: "CAR", sort: "NEWEST", limit: 8 }).catch(() => null),
     loadAdvancedCatalog(home.categories.map((c) => c.code)),
   ]);
   return (
@@ -107,27 +103,6 @@ export default async function HomePage() {
               initialHasMore={home.premium.hasMore}
               renderedAtMs={home.generatedAtMs}
             />
-          </section>
-        ) : null}
-
-        {fresh !== null && fresh.items.length > 0 ? (
-          <section aria-labelledby="fresh-title" className="mt-8 md:mt-12">
-            <div className="mb-4 flex items-baseline justify-between gap-3">
-              <h2 id="fresh-title" className="text-lg font-bold tracking-[-0.01em] text-ink md:text-2xl">
-                Yeni elanlar
-              </h2>
-              <Link href="/elanlar?category=CAR" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-hover">
-                Hamısına bax
-                <ArrowRight size={14} aria-hidden="true" />
-              </Link>
-            </div>
-            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-              {fresh.items.slice(0, 8).map((item) => (
-                <li key={item.publicId}>
-                  <ListingCard listing={item} nowMs={fresh.generatedAtMs} />
-                </li>
-              ))}
-            </ul>
           </section>
         ) : null}
 
