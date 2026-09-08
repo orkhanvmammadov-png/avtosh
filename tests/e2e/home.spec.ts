@@ -80,7 +80,7 @@ test.describe("Home", () => {
     await expect(page.getByTestId("home-adv-fuel_type-toggle")).toContainText("Hamısı");
   });
 
-  test("Kredit/Barter are toggle buttons in the Price block: collapse-safe, Təmizlə-cleared, restored on results", async ({ page }, testInfo) => {
+  test("Kredit/Barter are toggle buttons in the Price block: collapse-safe, Təmizlə-cleared, restored on results", async ({ page }) => {
     await page.goto("/");
     const toggle = page.getByTestId("home-advanced-toggle");
     await toggle.click();
@@ -107,12 +107,9 @@ test.describe("Home", () => {
     const url = new URL(page.url());
     expect(url.searchParams.get("credit")).toBe("true");
     expect(url.searchParams.get("barter")).toBe("true");
-    if (isMobile(testInfo.project.name) || testInfo.project.name === "tablet") {
-      await page.getByTestId("filters-open").click();
-    }
-    const form = page.locator('[data-testid="filter-form"]:visible').first();
-    await expect(form.locator('input[name="credit"]')).toBeChecked();
-    await expect(form.locator('input[name="barter"]')).toBeChecked();
+    await page.getByTestId("home-advanced-toggle").click();
+    await expect(page.getByTestId("home-adv-credit")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("home-adv-barter")).toHaveAttribute("aria-pressed", "true");
     // Təmizlə clears both
     await page.goto("/");
     await page.getByTestId("home-advanced-toggle").click();
@@ -234,7 +231,7 @@ test.describe("Home", () => {
     await expect(page.getByTestId("home-adv-year-max")).toHaveValue(String(expectedMax));
   });
 
-  test("full advanced submission restores every selection on Search Results (4.17O.2)", async ({ page }, testInfo) => {
+  test("full advanced submission restores every selection on Search Results (4.17O.2)", async ({ page }) => {
     const s = seed();
     await page.goto("/");
     await page.getByTestId("home-advanced-toggle").click();
@@ -284,24 +281,22 @@ test.describe("Home", () => {
     expect(url.searchParams.get("color_ids")).toBe(colorIds.join(","));
     expect(url.searchParams.get("no_accident")).toBe("true");
     expect(url.searchParams.get("not_repainted")).toBe("true");
-    // Search Results restores everything via URL-as-state
-    if (isMobile(testInfo.project.name) || testInfo.project.name === "tablet") {
-      await page.getByTestId("filters-open").click();
-    }
-    const form = page.locator('[data-testid="filter-form"]:visible').first();
-    await expect(form.getByTestId("filter-brand")).toHaveValue(s.toyotaBrandId);
-    await expect(form.getByTestId("filter-city")).toHaveValue(s.bakuCityId);
-    await expect(form.getByTestId("filter-price-min")).toHaveValue("5000");
-    await expect(form.getByTestId("filter-year-min")).toHaveValue("2015");
-    await expect(form.getByTestId("filter-mileage-max")).toHaveValue("123500");
-    await expect(form.getByTestId("filter-engine-min")).toHaveValue("1000");
-    await expect(form.getByTestId("filter-engine-max")).toHaveValue("7000");
-    await expect(form.getByTestId("filter-fuel_type-toggle")).toContainText("Benzin, Hibrid");
-    await form.getByTestId("filter-color-toggle").click();
-    await expect(form.getByTestId("filter-color-opt-BLACK")).toBeChecked();
-    await expect(form.getByTestId("filter-color-opt-WHITE")).toBeChecked();
-    await expect(form.getByTestId("filter-no-accident")).toBeChecked();
-    await expect(form.getByTestId("filter-not-repainted")).toBeChecked();
+    // Search Results (O.6 unified panel) restores everything via URL-as-state
+    await page.getByTestId("home-advanced-toggle").click();
+    await expect(page.getByTestId("home-brand")).toHaveValue(s.toyotaBrandId);
+    await expect(page.getByTestId("home-adv-city")).toHaveValue(s.bakuCityId);
+    await expect(page.getByTestId("home-adv-price-min")).toHaveValue("5 000"); // approved thousands display
+    await expect(page.getByTestId("home-adv-year-min")).toHaveValue("2015");
+    await expect(page.getByTestId("home-adv-mileage-max")).toHaveValue("123 500");
+    await expect(page.getByTestId("home-adv-engine-min")).toHaveValue("1000");
+    await expect(page.getByTestId("home-adv-engine-max")).toHaveValue("7000");
+    await expect(page.getByTestId("home-adv-fuel_type-toggle")).toContainText("Benzin, Hibrid");
+    await page.getByTestId("home-adv-color-toggle").click();
+    await expect(page.getByTestId("home-adv-color-opt-BLACK")).toBeChecked();
+    await expect(page.getByTestId("home-adv-color-opt-WHITE")).toBeChecked();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("home-adv-no-accident")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("home-adv-not-repainted")).toHaveAttribute("aria-pressed", "true");
     await expectNoHorizontalOverflow(page);
   });
 

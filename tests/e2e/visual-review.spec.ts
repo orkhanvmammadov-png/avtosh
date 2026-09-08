@@ -21,7 +21,7 @@ test.describe("visual review artifacts", () => {
     { name: "search-desktop-1440", width: 1440, height: 900, path: () => "/elanlar?category=CAR" },
     {
       name: "search-mobile-390-filters-open", width: 390, height: 844, path: () => "/elanlar?category=CAR",
-      before: async (page) => { await page.getByTestId("filters-open").click(); await page.getByTestId("filters-close").waitFor(); },
+      before: async (page) => { await page.getByTestId("home-advanced-toggle").click(); await page.getByTestId("home-advanced-panel").waitFor(); },
     },
     { name: "detail-mobile-390", width: 390, height: 844, path: (s) => `/elan/${s.activeCar}` },
     { name: "detail-desktop-1440", width: 1440, height: 900, path: (s) => `/elan/${s.activeCar}` },

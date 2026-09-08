@@ -20,9 +20,9 @@ test.describe("Responsive layout invariants", () => {
 
       await page.goto("/elanlar?category=CAR");
       await expectNoHorizontalOverflow(page);
-      // Phase 4.17: the desk (1024) tier shows the persistent filter rail.
-      if (width >= 1024) await expect(page.getByTestId("filters-desktop")).toBeVisible();
-      else await expect(page.getByTestId("filters-open")).toBeVisible();
+      // Phase 4.17O.6: unified search card at every width — no sidebar.
+      await expect(page.getByTestId("home-advanced-toggle")).toBeVisible();
+      await expect(page.getByTestId("filters-desktop")).toHaveCount(0);
       await expect(page.getByTestId("sort-select")).toBeVisible();
       const card = page.getByTestId("listing-card").first();
       // approved design card imagery: 16:10 mobile, 16:11 at md+
