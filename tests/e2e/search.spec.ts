@@ -247,8 +247,31 @@ test.describe("Search", () => {
     await expect(page.getByTestId("home-adv-motorcycle_type_id")).toBeVisible();
     await expect(page.getByTestId("home-adv-body_type_id")).toHaveCount(0);
     await expect(page.getByTestId("home-adv-drive_type_id")).toHaveCount(0);
+    // vehicle-condition claims are CAR-only (O.6 layout.md category contract)
+    await expect(page.getByTestId("home-adv-no-accident")).toHaveCount(0);
+    await expect(page.getByTestId("home-adv-not-repainted")).toHaveCount(0);
     const ids = await page.getByTestId("listing-card").evaluateAll((els) => els.map((e) => e.getAttribute("data-public-id")));
     for (const id of seed().motos) expect(ids).toContain(id);
+
+    // stale condition URL state never creates a visible control: the
+    // applied chip stays (honest, removable) but the panel shows no
+    // toggle and Axtar does not re-serialize the hidden claim
+    await page.goto("/elanlar?category=MOTORCYCLE&no_accident=true");
+    await openPanel(page);
+    await expect(page.getByTestId("home-adv-no-accident")).toHaveCount(0);
+    await expect(page.locator('[data-testid="applied-filter"]', { hasText: "Vuruğu yoxdur" })).toHaveCount(1);
+    await apply(page);
+    await page.waitForURL((u) => u.searchParams.get("no_accident") === null);
+
+    // live category switch CAR → MOTORCYCLE hides the CAR-only controls
+    await page.goto("/elanlar?category=CAR");
+    await openPanel(page);
+    await expect(page.getByTestId("home-adv-no-accident")).toBeVisible();
+    await expect(page.getByTestId("home-adv-body_type_id")).toBeVisible();
+    await page.getByTestId("category-MOTORCYCLE").click();
+    await expect(page.getByTestId("home-adv-no-accident")).toHaveCount(0);
+    await expect(page.getByTestId("home-adv-body_type_id")).toHaveCount(0);
+    await expect(page.getByTestId("home-adv-motorcycle_type_id")).toBeVisible();
   });
 
   test("premium + boost render BOTH textual badges on one card (4.17O.6)", async ({ page }, { project }) => {

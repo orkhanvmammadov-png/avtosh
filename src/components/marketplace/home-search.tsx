@@ -221,8 +221,14 @@ function countStateFilters(state: SearchFilterState): number {
   for (const key of ["fuel_type_ids", "transmission_ids", "color_ids"] as const) {
     if (idsFromCsv(state[key]).length > 0) count += 1;
   }
-  for (const key of ["credit", "barter", "no_accident", "not_repainted"] as const) {
+  for (const key of ["credit", "barter"] as const) {
     if (state[key] === "true") count += 1;
+  }
+  // conditions are a CAR-only control (O.6 category contract)
+  if (visibleFilterGroups(state.category ?? "CAR").includes("BODY_TYPE")) {
+    for (const key of ["no_accident", "not_repainted"] as const) {
+      if (state[key] === "true") count += 1;
+    }
   }
   return count;
 }
@@ -335,9 +341,10 @@ export function HomeSearch({
       const values = data.getAll(key).map(String).filter((v) => v.length > 0);
       if (values.length > 0) next[key] = csvFromIds(values);
     }
-    // Positive claims only — unselected emits nothing.
-    if (noAccident) next.no_accident = "true";
-    if (notRepainted) next.not_repainted = "true";
+    // Positive claims only — unselected emits nothing; a hidden
+    // (moto results) condition block never re-serializes URL state.
+    if (showConditions && noAccident) next.no_accident = "true";
+    if (showConditions && notRepainted) next.not_repainted = "true";
     // Existing boolean filters (unchanged contract).
     if (credit) next.credit = "true";
     if (barter) next.barter = "true";
@@ -372,8 +379,8 @@ export function HomeSearch({
     if (priceMin !== "" || priceMax !== "") count += 1;
     if (credit) count += 1;
     if (barter) count += 1;
-    if (noAccident) count += 1;
-    if (notRepainted) count += 1;
+    if (showConditions && noAccident) count += 1;
+    if (showConditions && notRepainted) count += 1;
     return count;
   }
 
@@ -410,6 +417,11 @@ export function HomeSearch({
   const options = advanced.optionsByCategory[category] ?? {};
   const priceGroupActive = priceMin !== "" || priceMax !== "" || credit || barter;
   const vehicleTypeGroup = groups.includes("BODY_TYPE") ? "BODY_TYPE" : "MOTORCYCLE_TYPE";
+  // O.6 category applicability (layout.md "Category contexts"): the
+  // vehicle-condition claims are a CAR-only control — Motosikletlər
+  // omits them ("never force CAR controls into moto"). Gated to
+  // results mode so the sealed Home O.2 surface stays untouched.
+  const showConditions = mode !== "results" || groups.includes("BODY_TYPE");
 
   const actionButtons = (
     <>
@@ -670,18 +682,21 @@ export function HomeSearch({
             testid="home-adv-transmission"
           />
         </div>
-        {/* 10 — Avtomobil vəziyyəti: visible toggle pair, final block. */}
-        <div className="[grid-area:cond]">
-          <FieldLabel>{UI.conditionTitle}</FieldLabel>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-            <ConditionToggle pressed={noAccident} onToggle={() => setNoAccident((v) => !v)} testid="home-adv-no-accident">
-              {UI.noAccident}
-            </ConditionToggle>
-            <ConditionToggle pressed={notRepainted} onToggle={() => setNotRepainted((v) => !v)} testid="home-adv-not-repainted">
-              {UI.notRepainted}
-            </ConditionToggle>
+        {/* 10 — Avtomobil vəziyyəti: visible toggle pair, final block
+            (CAR-only in results mode per the O.6 category contract). */}
+        {showConditions ? (
+          <div className="[grid-area:cond]">
+            <FieldLabel>{UI.conditionTitle}</FieldLabel>
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+              <ConditionToggle pressed={noAccident} onToggle={() => setNoAccident((v) => !v)} testid="home-adv-no-accident">
+                {UI.noAccident}
+              </ConditionToggle>
+              <ConditionToggle pressed={notRepainted} onToggle={() => setNotRepainted((v) => !v)} testid="home-adv-not-repainted">
+                {UI.notRepainted}
+              </ConditionToggle>
+            </div>
           </div>
-        </div>
+        ) : null}
         {/* Actions in flow below desk (right-aligned @768, stacked @390). */}
         <div className="[grid-area:actions] mt-1 flex flex-col gap-2 border-t border-sunken pt-3 sm:flex-row-reverse sm:items-center sm:justify-start sm:gap-2.5 desk:hidden">
           {actionButtons}
