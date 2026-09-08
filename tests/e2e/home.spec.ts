@@ -12,6 +12,11 @@ test.describe("Home", () => {
     const premiumCards = page.getByTestId("premium-grid").getByTestId("listing-card");
     expect(await premiumCards.count()).toBe(seed().premium.length);
     await expect(page.getByText("Popular")).toHaveCount(0);
+    // 4.17O.5: Premium is the ONLY Home listing feed — Yeni elanlar is gone
+    await expect(page.getByRole("heading", { name: "Yeni elanlar" })).toHaveCount(0);
+    await expect(page.getByText("Hamısına bax")).toHaveCount(0);
+    // all seeded premium fits one page → honest end, no load-more button
+    await expect(page.getByTestId("premium-load-more")).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
   });
 
@@ -308,8 +313,64 @@ test.describe("Home", () => {
       await page.goto("/");
       await expect(page.getByTestId("new-count")).toBeVisible();
       await expect(page.getByTestId("premium-section")).toHaveCount(0);
+      // honest zero state: no Latest-listings fallback appears (4.17O.5)
+      await expect(page.getByRole("heading", { name: "Yeni elanlar" })).toHaveCount(0);
+      await expect(page.getByTestId("listing-card")).toHaveCount(0);
     } finally {
       await sql`update listing_promotions set status = 'ACTIVE' where type = 'PREMIUM'`;
+      await sql.end();
+    }
+  });
+
+  test("Premium feed continues via cursor without duplicates (4.17O.5)", async ({ page }) => {
+    // Promote the seeded organic cars so premium exceeds one page
+    // (page size 24); restored afterwards so other tests keep the
+    // original 4-premium world.
+    const s = seed();
+    const sql = postgres(s.databaseUrl, { prepare: false, max: 1 });
+    try {
+      await sql`
+        with candidates as (
+          select l.id from listings l
+          where l.status = 'ACTIVE' and l.current_expires_at > now()
+            and not exists (select 1 from listing_promotions p where p.listing_id = l.id and p.type = 'PREMIUM')
+        ), pays as (
+          insert into payments (user_id, listing_id, type, amount_minor, idempotency_key, status, provider)
+          select ${s.sellerId}, c.id, 'PREMIUM', 0, 'o5lm:' || c.id, 'SUCCESS', 'KAPITAL' from candidates c
+          returning id, listing_id
+        )
+        insert into listing_promotions (listing_id, type, payment_id, starts_at, ends_at, status, purchased_duration_days, purchased_price_minor)
+        select p.listing_id, 'PREMIUM', p.id, now() - interval '2 hours', now() + interval '7 days', 'ACTIVE', 7, 0 from pays p
+      `;
+      await page.goto("/");
+      const cards = page.getByTestId("premium-grid").getByTestId("listing-card");
+      const firstPage = await cards.count();
+      expect(firstPage).toBe(24); // exactly one server page
+      const loadMore = page.getByTestId("premium-load-more");
+      await expect(loadMore).toBeVisible();
+      // walk the cursor to the honest end: each click must append at
+      // least one card (button is disabled while loading, so one click
+      // is one page); the loop is bounded, never a retry crutch —
+      // earlier suites may have grown the premium pool past two pages
+      let clicks = 0;
+      while ((await loadMore.count()) > 0) {
+        expect(clicks++).toBeLessThan(10);
+        const before = await cards.count();
+        await loadMore.click();
+        await expect(cards.nth(before)).toBeVisible(); // page appended
+      }
+      const total = await cards.count();
+      expect(total).toBeGreaterThan(firstPage); // feed actually continued
+      await expect(loadMore).toHaveCount(0); // honest end — no fake continuation
+      // no duplicate cards across pages: every card is a distinct listing
+      const publicIds = await cards.evaluateAll((els) =>
+        els.map((el) => el.getAttribute("data-public-id") ?? ""),
+      );
+      expect(new Set(publicIds).size).toBe(total);
+      expect(publicIds.every((id) => id.length > 0)).toBe(true);
+    } finally {
+      await sql`delete from listing_promotions where payment_id in (select id from payments where idempotency_key like 'o5lm:%')`;
+      await sql`delete from payments where idempotency_key like 'o5lm:%'`;
       await sql.end();
     }
   });
