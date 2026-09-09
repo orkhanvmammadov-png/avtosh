@@ -143,7 +143,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   return (
     <article data-testid="listing-detail" data-status={listing.status}>
       {/* Navy stage — full-bleed. */}
-      <section className="bg-navy pb-7 pt-1.5 text-white">
+      <section className="bg-navy pb-6 pt-1.5 text-white xl:pb-7">
         <Container>
           <nav aria-label="Naviqasiya yolu" className="mb-3 flex flex-wrap items-center gap-1.5 py-2 text-xs text-on-navy-muted">
             <Link href="/" className="hover:text-white">Əsas səhifə</Link>
@@ -163,7 +163,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             </div>
             {/* Identity panel. */}
             <div
-              className="self-start rounded-[12px] border border-navy-border bg-navy-raised p-5 desk:sticky desk:top-20"
+              className="self-start rounded-[12px] border border-navy-border bg-navy-raised p-5 desk:sticky desk:top-20 desk:p-4 xl:p-5"
               data-testid="identity-panel"
             >
               <div className="mb-2.5 flex items-start justify-between gap-3">
@@ -176,7 +176,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                 {listing.status !== "SOLD" ? <FavoriteButton publicId={listing.publicId} skin="panel" autoIntent /> : null}
               </div>
               <p
-                className={`whitespace-nowrap font-condensed text-[34px] font-bold leading-none ${limited ? "text-on-navy-muted" : "text-white"}`}
+                className={`whitespace-nowrap font-condensed text-[34px] font-bold leading-none desk:text-[28px] xl:text-[34px] ${limited ? "text-on-navy-muted" : "text-white"}`}
                 data-testid="detail-price"
               >
                 {formatPriceMinor(listing.priceMinor, listing.currency)}
@@ -195,13 +195,13 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   ) : null}
                 </div>
               ) : null}
-              <h1 className="mt-3 text-[17px] font-semibold leading-snug">{title}</h1>
+              <h1 className="mt-3 break-words text-[17px] font-semibold leading-snug desk:mt-2 desk:text-[15px] xl:mt-3 xl:text-[17px]">{title}</h1>
               {meta.length > 0 ? (
-                <p className="mt-1 text-[12.5px] text-on-navy-muted" data-testid="detail-meta">
+                <p className="mt-1 text-[12.5px] text-on-navy-muted desk:mt-0.5 desk:text-[11.5px] xl:mt-1 xl:text-[12.5px]" data-testid="detail-meta">
                   {meta.join(" · ")}
                 </p>
               ) : null}
-              <div className="mt-4">
+              <div className="mt-4 desk:mt-3 xl:mt-4">
                 {contactable && listing.seller ? (
                   <ContactCard
                     publicId={listing.publicId}
@@ -220,7 +220,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                 )}
               </div>
               {contactable && listing.seller ? (
-                <div className="mt-3.5 flex items-center gap-2.5 border-t border-navy-border pt-3" data-testid="seller-module">
+                <div className="mt-3.5 flex items-center gap-2.5 border-t border-navy-border pt-3 desk:mt-3 desk:pt-2.5 xl:mt-3.5 xl:pt-3" data-testid="seller-module">
                   <span aria-hidden="true" className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-border text-sm font-semibold text-green-dark">
                     {sellerInitial}
                   </span>

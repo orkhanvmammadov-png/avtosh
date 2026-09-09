@@ -60,7 +60,7 @@ export function ContactCard({
         </div>
         {contact === null ? (
           <div className="shrink-0 desk:block">
-            <Button onClick={reveal} disabled={loading || maskedPhone === null} className="min-h-12 w-full min-w-40 desk:min-w-0" data-testid="contact-reveal">
+            <Button onClick={reveal} disabled={loading || maskedPhone === null} className="min-h-12 w-full min-w-40 desk:min-h-11 desk:min-w-0 desk:text-[13px] xl:min-h-12 xl:text-sm" data-testid="contact-reveal">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M6 4h4l2 5-2.5 1.5a11 11 0 0 0 4 4L15 12l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 4 6a2 2 0 0 1 2-2z" />
               </svg>
@@ -72,7 +72,7 @@ export function ContactCard({
         ) : (
           <div className="flex shrink-0 gap-2 desk:flex-col">
             {/* Revealed: phone = PRIMARY, WhatsApp = SECONDARY (existing contract). */}
-            <a href={`tel:${contact.phone}`} className={buttonClasses("primary", "min-h-12 w-full whitespace-nowrap")} data-testid="contact-call">
+            <a href={`tel:${contact.phone}`} className={buttonClasses("primary", "min-h-12 w-full whitespace-nowrap desk:min-h-11 xl:min-h-12")} data-testid="contact-call">
               {UI.callSeller}: {contact.phone}
             </a>
             <a

@@ -106,9 +106,9 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
           role="group"
           aria-label={`Şəkillər — ${active + 1} / ${list.length}`}
           onKeyDown={onStageKeyDown}
-          className="relative rounded-[12px] focus:outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
+          className="relative rounded-[10px] xl:rounded-[12px] focus:outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
         >
-          <div className="aspect-gallery w-full overflow-hidden rounded-[12px] bg-navy-raised" data-testid="gallery-main">
+          <div className="aspect-gallery w-full overflow-hidden rounded-[10px] bg-navy-raised xl:rounded-[12px]" data-testid="gallery-main">
             <ListingImage src={current.url} alt={`${title} — ${UI.photoOf.toLowerCase()} ${active + 1}`} priority />
           </div>
           {many ? (
@@ -118,7 +118,7 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
                 aria-label="Əvvəlki şəkil"
                 disabled={active === 0}
                 onClick={() => step(-1)}
-                className={`${arrow} left-3`}
+                className={`${arrow} left-2.5 xl:left-3`}
                 data-testid="gallery-prev"
               >
                 ‹
@@ -128,7 +128,7 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
                 aria-label="Növbəti şəkil"
                 disabled={active === list.length - 1}
                 onClick={() => step(1)}
-                className={`${arrow} right-3`}
+                className={`${arrow} right-2.5 xl:right-3`}
                 data-testid="gallery-next"
               >
                 ›
@@ -140,7 +140,7 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
           ) : null}
         </div>
         {many ? (
-          <ul className="mt-2 grid grid-cols-6 gap-2" aria-label="Kiçik şəkillər">
+          <ul className="mt-1.5 grid grid-cols-6 gap-1.5 xl:mt-2 xl:gap-2" aria-label="Kiçik şəkillər">
             {list.slice(0, visibleThumbs).map((img, i) => (
               <li key={i}>
                 <button
