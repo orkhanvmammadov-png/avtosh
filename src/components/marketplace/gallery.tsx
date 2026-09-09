@@ -12,8 +12,9 @@ export interface GalleryImage {
   isPrimary: boolean;
 }
 
-/** Approved O.7 thumbnail cap at desktop (components.md): 6 visible tiles. */
-const THUMB_CAP = 6;
+/** Approved O.7 thumbnail caps (components.md): 6-up at desk/xl, 8-up at the 768 board. */
+const DESK_CAP = 6;
+const MD_CAP = 8;
 
 /**
  * O.7 Direction 1A gallery. ONE active index owns the hero, the
@@ -77,7 +78,13 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
     "absolute top-1/2 z-10 flex h-[34px] w-[34px] -translate-y-1/2 items-center justify-center rounded-full bg-white/[.92] text-[15px] font-semibold text-ink shadow-sm transition-opacity duration-150 disabled:cursor-default disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2";
   const counterChip =
     "rounded-[5px] bg-[rgba(20,26,34,0.8)] px-2 py-[3px] text-[10.5px] font-medium text-white";
-  const visibleThumbs = list.length > THUMB_CAP ? THUMB_CAP - 1 : list.length;
+  // Per-tier visible real tiles; the "+n" tile takes the last slot only
+  // when more images exist at that tier. Extra md-tier tiles are simply
+  // CSS-hidden at desk+, so ONE DOM serves both rails.
+  const deskVisible = list.length > DESK_CAP ? DESK_CAP - 1 : list.length;
+  const mdVisible = list.length > MD_CAP ? MD_CAP - 1 : list.length;
+  const deskMore = list.length - deskVisible;
+  const mdMore = list.length - mdVisible;
 
   return (
     <div data-testid="gallery">
@@ -140,9 +147,9 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
           ) : null}
         </div>
         {many ? (
-          <ul className="mt-1.5 grid grid-cols-6 gap-1.5 xl:mt-2 xl:gap-2" aria-label="Kiçik şəkillər">
-            {list.slice(0, visibleThumbs).map((img, i) => (
-              <li key={i}>
+          <ul className="mt-1.5 grid grid-cols-8 gap-1.5 desk:grid-cols-6 xl:mt-2 xl:gap-2" aria-label="Kiçik şəkillər">
+            {list.slice(0, mdVisible).map((img, i) => (
+              <li key={i} className={i >= deskVisible ? "desk:hidden" : ""}>
                 <button
                   type="button"
                   aria-label={`${UI.photoOf} ${i + 1}`}
@@ -157,21 +164,29 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
                 </button>
               </li>
             ))}
-            {list.length > THUMB_CAP ? (
-              <li>
+            {list.length > DESK_CAP ? (
+              <li className={mdMore > 0 ? "" : "hidden desk:block"}>
                 <button
                   type="button"
-                  aria-label={`Daha ${list.length - visibleThumbs} şəkil`}
+                  aria-label={`Daha ${deskMore} şəkil`}
                   onClick={() => {
-                    setActive(visibleThumbs);
+                    const jump = window.matchMedia("(min-width: 1024px)").matches ? deskVisible : mdVisible;
+                    setActive(Math.min(list.length - 1, jump));
                     setFullscreen(true);
                   }}
                   data-testid="gallery-more"
                   className="relative aspect-vehicle w-full overflow-hidden rounded-lg border border-navy-border bg-navy-raised focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
                 >
-                  <ListingImage src={list[visibleThumbs]?.url ?? null} alt="" />
+                  <ListingImage src={list[deskVisible]?.url ?? null} alt="" />
                   <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-[rgba(20,26,34,0.6)] text-[12px] font-semibold text-white">
-                    +{list.length - visibleThumbs}
+                    {mdMore > 0 ? (
+                      <>
+                        <span className="desk:hidden">+{mdMore}</span>
+                        <span className="hidden desk:inline">+{deskMore}</span>
+                      </>
+                    ) : (
+                      <span>+{deskMore}</span>
+                    )}
                   </span>
                 </button>
               </li>

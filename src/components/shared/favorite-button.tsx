@@ -96,7 +96,7 @@ export function FavoriteButton({
       }}
       className={
         skin === "panel"
-          ? `inline-flex h-[34px] w-[34px] items-center justify-center rounded-[6px] border desk:h-8 desk:w-8 xl:h-[34px] xl:w-[34px] transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${
+          ? `inline-flex h-[34px] w-[34px] items-center justify-center rounded-[6px] border md:h-[42px] md:w-[42px] desk:h-8 desk:w-8 xl:h-[34px] xl:w-[34px] transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${
               active
                 ? "border-[#B3261E] bg-[#F9E4E1] text-[#B3261E]"
                 : "border-navy-border bg-transparent text-on-navy-muted hover:border-green-dark hover:text-green-dark"

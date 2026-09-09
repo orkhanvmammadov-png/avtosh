@@ -154,7 +154,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             <span aria-hidden="true">/</span>
             <span className="truncate text-white/80">{title}</span>
           </nav>
-          <div className="grid gap-5 desk:grid-cols-[minmax(0,1fr)_340px] desk:gap-5 xl:grid-cols-[minmax(0,1fr)_400px] xl:gap-7">
+          <div className="grid gap-3 desk:grid-cols-[minmax(0,1fr)_340px] desk:gap-5 xl:grid-cols-[minmax(0,1fr)_400px] xl:gap-7">
             {/* Gallery column — the dominant element. */}
             <div className="min-w-0">
               <div className={limited ? "saturate-[0.6]" : ""}>
@@ -163,20 +163,18 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             </div>
             {/* Identity panel. */}
             <div
-              className="self-start rounded-[12px] border border-navy-border bg-navy-raised p-5 desk:sticky desk:top-20 desk:p-4 xl:p-5"
+              className="relative self-start rounded-[12px] border border-navy-border bg-navy-raised p-5 md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-x-4 md:p-4 desk:sticky desk:top-20 desk:block desk:p-4 xl:p-5"
               data-testid="identity-panel"
             >
-              <div className="mb-2.5 flex items-start justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-[5px]">
-                  {listing.status === "SOLD" ? <Badge tone="sold">{STATUS_LABELS.SOLD}</Badge> : null}
-                  {listing.status === "EXPIRED" ? <Badge tone="expired">{STATUS_LABELS.EXPIRED}</Badge> : null}
-                  {listing.badges.premium ? <PromotionBadge type="PREMIUM" onNavy /> : null}
-                  {listing.badges.boosted ? <PromotionBadge type="BOOST" /> : null}
-                </div>
-                {listing.status !== "SOLD" ? <FavoriteButton publicId={listing.publicId} skin="panel" autoIntent /> : null}
+              <div className="min-w-0">
+              <div className="mb-2.5 flex flex-wrap items-center gap-[5px] pr-10 md:mb-[7px] md:pr-0 desk:mb-2.5 desk:pr-10">
+                {listing.status === "SOLD" ? <Badge tone="sold">{STATUS_LABELS.SOLD}</Badge> : null}
+                {listing.status === "EXPIRED" ? <Badge tone="expired">{STATUS_LABELS.EXPIRED}</Badge> : null}
+                {listing.badges.premium ? <PromotionBadge type="PREMIUM" onNavy /> : null}
+                {listing.badges.boosted ? <PromotionBadge type="BOOST" /> : null}
               </div>
               <p
-                className={`whitespace-nowrap font-condensed text-[34px] font-bold leading-none desk:text-[28px] xl:text-[34px] ${limited ? "text-on-navy-muted" : "text-white"}`}
+                className={`whitespace-nowrap font-condensed text-[34px] font-bold leading-none md:text-[27px] desk:text-[28px] xl:text-[34px] ${limited ? "text-on-navy-muted" : "text-white"}`}
                 data-testid="detail-price"
               >
                 {formatPriceMinor(listing.priceMinor, listing.currency)}
@@ -195,13 +193,19 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   ) : null}
                 </div>
               ) : null}
-              <h1 className="mt-3 break-words text-[17px] font-semibold leading-snug desk:mt-2 desk:text-[15px] xl:mt-3 xl:text-[17px]">{title}</h1>
+              <h1 className="mt-3 break-words text-[17px] font-semibold leading-snug md:mt-1.5 md:text-[14.5px] desk:mt-2 desk:text-[15px] xl:mt-3 xl:text-[17px]">
+                {title}
+                {meta.length > 0 ? (
+                  <span className="hidden font-normal text-[11.5px] text-on-navy-muted md:inline desk:hidden"> · {meta.join(" · ")}</span>
+                ) : null}
+              </h1>
               {meta.length > 0 ? (
-                <p className="mt-1 text-[12.5px] text-on-navy-muted desk:mt-0.5 desk:text-[11.5px] xl:mt-1 xl:text-[12.5px]" data-testid="detail-meta">
+                <p className="mt-1 text-[12.5px] text-on-navy-muted md:hidden desk:mt-0.5 desk:block desk:text-[11.5px] xl:mt-1 xl:text-[12.5px]" data-testid="detail-meta">
                   {meta.join(" · ")}
                 </p>
               ) : null}
-              <div className="mt-4 desk:mt-3 xl:mt-4">
+              </div>
+              <div className="mt-4 md:mt-0 md:flex md:shrink-0 md:items-center md:gap-2 desk:mt-3 desk:block xl:mt-4">
                 {contactable && listing.seller ? (
                   <ContactCard
                     publicId={listing.publicId}
@@ -218,9 +222,14 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                     </Link>
                   </div>
                 )}
+                {listing.status !== "SOLD" ? (
+                  <span className="absolute right-5 top-5 md:static md:right-auto md:top-auto desk:absolute desk:right-4 desk:top-4 xl:right-5 xl:top-5">
+                    <FavoriteButton publicId={listing.publicId} skin="panel" autoIntent />
+                  </span>
+                ) : null}
               </div>
               {contactable && listing.seller ? (
-                <div className="mt-3.5 flex items-center gap-2.5 border-t border-navy-border pt-3 desk:mt-3 desk:pt-2.5 xl:mt-3.5 xl:pt-3" data-testid="seller-module">
+                <div className="mt-3.5 flex items-center gap-2.5 border-t border-navy-border pt-3 md:hidden desk:mt-3 desk:flex desk:pt-2.5 xl:mt-3.5 xl:pt-3" data-testid="seller-module">
                   <span aria-hidden="true" className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-border text-sm font-semibold text-green-dark">
                     {sellerInitial}
                   </span>
@@ -230,7 +239,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   </div>
                 </div>
               ) : null}
-              <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-on-navy-muted">
+              <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-on-navy-muted md:hidden desk:flex">
                 <span data-testid="listing-ref">
                   Elan № {listing.publicId}
                   {listing.publishedAt !== null ? ` · ${formatDateAz(listing.publishedAt)}` : ""}
@@ -313,6 +322,29 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             ) : null}
           </div>
         </div>
+        {contactable && listing.seller ? (
+          <section
+            aria-label={UI.seller}
+            className="mt-4 hidden items-center justify-between gap-3 rounded-[10px] border border-line bg-raised px-[18px] py-3.5 md:flex desk:hidden"
+            data-testid="seller-row"
+          >
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-full bg-sunken text-sm font-semibold text-primary">
+                {sellerInitial}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-[13px] font-semibold text-ink">{listing.seller.displayName ?? UI.seller}</p>
+                <p className="text-[11px] text-muted">
+                  Elan № {listing.publicId}
+                  {listing.city ? ` · ${listing.city}` : ""}
+                </p>
+              </div>
+            </div>
+            <a href="#report" className="shrink-0 text-[11.5px] font-medium text-[#B3261E] hover:underline">
+              Şikayət et
+            </a>
+          </section>
+        ) : null}
         {!limited ? (
           <Notice tone="info" className="mt-5">
             Təhlükəsizlik üçün: avtomobili şəxsən yoxlamadan ödəniş etməyin və rəsmi sənədləşmədən
