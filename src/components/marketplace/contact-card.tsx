@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button, buttonClasses } from "@/components/ui/button";
-import { PromotionBadge } from "@/components/ui/promotion-badge";
 import { UI } from "@/lib/marketplace/labels";
 import { publicFetch, PublicApiError } from "@/lib/marketplace/public-api";
 
@@ -15,15 +14,10 @@ export function ContactCard({
   publicId,
   displayName,
   maskedPhone,
-  priceLabel,
-  premium = false,
 }: {
   publicId: string;
   displayName: string | null;
   maskedPhone: string | null;
-  /** Presentation-only: Condensed price rendered inside the panel (≥desk). */
-  priceLabel?: string;
-  premium?: boolean;
 }) {
   const [contact, setContact] = useState<{ phone: string; whatsappUrl: string } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,30 +41,26 @@ export function ContactCard({
   }
 
   // ONE instance serves both form factors purely via classes: the
-  // approved fixed MobileStickyContact bar below desk, the sticky
-  // navy-raised ContactPanel at desk+. Same DOM, same testids, same
-  // reveal/rate-limit behavior.
+  // fixed mobile contact bar below desk, and the unchromed CTA block
+  // inside the O.7 identity panel at desk+ (the panel supplies the
+  // surface). Same DOM, same testids, same reveal/rate-limit behavior.
   return (
     <aside
       aria-labelledby="contact-title"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-navy-border bg-navy p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-white desk:static desk:rounded-[12px] desk:border desk:bg-navy-raised desk:p-5"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-navy-border bg-navy p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-white desk:static desk:border-0 desk:bg-transparent desk:p-0"
       data-testid="contact-card"
     >
+      <h2 id="contact-title" className="sr-only">{UI.seller}</h2>
       <div className="mx-auto flex max-w-xl items-center gap-3 desk:mx-0 desk:block desk:max-w-none">
-        <div className="min-w-0 flex-1 desk:flex-none">
-          {premium ? <span className="mb-2 hidden desk:block"><PromotionBadge type="PREMIUM" /></span> : null}
-          {priceLabel !== undefined ? (
-            <p className="hidden font-condensed text-[34px] font-bold leading-none desk:block">{priceLabel}</p>
-          ) : null}
-          <h2 id="contact-title" className="hidden text-[11px] font-semibold uppercase tracking-[0.06em] text-on-navy-muted desk:mt-4 desk:block">{UI.seller}</h2>
-          <p className="truncate text-sm font-semibold text-white desk:mt-0.5 desk:text-base">{displayName ?? "Satıcı"}</p>
+        <div className="min-w-0 flex-1 desk:hidden">
+          <p className="truncate text-sm font-semibold text-white">{displayName ?? "Satıcı"}</p>
           {contact === null && maskedPhone ? (
-            <p className="truncate font-mono text-xs text-on-navy-muted desk:mt-1.5 desk:text-sm" data-testid="contact-masked">{maskedPhone}</p>
+            <p className="truncate font-mono text-xs text-on-navy-muted" data-testid="contact-masked">{maskedPhone}</p>
           ) : null}
         </div>
         {contact === null ? (
-          <div className="shrink-0 desk:mt-4 desk:block">
-            <Button onClick={reveal} disabled={loading || maskedPhone === null} className="w-full min-w-40 desk:min-w-0" data-testid="contact-reveal">
+          <div className="shrink-0 desk:block">
+            <Button onClick={reveal} disabled={loading || maskedPhone === null} className="min-h-12 w-full min-w-40 desk:min-w-0" data-testid="contact-reveal">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M6 4h4l2 5-2.5 1.5a11 11 0 0 0 4 4L15 12l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 4 6a2 2 0 0 1 2-2z" />
               </svg>
@@ -80,8 +70,9 @@ export function ContactCard({
             {error ? <p role="alert" className="mt-1 text-xs text-[#F2B8B5] desk:mt-2 desk:text-sm">{error}</p> : null}
           </div>
         ) : (
-          <div className="flex shrink-0 gap-2 desk:mt-4 desk:flex-col">
-            <a href={`tel:${contact.phone}`} className={buttonClasses("primary", "w-full whitespace-nowrap")} data-testid="contact-call">
+          <div className="flex shrink-0 gap-2 desk:flex-col">
+            {/* Revealed: phone = PRIMARY, WhatsApp = SECONDARY (existing contract). */}
+            <a href={`tel:${contact.phone}`} className={buttonClasses("primary", "min-h-12 w-full whitespace-nowrap")} data-testid="contact-call">
               {UI.callSeller}: {contact.phone}
             </a>
             <a

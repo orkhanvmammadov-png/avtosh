@@ -19,10 +19,14 @@ export function FavoriteButton({
   publicId,
   size = "sm",
   autoIntent = false,
+  skin = "card",
 }: {
   publicId: string;
   size?: "sm" | "lg";
   autoIntent?: boolean;
+  /** O.7 identity-panel skin (square on navy) — additive; existing
+      callers keep the default round card treatment. */
+  skin?: "card" | "panel";
 }) {
   const router = useRouter();
   const [favorited, setFavorited] = useState<boolean | null>(null);
@@ -90,9 +94,17 @@ export function FavoriteButton({
         e.stopPropagation();
         void toggle();
       }}
-      className={`inline-flex items-center justify-center rounded-full bg-white/90 transition-colors duration-150 ${
-        size === "lg" ? "min-h-12 min-w-12 border border-line" : "h-7 w-7 md:h-[30px] md:w-[30px]"
-      } ${active ? "text-[#B3261E]" : "text-slate-strong hover:text-[#B3261E]"}`}
+      className={
+        skin === "panel"
+          ? `inline-flex h-[34px] w-[34px] items-center justify-center rounded-[6px] border transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${
+              active
+                ? "border-[#B3261E] bg-[#F9E4E1] text-[#B3261E]"
+                : "border-navy-border bg-transparent text-on-navy-muted hover:border-green-dark hover:text-green-dark"
+            }`
+          : `inline-flex items-center justify-center rounded-full bg-white/90 transition-colors duration-150 ${
+              size === "lg" ? "min-h-12 min-w-12 border border-line" : "h-7 w-7 md:h-[30px] md:w-[30px]"
+            } ${active ? "text-[#B3261E]" : "text-slate-strong hover:text-[#B3261E]"}`
+      }
     >
       <svg width={size === "lg" ? 20 : 15} height={size === "lg" ? 20 : 15} viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />

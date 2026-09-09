@@ -9,16 +9,20 @@ export function PromotionBadge({
   type,
   compact = false,
   label,
+  onNavy = false,
 }: {
   type: "PREMIUM" | "BOOST";
   compact?: boolean;
-  /** Text override — boosted public placements must carry the required ad marking ("Reklam"). */
+  /** Text override for special placements. */
   label?: string;
+  /** O.7 navy-stage Premium variant (raised fill + gold hairline) —
+      additive; every existing caller keeps the default chip. */
+  onNavy?: boolean;
 }) {
   const size = compact ? "px-1.5 py-0.5 text-[8.5px]" : "px-2 py-0.5 text-[10px]";
   if (type === "PREMIUM") {
     return (
-      <span className={`inline-flex items-center rounded-[5px] bg-navy font-bold uppercase tracking-wider text-premium ${size}`}>
+      <span className={`inline-flex items-center rounded-[5px] font-bold uppercase tracking-wider text-premium ${size} ${onNavy ? "border border-[#4A4636] bg-navy-raised" : "bg-navy"}`}>
         Premium
       </span>
     );
