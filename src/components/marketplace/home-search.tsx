@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Check, ChevronDown, ChevronUp, X } from "lucide-react";
-import { aznInputToMinor } from "@/lib/format";
+import { aznInputToMinor, minorToAznInput } from "@/lib/format";
 import { CATEGORY_LABELS, GROUP_LABELS, UI } from "@/lib/marketplace/labels";
 import { publicFetch } from "@/lib/marketplace/public-api";
 import { engineCcOptions } from "@/lib/marketplace/engine-options";
@@ -11,6 +11,7 @@ import { MultiSelectField } from "@/components/marketplace/multi-select";
 import {
   csvFromIds,
   GROUP_TO_PARAM,
+  idsFromCsv,
   searchHref,
   visibleFilterGroups,
   type SearchFilterState,
@@ -52,6 +53,7 @@ function Select1C({
   placeholder,
   optionItems,
   clearable = false,
+  initialValue = "",
   testid,
 }: {
   name: string;
@@ -59,9 +61,11 @@ function Select1C({
   placeholder: string;
   optionItems: { value: string; label: string }[];
   clearable?: boolean;
+  /** Results-mode restore: initial selection from the parsed URL. */
+  initialValue?: string;
   testid: string;
 }) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(initialValue);
   return (
     <span className="relative block">
       <select
@@ -205,34 +209,77 @@ export interface HomeAdvancedCatalog {
   optionsByCategory: Record<string, Record<string, ReferenceOptionDto[]>>;
 }
 
+/** Filter count of a parsed URL state (results-mode collapsed chip). */
+function countStateFilters(state: SearchFilterState): number {
+  let count = 0;
+  for (const key of ["city_id", "body_type_id", "drive_type_id", "motorcycle_type_id", "mileage_max"] as const) {
+    if (state[key] !== undefined) count += 1;
+  }
+  if (state.year_min !== undefined || state.year_max !== undefined) count += 1;
+  if (state.engine_cc_min !== undefined || state.engine_cc_max !== undefined) count += 1;
+  if (state.price_min !== undefined || state.price_max !== undefined) count += 1;
+  for (const key of ["fuel_type_ids", "transmission_ids", "color_ids"] as const) {
+    if (idsFromCsv(state[key]).length > 0) count += 1;
+  }
+  for (const key of ["credit", "barter"] as const) {
+    if (state[key] === "true") count += 1;
+  }
+  // conditions are a CAR-only control (O.6 category contract)
+  if (visibleFilterGroups(state.category ?? "CAR").includes("BODY_TYPE")) {
+    for (const key of ["no_accident", "not_repainted"] as const) {
+      if (state[key] === "true") count += 1;
+    }
+  }
+  return count;
+}
+
 export function HomeSearch({
   categories,
   initialBrands,
   advanced,
+  mode = "home",
+  initialState,
+  initialModels,
 }: {
   categories: CategoryDto[];
   initialBrands: BrandDto[];
   advanced: HomeAdvancedCatalog;
+  /**
+   * "home" (default, sealed O.2 behavior — byte-identical) or
+   * "results" (O.6): controls restore from `initialState`, Axtar stays
+   * on /elanlar (scroll preserved) and auto-collapses the panel, and
+   * the collapsed count chip derives from the applied query. The
+   * Results page remounts this component per query string, so URL
+   * navigation (apply, chips, clear, sort, back/forward) always
+   * re-initializes deterministically from the parsed URL.
+   */
+  mode?: "home" | "results";
+  initialState?: SearchFilterState;
+  /** Models for initialState.brand_id (server-loaded on Results). */
+  initialModels?: ModelDto[];
 }) {
+  const init: SearchFilterState = mode === "results" ? (initialState ?? {}) : {};
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
-  const [category, setCategory] = useState(categories[0]?.code ?? "CAR");
+  const [category, setCategory] = useState(init.category ?? categories[0]?.code ?? "CAR");
   const [brands, setBrands] = useState<BrandDto[]>(initialBrands);
-  const [models, setModels] = useState<ModelDto[]>([]);
-  const [brandId, setBrandId] = useState("");
-  const [modelId, setModelId] = useState("");
+  const [models, setModels] = useState<ModelDto[]>(initialModels ?? []);
+  const [brandId, setBrandId] = useState(init.brand_id ?? "");
+  const [modelId, setModelId] = useState(init.model_id ?? "");
   const [loadingBrands, setLoadingBrands] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [priceMin, setPriceMin] = useState("");
-  const [priceMax, setPriceMax] = useState("");
-  const [mileage, setMileage] = useState("");
-  const [credit, setCredit] = useState(false);
-  const [barter, setBarter] = useState(false);
-  const [noAccident, setNoAccident] = useState(false);
-  const [notRepainted, setNotRepainted] = useState(false);
-  const [collapsedCount, setCollapsedCount] = useState(0);
+  const [priceMin, setPriceMin] = useState(init.price_min !== undefined ? minorToAznInput(init.price_min) : "");
+  const [priceMax, setPriceMax] = useState(init.price_max !== undefined ? minorToAznInput(init.price_max) : "");
+  const [mileage, setMileage] = useState(init.mileage_max ?? "");
+  const [credit, setCredit] = useState(init.credit === "true");
+  const [barter, setBarter] = useState(init.barter === "true");
+  const [noAccident, setNoAccident] = useState(init.no_accident === "true");
+  const [notRepainted, setNotRepainted] = useState(init.not_repainted === "true");
+  const [collapsedCount, setCollapsedCount] = useState(() => countStateFilters(init));
   const [clearCount, setClearCount] = useState(0); // remounts uncontrolled fields on Təmizlə
   const requestRef = useRef(0);
+  /** Restore value for a keyed field: Təmizlə wins over the URL value. */
+  const restored = (value: string | undefined): string => (clearCount > 0 ? "" : (value ?? ""));
 
   async function loadBrands(nextCategory: string) {
     const ticket = ++requestRef.current;
@@ -272,8 +319,10 @@ export function HomeSearch({
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     // EXACT Search URL contract — same keys and serializer the
-    // Search Results page parses back (URL-as-state).
+    // Search Results page parses back (URL-as-state). Results mode
+    // carries the active sort through unchanged.
     const next: SearchFilterState = { category };
+    if (mode === "results" && init.sort !== undefined) next.sort = init.sort;
     if (brandId !== "") next.brand_id = brandId;
     if (modelId !== "") next.model_id = modelId;
     const data = new FormData(event.currentTarget);
@@ -292,12 +341,22 @@ export function HomeSearch({
       const values = data.getAll(key).map(String).filter((v) => v.length > 0);
       if (values.length > 0) next[key] = csvFromIds(values);
     }
-    // Positive claims only — unselected emits nothing.
-    if (noAccident) next.no_accident = "true";
-    if (notRepainted) next.not_repainted = "true";
+    // Positive claims only — unselected emits nothing; a hidden
+    // (moto results) condition block never re-serializes URL state.
+    if (showConditions && noAccident) next.no_accident = "true";
+    if (showConditions && notRepainted) next.not_repainted = "true";
     // Existing boolean filters (unchanged contract).
     if (credit) next.credit = "true";
     if (barter) next.barter = "true";
+    if (mode === "results") {
+      // Apply on Results: same URL contract, stay in the results
+      // context (no scroll jump), and the advanced panel collapses as
+      // part of THIS user action (never on rerender).
+      setCollapsedCount(countActiveFilters());
+      setExpanded(false);
+      router.push(searchHref(next), { scroll: false });
+      return;
+    }
     router.push(searchHref(next));
   }
 
@@ -320,8 +379,8 @@ export function HomeSearch({
     if (priceMin !== "" || priceMax !== "") count += 1;
     if (credit) count += 1;
     if (barter) count += 1;
-    if (noAccident) count += 1;
-    if (notRepainted) count += 1;
+    if (showConditions && noAccident) count += 1;
+    if (showConditions && notRepainted) count += 1;
     return count;
   }
 
@@ -358,6 +417,11 @@ export function HomeSearch({
   const options = advanced.optionsByCategory[category] ?? {};
   const priceGroupActive = priceMin !== "" || priceMax !== "" || credit || barter;
   const vehicleTypeGroup = groups.includes("BODY_TYPE") ? "BODY_TYPE" : "MOTORCYCLE_TYPE";
+  // O.6 category applicability (layout.md "Category contexts"): the
+  // vehicle-condition claims are a CAR-only control — Motosikletlər
+  // omits them ("never force CAR controls into moto"). Gated to
+  // results mode so the sealed Home O.2 surface stays untouched.
+  const showConditions = mode !== "results" || groups.includes("BODY_TYPE");
 
   const actionButtons = (
     <>
@@ -415,7 +479,7 @@ export function HomeSearch({
           </label>
           <label className="block" key={`city-${clearCount}`}>
             <FieldLabel>{UI.city}</FieldLabel>
-            <select name="city_id" defaultValue="" className={`${control} appearance-none pr-8 min-h-12`} data-testid="home-adv-city">
+            <select name="city_id" defaultValue={restored(init.city_id)} className={`${control} appearance-none pr-8 min-h-12`} data-testid="home-adv-city">
               <option value="">{UI.any}</option>
               {advanced.cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
@@ -482,6 +546,7 @@ export function HomeSearch({
             ariaLabel={GROUP_LABELS[vehicleTypeGroup]}
             placeholder={UI.any}
             optionItems={(options[vehicleTypeGroup] ?? []).map((o) => ({ value: o.id, label: o.name }))}
+            initialValue={restored(init[GROUP_TO_PARAM[vehicleTypeGroup]])}
             clearable
             testid={`home-adv-${GROUP_TO_PARAM[vehicleTypeGroup]}`}
           />
@@ -516,16 +581,16 @@ export function HomeSearch({
         <div className="[grid-area:year]">
           <FieldLabel>{UI.year}</FieldLabel>
           <div className="grid grid-cols-2 gap-2" key={`year-${clearCount}`}>
-            <Select1C name="year_min" ariaLabel="Minimum il" placeholder="Min" optionItems={advanced.years.map((y) => ({ value: String(y), label: String(y) }))} testid="home-adv-year-min" />
-            <Select1C name="year_max" ariaLabel="Maximum il" placeholder="Maks" optionItems={advanced.years.map((y) => ({ value: String(y), label: String(y) }))} testid="home-adv-year-max" />
+            <Select1C name="year_min" ariaLabel="Minimum il" placeholder="Min" optionItems={advanced.years.map((y) => ({ value: String(y), label: String(y) }))} initialValue={restored(init.year_min)} testid="home-adv-year-min" />
+            <Select1C name="year_max" ariaLabel="Maximum il" placeholder="Maks" optionItems={advanced.years.map((y) => ({ value: String(y), label: String(y) }))} initialValue={restored(init.year_max)} testid="home-adv-year-max" />
           </div>
         </div>
         {/* 4 — Mühərrikin həcmi (shared generator). */}
         <div className="[grid-area:engine]">
           <FieldLabel>{UI.engineCcTitle}</FieldLabel>
           <div className="grid grid-cols-2 gap-2" key={`engine-${clearCount}`}>
-            <Select1C name="engine_cc_min" ariaLabel={`${UI.engineCcTitle} ${UI.min}`} placeholder="Min" optionItems={engineCcOptions().map((v) => ({ value: String(v), label: String(v) }))} testid="home-adv-engine-min" />
-            <Select1C name="engine_cc_max" ariaLabel={`${UI.engineCcTitle} ${UI.max}`} placeholder="Maks" optionItems={engineCcOptions().map((v) => ({ value: String(v), label: String(v) }))} testid="home-adv-engine-max" />
+            <Select1C name="engine_cc_min" ariaLabel={`${UI.engineCcTitle} ${UI.min}`} placeholder="Min" optionItems={engineCcOptions().map((v) => ({ value: String(v), label: String(v) }))} initialValue={restored(init.engine_cc_min)} testid="home-adv-engine-min" />
+            <Select1C name="engine_cc_max" ariaLabel={`${UI.engineCcTitle} ${UI.max}`} placeholder="Maks" optionItems={engineCcOptions().map((v) => ({ value: String(v), label: String(v) }))} initialValue={restored(init.engine_cc_max)} testid="home-adv-engine-max" />
           </div>
         </div>
         {/* 5 — Rəng (multi, swatches). */}
@@ -536,7 +601,7 @@ export function HomeSearch({
             label={GROUP_LABELS.COLOR}
             name={GROUP_TO_PARAM.COLOR}
             options={options.COLOR ?? []}
-            initialSelected={[]}
+            initialSelected={clearCount > 0 ? [] : idsFromCsv(init[GROUP_TO_PARAM.COLOR])}
             swatches
             panelWide
             testid="home-adv-color"
@@ -585,7 +650,7 @@ export function HomeSearch({
             label="Yanacaq növü"
             name={GROUP_TO_PARAM.FUEL_TYPE}
             options={options.FUEL_TYPE ?? []}
-            initialSelected={[]}
+            initialSelected={clearCount > 0 ? [] : idsFromCsv(init[GROUP_TO_PARAM.FUEL_TYPE])}
             testid="home-adv-fuel_type"
           />
         </div>
@@ -599,6 +664,7 @@ export function HomeSearch({
               ariaLabel={GROUP_LABELS.DRIVE_TYPE}
               placeholder={UI.any}
               optionItems={(options.DRIVE_TYPE ?? []).map((o) => ({ value: o.id, label: o.name }))}
+              initialValue={restored(init.drive_type_id)}
               clearable
               testid={`home-adv-${GROUP_TO_PARAM.DRIVE_TYPE}`}
             />
@@ -612,22 +678,25 @@ export function HomeSearch({
             label={GROUP_LABELS.TRANSMISSION}
             name={GROUP_TO_PARAM.TRANSMISSION}
             options={options.TRANSMISSION ?? []}
-            initialSelected={[]}
+            initialSelected={clearCount > 0 ? [] : idsFromCsv(init[GROUP_TO_PARAM.TRANSMISSION])}
             testid="home-adv-transmission"
           />
         </div>
-        {/* 10 — Avtomobil vəziyyəti: visible toggle pair, final block. */}
-        <div className="[grid-area:cond]">
-          <FieldLabel>{UI.conditionTitle}</FieldLabel>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-            <ConditionToggle pressed={noAccident} onToggle={() => setNoAccident((v) => !v)} testid="home-adv-no-accident">
-              {UI.noAccident}
-            </ConditionToggle>
-            <ConditionToggle pressed={notRepainted} onToggle={() => setNotRepainted((v) => !v)} testid="home-adv-not-repainted">
-              {UI.notRepainted}
-            </ConditionToggle>
+        {/* 10 — Avtomobil vəziyyəti: visible toggle pair, final block
+            (CAR-only in results mode per the O.6 category contract). */}
+        {showConditions ? (
+          <div className="[grid-area:cond]">
+            <FieldLabel>{UI.conditionTitle}</FieldLabel>
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+              <ConditionToggle pressed={noAccident} onToggle={() => setNoAccident((v) => !v)} testid="home-adv-no-accident">
+                {UI.noAccident}
+              </ConditionToggle>
+              <ConditionToggle pressed={notRepainted} onToggle={() => setNotRepainted((v) => !v)} testid="home-adv-not-repainted">
+                {UI.notRepainted}
+              </ConditionToggle>
+            </div>
           </div>
-        </div>
+        ) : null}
         {/* Actions in flow below desk (right-aligned @768, stacked @390). */}
         <div className="[grid-area:actions] mt-1 flex flex-col gap-2 border-t border-sunken pt-3 sm:flex-row-reverse sm:items-center sm:justify-start sm:gap-2.5 desk:hidden">
           {actionButtons}

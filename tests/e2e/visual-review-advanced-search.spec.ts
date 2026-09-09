@@ -219,10 +219,9 @@ test.describe("advanced search visual artifacts", () => {
         `/elanlar?category=CAR&city_id=${s.bakuCityId}&year_min=2015&no_accident=true&not_repainted=true&engine_cc_min=1000`,
       );
       await page.waitForLoadState("networkidle");
-      if (width < 1024) {
-        await page.getByTestId("filters-open").click();
-        await expect(page.getByTestId("filters-drawer")).toBeVisible();
-      }
+      // O.6: the unified search card replaces sidebar/drawer at every width
+      await page.getByTestId("home-advanced-toggle").click();
+      await expect(page.getByTestId("home-advanced-panel")).toBeVisible();
       await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: width >= 1024 });
     });
   }
