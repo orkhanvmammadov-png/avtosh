@@ -124,7 +124,7 @@ test.describe("contact reveal rate limiting UI", () => {
 });
 
 test.describe("Listing detail — Direction 1A (4.17O.7 Stage A)", () => {
-  test("identity panel composes real data: price, chips, title, meta, seller, reference", async ({ page }) => {
+  test("identity panel composes real data: price, chips, title, meta, seller, reference", async ({ page }, { project }) => {
     const s = seed();
     await page.goto(`/elan/${s.activeCar}`);
     const panel = page.getByTestId("identity-panel");
@@ -133,12 +133,18 @@ test.describe("Listing detail — Direction 1A (4.17O.7 Stage A)", () => {
     await expect(panel.getByTestId("detail-meta")).toContainText("km");
     await expect(panel.getByTestId("detail-meta")).toContainText("Benzin");
     // seller module: real public data only — name + city, never a
-    // seller classification
-    await expect(panel.getByTestId("seller-module")).toBeVisible();
+    // seller classification. At the 768 board tier the seller (and the
+    // report entry) live in the lower seller row per responsive.md.
+    if (project.name === "tablet") {
+      await expect(page.getByTestId("seller-row")).toBeVisible();
+      await expect(page.getByTestId("seller-row")).toContainText(`Elan № ${s.activeCar}`);
+      await page.getByTestId("seller-row").getByText("Şikayət et").click();
+    } else {
+      await expect(panel.getByTestId("seller-module")).toBeVisible();
+      await expect(panel.getByTestId("listing-ref")).toContainText(`Elan № ${s.activeCar}`);
+      await panel.getByTestId("panel-report-link").click();
+    }
     await expect(page.getByTestId("listing-detail")).not.toContainText("Fərdi satıcı");
-    await expect(panel.getByTestId("listing-ref")).toContainText(`Elan № ${s.activeCar}`);
-    // report entry point anchors to the existing report flow
-    await panel.getByTestId("panel-report-link").click();
     await expect(page.getByTestId("report-open")).toBeVisible();
     // exactly one reveal control — no duplicated contact architecture
     await expect(page.getByTestId("contact-reveal")).toHaveCount(1);
@@ -176,26 +182,33 @@ test.describe("Listing detail — Direction 1A (4.17O.7 Stage A)", () => {
     await expect(page.getByTestId("features-toggle")).toHaveCount(0);
   });
 
-  test("gallery: '+n' tile appears past six images and opens the fullscreen layer", async ({ page, context }, { project }) => {
+  test("gallery: '+n' tile appears past the tier cap and opens the fullscreen layer", async ({ page, context }, { project }) => {
     test.skip(project.name === "mobile", "desktop gallery controls");
     const { userId } = await loginAs(context, testPhone(project.name, 48));
     const fixture = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 9 });
     await context.clearCookies();
     await page.goto(`/elan/${fixture.publicId}`);
     await expect(page.getByTestId("gallery-hero-counter")).toHaveText("1 / 9");
-    await expect(page.getByTestId("gallery-thumb-4")).toBeVisible(); // 5 real tiles
-    await expect(page.getByTestId("gallery-thumb-5")).toHaveCount(0);
+    // per-tier rails from ONE DOM: 5 real tiles + "+4" at desk (6-up),
+    // 7 real tiles + "+2" on the 768 board (8-up)
+    const desk = project.name === "desktop";
+    await expect(page.getByTestId("gallery-thumb-4")).toBeVisible();
+    if (desk) {
+      await expect(page.getByTestId("gallery-thumb-5")).not.toBeVisible();
+    } else {
+      await expect(page.getByTestId("gallery-thumb-6")).toBeVisible();
+    }
     const more = page.getByTestId("gallery-more");
-    await expect(more).toContainText("+4");
+    await expect(more.getByText(desk ? "+4" : "+2")).toBeVisible();
     await more.click();
     const overlay = page.getByTestId("gallery-fullscreen");
     await expect(overlay).toBeVisible();
-    await expect(overlay).toContainText("6 / 9"); // jumped to the first hidden index
+    await expect(overlay).toContainText(desk ? "6 / 9" : "8 / 9"); // first hidden index per tier
     await page.keyboard.press("ArrowRight");
-    await expect(overlay).toContainText("7 / 9");
+    await expect(overlay).toContainText(desk ? "7 / 9" : "9 / 9");
     await page.keyboard.press("Escape");
     await expect(overlay).toHaveCount(0);
-    await expect(page.getByTestId("gallery-hero-counter")).toHaveText("7 / 9"); // one shared index
+    await expect(page.getByTestId("gallery-hero-counter")).toHaveText(desk ? "7 / 9" : "9 / 9"); // one shared index
   });
 
   test("promotion badges: PREMIUM, BOOST and the dual state show full words, never Reklam", async ({ page, context }, { project }) => {
@@ -317,6 +330,103 @@ test.describe("Listing detail — 1024 tier (4.17O.7 Stage B)", () => {
         await sql`update listings set model_id = ${s.corollaModelId} where id = ${fixture.id}`;
         await sql`delete from models where id = ${modelId}`;
       }
+      await sql.end();
+    }
+  });
+});
+
+test.describe("Listing detail — 768 board (4.17O.7 Stage C)", () => {
+  test("768 uses the full-width gallery → identity board structure; 1024 reverts to the sealed panel", async ({ page, context }, { project }) => {
+    test.skip(project.name !== "desktop", "explicit viewport scenario; one project");
+    const s = seed();
+    const { userId } = await loginAs(context, testPhone("desktop", 53));
+    const rich = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 9, noAccident: true });
+    const sql = (await import("postgres")).default(s.databaseUrl, { prepare: false, max: 1 });
+    let modelId: string | null = null;
+    try {
+      // Premium+Boost, credit chip and a LONG identity on one listing
+      for (const type of ["PREMIUM", "BOOST"] as const) {
+        await sql`
+          with pay as (
+            insert into payments (user_id, listing_id, type, amount_minor, idempotency_key, status, provider)
+            values (${userId}, ${rich.id}, ${type}, 0, ${`o7c:${rich.id}:${type}`}, 'SUCCESS', 'KAPITAL')
+            returning id
+          )
+          insert into listing_promotions (listing_id, type, payment_id, starts_at, ends_at, status, purchased_duration_days, purchased_price_minor)
+          select ${rich.id}, ${type}, pay.id, now() - interval '1 hour', now() + interval '7 days', 'ACTIVE', 7, 0 from pay
+        `;
+      }
+      const [m] = await sql`
+        insert into models (brand_id, category_id, name, slug)
+        values (${s.toyotaBrandId}, (select id from categories where code = 'CAR'),
+                'Land Cruiser 300 GR Sport Executive', 'lc300-gr-sport-exec-o7c')
+        returning id
+      `;
+      modelId = m.id as string;
+      await sql`update listings set model_id = ${modelId}, credit_available = true where id = ${rich.id}`;
+      await context.clearCookies();
+
+      // structural transition holds, overflow-free, across the tablet band
+      for (const width of [768, 800, 900, 1023]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(`/elan/${rich.publicId}`);
+        const panel = page.getByTestId("identity-panel");
+        await expect(panel).toBeVisible();
+        const panelBox = (await panel.boundingBox())!;
+        const galleryBox = (await page.getByTestId("gallery-main").boundingBox())!;
+        // full-width board under a full-width gallery — no side panel
+        expect(panelBox.width).toBeGreaterThan(galleryBox.width * 0.95);
+        expect(panelBox.y).toBeGreaterThan(galleryBox.y + galleryBox.height - 1);
+        await expectNoHorizontalOverflow(page);
+      }
+
+      // board internals at 768: price left, CTA + 42px favorite right,
+      // dual badges textual, inline meta, panel seller/footer relocated
+      await page.setViewportSize({ width: 768, height: 900 });
+      await page.goto(`/elan/${rich.publicId}`);
+      const panel = page.getByTestId("identity-panel");
+      await expect(panel).toContainText("Premium");
+      await expect(panel).toContainText("Boost");
+      await expect(panel.getByTestId("chip-credit")).toBeVisible();
+      const panelBox = (await panel.boundingBox())!;
+      const priceBox = (await page.getByTestId("detail-price").boundingBox())!;
+      const ctaBox = (await page.getByTestId("contact-reveal").boundingBox())!;
+      expect(ctaBox.x).toBeGreaterThan(panelBox.x + panelBox.width * 0.5); // CTA in the right column
+      expect(priceBox.x).toBeLessThan(panelBox.x + panelBox.width * 0.4);
+      const favBox = (await panel.getByTestId("favorite-button").boundingBox())!;
+      expect(Math.round(favBox.width)).toBe(42);
+      await expect(page.getByTestId("detail-meta")).toBeHidden(); // meta rides inline with the title
+      await expect(panel.getByRole("heading", { level: 1 })).toContainText("Land Cruiser 300 GR Sport Executive");
+      await expect(panel.getByRole("heading", { level: 1 })).toContainText("km");
+      await expect(page.getByTestId("seller-module")).toBeHidden();
+      await expect(page.getByTestId("listing-ref")).toBeHidden();
+      await expect(page.getByTestId("seller-row")).toBeVisible(); // seller after description
+      // revealed contact fits the board — phone primary + WhatsApp secondary
+      await page.getByTestId("contact-reveal").click();
+      await expect(page.getByTestId("contact-call")).toBeVisible();
+      await expect(page.getByTestId("contact-whatsapp")).toBeVisible();
+      const callBox = (await page.getByTestId("contact-call").boundingBox())!;
+      expect(callBox.x + callBox.width).toBeLessThanOrEqual(panelBox.x + panelBox.width + 1);
+      await expectNoHorizontalOverflow(page);
+
+      // 1024 flips back to the SEALED side-panel composition
+      await page.setViewportSize({ width: 1024, height: 800 });
+      await page.goto(`/elan/${rich.publicId}`);
+      const sealedBox = (await page.getByTestId("identity-panel").boundingBox())!;
+      expect(sealedBox.width).toBeGreaterThan(330);
+      expect(sealedBox.width).toBeLessThan(350); // the sealed 340px panel
+      await expect(page.getByTestId("seller-module")).toBeVisible();
+      await expect(page.getByTestId("listing-ref")).toBeVisible();
+      await expect(page.getByTestId("seller-row")).toBeHidden();
+      await expect(page.getByTestId("detail-meta")).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+    } finally {
+      if (modelId !== null) {
+        await sql`update listings set model_id = ${s.corollaModelId} where id = ${rich.id}`;
+        await sql`delete from models where id = ${modelId}`;
+      }
+      await sql`delete from listing_promotions where payment_id in (select id from payments where idempotency_key like 'o7c:%')`;
+      await sql`delete from payments where idempotency_key like 'o7c:%'`;
       await sql.end();
     }
   });

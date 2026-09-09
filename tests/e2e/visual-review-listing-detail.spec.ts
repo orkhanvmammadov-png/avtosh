@@ -76,6 +76,23 @@ test.describe("listing detail visual review (Stage A — 1440)", () => {
       await page.getByTestId("contact-reveal").click();
       await expect(page.getByTestId("contact-call")).toBeVisible();
       await page.screenshot({ path: `${OUT}/o7-1024-contact-revealed.png` });
+
+      // Stage C — 768 board states
+      await page.setViewportSize({ width: 768, height: 1024 });
+      await page.goto(`/elan/${s.activeCar}`);
+      await expect(page.getByTestId("identity-panel")).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      await page.screenshot({ path: `${OUT}/o7-768-active.png`, fullPage: true });
+      await page.goto(`/elan/${rich.publicId}`);
+      await expect(page.getByTestId("gallery-more")).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      await page.screenshot({ path: `${OUT}/o7-768-premium-boost.png`, fullPage: true });
+      await page.getByTestId("key-specs").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: `${OUT}/o7-768-lower-content.png` });
+      await page.getByTestId("identity-panel").scrollIntoViewIfNeeded();
+      await page.getByTestId("contact-reveal").click();
+      await expect(page.getByTestId("contact-call")).toBeVisible();
+      await page.screenshot({ path: `${OUT}/o7-768-contact-revealed.png` });
     } finally {
       await sql`delete from listing_promotions where payment_id in (select id from payments where idempotency_key like 'o7cap:%')`;
       await sql`delete from payments where idempotency_key like 'o7cap:%'`;
