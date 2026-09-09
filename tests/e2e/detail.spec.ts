@@ -269,3 +269,55 @@ test.describe("Listing detail — Direction 1A (4.17O.7 Stage A)", () => {
     await expect(page.getByTestId("description-toggle")).toHaveCount(0);
   });
 });
+
+test.describe("Listing detail — 1024 tier (4.17O.7 Stage B)", () => {
+  test("1024 keeps the panel readable: long title wraps, reveal fits, no overflow", async ({ page, context }, { project }) => {
+    test.skip(project.name !== "desktop", "explicit viewport scenario; one project");
+    const s = seed();
+    const { userId } = await loginAs(context, testPhone("desktop", 52));
+    const fixture = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 3 });
+    // deterministic LONG identity: a real (temporary) catalog model
+    const sql = (await import("postgres")).default(s.databaseUrl, { prepare: false, max: 1 });
+    let modelId: string | null = null;
+    try {
+      const [m] = await sql`
+        insert into models (brand_id, category_id, name, slug)
+        values (${s.toyotaBrandId}, (select id from categories where code = 'CAR'),
+                'Land Cruiser 300 GR Sport Executive', 'lc300-gr-sport-exec-o7')
+        returning id
+      `;
+      modelId = m.id as string;
+      await sql`update listings set model_id = ${modelId} where id = ${fixture.id}`;
+      await context.clearCookies();
+      await page.setViewportSize({ width: 1024, height: 800 });
+      await page.goto(`/elan/${fixture.publicId}`);
+      const panel = page.getByTestId("identity-panel");
+      await expect(panel.getByRole("heading", { level: 1 })).toContainText("Land Cruiser 300 GR Sport Executive");
+      await expectNoHorizontalOverflow(page);
+      // the title never pushes the CTA out of the panel
+      const panelBox = await panel.boundingBox();
+      const ctaBox = await page.getByTestId("contact-reveal").boundingBox();
+      expect(panelBox).not.toBeNull();
+      expect(ctaBox).not.toBeNull();
+      expect(ctaBox!.x + ctaBox!.width).toBeLessThanOrEqual(panelBox!.x + panelBox!.width + 1);
+      // revealed state stays inside the panel — phone primary, WhatsApp secondary
+      await page.getByTestId("contact-reveal").click();
+      await expect(page.getByTestId("contact-call")).toBeVisible();
+      await expect(page.getByTestId("contact-whatsapp")).toBeVisible();
+      const callBox = await page.getByTestId("contact-call").boundingBox();
+      expect(callBox!.x + callBox!.width).toBeLessThanOrEqual(panelBox!.x + panelBox!.width + 1);
+      await expectNoHorizontalOverflow(page);
+      // the sealed 1440 composition still holds at its own width
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto(`/elan/${s.activeCar}`);
+      await expect(page.getByTestId("identity-panel")).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+    } finally {
+      if (modelId !== null) {
+        await sql`update listings set model_id = ${s.corollaModelId} where id = ${fixture.id}`;
+        await sql`delete from models where id = ${modelId}`;
+      }
+      await sql.end();
+    }
+  });
+});
