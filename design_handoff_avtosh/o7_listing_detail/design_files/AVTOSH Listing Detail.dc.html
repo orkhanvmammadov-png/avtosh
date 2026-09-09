@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/modernist-cf7ae464-5c45-401c-ae72-b0749af952b1/styles.css">
+<script src="_ds/modernist-cf7ae464-5c45-401c-ae72-b0749af952b1/_ds_bundle.js"></script>
+<script src="image-slot.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800&family=Fira+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E7E2;font-family:'Fira Sans',system-ui,sans-serif;color:#1B1E24}
+a{color:#147A4E}a:hover{color:#0F6440}
+.dv-turn{padding:40px 44px 32px}
+.dv-opt{scroll-margin-top:16px;margin-bottom:48px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-opt:target > .dv-olabel .dv-oid{background:#2a78d6;color:#fff}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.6);margin-bottom:12px}
+.frame{background:#F5F4F0;border:1px solid rgba(0,0,0,.09);box-shadow:0 1px 3px rgba(20,26,34,.06)}
+.notes{background:#fff;border:1px solid rgba(0,0,0,.09);padding:16px 22px;margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px 28px;font:400 12px/1.55 'Fira Sans';color:#3d4148}
+.bBoost{background:#E7F2EC;color:#0F6440;font:600 9.5px 'Fira Sans';letter-spacing:.04em;padding:3px 7px;border-radius:5px;display:inline-flex;gap:4px;align-items:center}
+.bPrem{background:#141A22;color:#D9B45B;font:600 9.5px 'Fira Sans';letter-spacing:.06em;padding:3px 7px;border-radius:5px}
+.bPremD{background:#1D2733;border:1px solid #4A4636;color:#D9B45B;font:600 9.5px 'Fira Sans';letter-spacing:.06em;padding:3px 7px;border-radius:5px}
+.price{font-family:'Fira Sans Condensed'}
+.kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #EDEBE4;font:400 12.5px 'Fira Sans'}
+.kv b{font-weight:600}
+.kv span:first-child{color:#565B63}
+.ftr{font:400 12.5px 'Fira Sans';color:#3d4148}
+.ftr b{color:#147A4E;font-weight:600}
+.hdrN{background:#141A22;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:56px}
+.crumb{font:400 12px 'Fira Sans';color:#7E8794}
+.thumb{aspect-ratio:4/3;background:#E4DFD4;border-radius:8px;position:relative}
+.thumbD{aspect-ratio:4/3;background:#1D2733;border:1px solid #2B3644;border-radius:8px;position:relative}
+.tlab{position:absolute;left:6px;bottom:4px;font:500 8.5px 'Fira Sans';color:#9B9488}
+.cnt{position:absolute;right:10px;bottom:10px;background:rgba(20,26,34,.8);color:#fff;font:500 10.5px 'Fira Sans';padding:3px 8px;border-radius:5px;pointer-events:none}
+.navArr{position:absolute;top:50%;transform:translateY(-50%);width:34px;height:34px;background:rgba(255,255,255,.92);border-radius:50%;display:flex;align-items:center;justify-content:center;font:600 15px 'Fira Sans';color:#1B1E24;box-shadow:0 1px 3px rgba(20,26,34,.15)}
+.secH{font:700 14.5px 'Fira Sans';margin-bottom:10px}
+.wpanel{background:#fff;border:1px solid #E3E0D8;border-radius:10px;padding:16px 18px}
+.ctaG{background:#147A4E;color:#fff;font:600 14px 'Fira Sans';text-align:center;padding:13px;border-radius:6px;cursor:pointer}
+.ctaO{border:1px solid #C6C2B6;font:600 13px 'Fira Sans';text-align:center;padding:11px;border-radius:6px;cursor:pointer;background:#fff}
+.chipF{border:1px solid #E3E0D8;background:#fff;border-radius:999px;padding:5px 11px;font:500 12px 'Fira Sans';color:#3d4148}
+</style>
+</helmet>
+<section class="dv-turn" id="t2">
+<div class="dv-opt" id="2a">
+<div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a><b style="color:#111">O.7.2 — Direction 1A (SƏHNƏ) responsive refinement</b> · owner-selected; Stage 1 exploration archived below</div>
+<div style="max-width:1180px;background:#fff;border:1px solid rgba(0,0,0,.1);padding:16px 22px;margin-bottom:24px;font:12.5px/1.6 system-ui,sans-serif;color:#333;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 28px">
+  <div><b>1A preserved.</b> Gallery stays the dominant element at every width — full-width hero on the navy stage, thumbnails on the dark band, identity + CTA in the floating dark panel. Below the stage, paper carries specs → condition/features → description. No dilution into a flat classifieds table.</div>
+  <div><b>Breakpoints.</b> 1440: gallery + 400px panel · 1024: gallery + 340px panel · 768: panel drops below the gallery full-width (identity → CTA → seller), content single column · 390: swipe gallery, dark identity block, sticky contact bar (phone + favorite, 48px, safe-area padded).</div>
+  <div><b>States.</b> ACTIVE (Premium+Boost at 1440 and 390), SOLD and EXPIRED at 390 (CTA replaced by a status board — phone reveal disabled per current contract), Motosiklet at 1024 with category-correct fields only. Close-ups + interaction notes at the end. No fake data anywhere.</div>
+</div>
+<div class="cap" style="font:600 10.5px ui-monospace,Menlo,monospace;letter-spacing:.06em;color:rgba(0,0,0,.45);margin:0 0 8px;text-transform:uppercase">1440 — ACTIVE · Premium + Boost · full page architecture</div>
+<div class="frame" style="width:1440px">
+  <div class="hdrN">
+    <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:18px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 17px 'Fira Sans'">AVTOSH<span style="font:700 11px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+    <span class="crumb">Avtomobillər / BMW / 530e</span>
+  </div>
+  <div style="background:#141A22;padding:6px 40px 30px">
+    <div style="display:grid;grid-template-columns:1fr 400px;gap:28px">
+      <div>
+        <div style="position:relative">
+          <div style="aspect-ratio:16/10;border-radius:12px;overflow:hidden"><image-slot id="r-hero" shape="rect" placeholder="Əsas şəkil — foto atın"></image-slot></div>
+          <span class="navArr" style="left:12px">‹</span><span class="navArr" style="right:12px">›</span>
+          <span class="cnt">3 / 12</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:8px">
+          <div class="thumbD" style="outline:2px solid #2FAE74;outline-offset:1px"><span class="tlab" style="color:#A7ADB8">ÖN</span></div>
+          <div class="thumbD"><span class="tlab" style="color:#7E8794">ARXA</span></div>
+          <div class="thumbD"><span class="tlab" style="color:#7E8794">SALON</span></div>
+          <div class="thumbD"><span class="tlab" style="color:#7E8794">TORPEDO</span></div>
+          <div class="thumbD"><span class="tlab" style="color:#7E8794">MÜHƏRRİK</span></div>
+          <div class="thumbD" style="position:relative"><span style="position:absolute;inset:0;background:rgba(20,26,34,.6);border-radius:8px;display:flex;align-items:center;justify-content:center;font:600 12px 'Fira Sans';color:#fff">+6</span></div>
+        </div>
+      </div>
+      <div style="align-self:start;background:#1D2733;border:1px solid #2B3644;border-radius:12px;padding:20px;color:#fff">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div style="display:flex;gap:5px"><span class="bPremD">PREMIUM</span><span class="bBoost"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"></path></svg>BOOST</span></div>
+          <span style="width:34px;height:34px;border:1px solid #2B3644;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 15px 'Fira Sans';color:#A7ADB8;cursor:pointer" style-hover="border-color:#2FAE74;color:#2FAE74">♡</span>
+        </div>
+        <div class="price" style="font:700 34px/1 'Fira Sans Condensed';white-space:nowrap">64 500 <span style="font:600 14px 'Fira Sans';color:#7E8794">AZN</span></div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><span style="border:1px solid #2B3644;border-radius:999px;padding:4px 10px;font:500 11px 'Fira Sans';color:#A7ADB8">Kredit mümkündür</span><span style="border:1px solid #2B3644;border-radius:999px;padding:4px 10px;font:500 11px 'Fira Sans';color:#A7ADB8">Barter</span></div>
+        <div style="font:600 17px 'Fira Sans';margin-top:12px">BMW 530e, 2023</div>
+        <div style="font:400 12.5px 'Fira Sans';color:#A7ADB8;margin-top:3px">21 000 km · Hibrid · Bakı · Bu gün 14:32</div>
+        <div onClick="{{ reveal1 }}" class="ctaG" style="margin-top:16px" style-hover="background:#189459">{{ phone1 }}</div>
+        <div style="border-top:1px solid #2B3644;margin-top:14px;padding-top:12px;display:flex;align-items:center;gap:10px">
+          <div style="width:36px;height:36px;border-radius:50%;background:#2B3644;color:#2FAE74;display:flex;align-items:center;justify-content:center;font:600 14px 'Fira Sans'">E</div>
+          <div><div style="font:600 13px 'Fira Sans'">Elvin M.</div><div style="font:400 11.5px 'Fira Sans';color:#7E8794">Fərdi satıcı · Bakı</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font:400 11px 'Fira Sans';color:#7E8794;margin-top:12px"><span>Elan № 482 913 · Bu gün 14:32</span><span style="color:#D08A82;cursor:pointer">Şikayət et</span></div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:24px 40px 8px">
+    <div class="wpanel">
+      <div class="secH">Əsas göstəricilər</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        <sc-for list="{{ specs6 }}" as="s" hint-placeholder-count="6">
+          <div style="background:#F5F4F0;border-radius:8px;padding:9px 11px"><div style="font:400 10.5px 'Fira Sans';color:#8A8F98">{{ s.l }}</div><div style="font:600 12.5px 'Fira Sans';margin-top:2px">{{ s.v }}</div></div>
+        </sc-for>
+      </div>
+      <div style="border-top:1px solid #EDEBE4;margin-top:12px;padding-top:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;column-gap:32px">
+          <div><div style="font:600 11px 'Fira Sans';letter-spacing:.05em;color:#8A8F98;margin-bottom:4px">AVTOMOBİL</div><sc-for list="{{ attrsVehicle }}" as="s" hint-placeholder-count="5"><div class="kv"><span>{{ s.l }}</span><b>{{ s.v }}</b></div></sc-for></div>
+          <div><div style="font:600 11px 'Fira Sans';letter-spacing:.05em;color:#8A8F98;margin-bottom:4px">TEXNİKİ</div><sc-for list="{{ attrsTech }}" as="s" hint-placeholder-count="6"><div class="kv"><span>{{ s.l }}</span><b>{{ s.v }}</b></div></sc-for></div>
+        </div>
+        <div style="font:400 10.5px 'Fira Sans';color:#8A8F98;margin-top:8px">Boş sahələr sətri ilə birlikdə gizlədilir — "—" göstərilmir.</div>
+      </div>
+    </div>
+    <div>
+      <div class="wpanel">
+        <div class="secH">Vəziyyət · Təchizat</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap"><span class="chipF" style="border-color:#147A4E;color:#0F6440;font-weight:600">✓ Vuruğu yoxdur</span><span class="chipF" style="border-color:#147A4E;color:#0F6440;font-weight:600">✓ Rənglənməyib</span><span style="font:400 10.5px 'Fira Sans';color:#8A8F98;align-self:center">satıcının bəyanı</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+          <sc-for list="{{ feats }}" as="f" hint-placeholder-count="8"><span class="ftr"><b>✓</b> {{ f }}</span></sc-for>
+        </div>
+        <div style="font:500 12px 'Fira Sans';color:#147A4E;margin-top:8px;cursor:pointer">Bütün təchizatı göstər (14) ▾</div>
+      </div>
+      <div class="wpanel" style="margin-top:16px">
+        <div class="secH">Təsvir</div>
+        <div style="font:400 13px/1.6 'Fira Sans';color:#45413c">Avtomobil rəsmi dilerdən alınıb, bir sahibi olub. Servis tarixçəsi tam, qəzasız. Real yürüş. Barter yoxdur. <span style="color:#147A4E;font-weight:600;cursor:pointer">Daha çox ▾</span></div>
+        <div style="font:400 10.5px 'Fira Sans';color:#8A8F98;margin-top:8px">6 sətirdən uzun təsvir kəsilir; "Daha çox" yerində açır (naviqasiya yox). Qısa təsvir kəsilmir.</div>
+      </div>
+    </div>
+  </div>
+  <div style="height:20px"></div>
+</div>
+<!--R1024-->
+<div class="cap" style="font:600 10.5px ui-monospace,Menlo,monospace;letter-spacing:.06em;color:rgba(0,0,0,.45);margin:22px 0 8px;text-transform:uppercase">1024 — ACTIVE (panel 340) · 1024 — Motosiklet (category-correct fields)</div>
+<div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+<div class="frame" style="width:1024px">
+  <div class="hdrN" style="height:50px;padding:0 32px">
+    <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:16px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 15px 'Fira Sans'">AVTOSH<span style="font:700 10px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+    <span class="crumb">Avtomobillər / BMW / 530e</span>
+  </div>
+  <div style="background:#141A22;padding:6px 32px 24px">
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:20px">
+      <div>
+        <div style="position:relative">
+          <div style="aspect-ratio:16/10;background:#1D2733;border-radius:10px;position:relative"><span class="tlab" style="color:#7E8794;font-size:10px;left:10px;bottom:8px">Əsas şəkil</span></div>
+          <span class="navArr" style="left:10px">‹</span><span class="navArr" style="right:10px">›</span>
+          <span class="cnt">3 / 12</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:6px">
+          <sc-for list="{{ thumbs }}" as="th" hint-placeholder-count="6"><div class="thumbD"><span class="tlab" style="color:#7E8794;font-size:7.5px">{{ th }}</span></div></sc-for>
+        </div>
+      </div>
+      <div style="align-self:start;background:#1D2733;border:1px solid #2B3644;border-radius:12px;padding:16px;color:#fff">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span class="bPremD" style="font-size:8.5px">PREMIUM</span><span style="width:32px;height:32px;border:1px solid #2B3644;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 14px 'Fira Sans';color:#A7ADB8">♡</span></div>
+        <div class="price" style="font:700 28px/1 'Fira Sans Condensed';white-space:nowrap">64 500 <span style="font:600 12px 'Fira Sans';color:#7E8794">AZN</span></div>
+        <div style="font:600 15px 'Fira Sans';margin-top:9px">BMW 530e, 2023</div>
+        <div style="font:400 11.5px 'Fira Sans';color:#A7ADB8;margin-top:2px">21 000 km · Hibrid · Bakı</div>
+        <div class="ctaG" style="margin-top:13px;font-size:13px;padding:12px">Nömrəni göstər</div>
+        <div style="border-top:1px solid #2B3644;margin-top:12px;padding-top:10px;font:600 12px 'Fira Sans'">Elvin M. <span style="font:400 10.5px 'Fira Sans';color:#7E8794">· Fərdi satıcı</span></div>
+      </div>
+    </div>
+  </div>
+  <div style="padding:16px 32px 20px;font:400 11px/1.6 'Fira Sans';color:#565B63">Aşağı hissə 1440 ilə eyni iki sütunda qalır (göstəricilər · vəziyyət/təchizat/təsvir); yalnız panel 400→340, gutter 40→32, hero eyni 16:10.</div>
+</div>
+<div class="frame" style="width:1024px">
+  <div class="hdrN" style="height:50px;padding:0 32px">
+    <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:16px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 15px 'Fira Sans'">AVTOSH<span style="font:700 10px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+    <span class="crumb">Motosikletlər / Honda / CB650R</span>
+  </div>
+  <div style="background:#141A22;padding:6px 32px 24px">
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:20px">
+      <div>
+        <div style="position:relative">
+          <div style="aspect-ratio:16/10;background:#1D2733;border-radius:10px;position:relative"><span class="tlab" style="color:#7E8794;font-size:10px;left:10px;bottom:8px">Əsas şəkil — Honda CB650R</span></div>
+          <span class="navArr" style="left:10px">‹</span><span class="navArr" style="right:10px">›</span>
+          <span class="cnt">2 / 7</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:6px">
+          <div class="thumbD"><span class="tlab" style="color:#7E8794;font-size:7.5px">ÖN</span></div>
+          <div class="thumbD" style="outline:2px solid #2FAE74"><span class="tlab" style="color:#A7ADB8;font-size:7.5px">YAN</span></div>
+          <div class="thumbD"><span class="tlab" style="color:#7E8794;font-size:7.5px">ARXA</span></div>
+          <div class="thumbD"><span class="tlab" style="color:#7E8794;font-size:7.5px">PANEL</span></div>
+          <div class="thumbD"><span class="tlab" style="color:#7E8794;font-size:7.5px">MÜHƏRRİK</span></div>
+          <div class="thumbD"><span class="tlab" style="color:#7E8794;font-size:7.5px">TƏKƏR</span></div>
+        </div>
+      </div>
+      <div style="align-self:start;background:#1D2733;border:1px solid #2B3644;border-radius:12px;padding:16px;color:#fff">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span class="bBoost" style="font-size:8.5px">BOOST</span><span style="width:32px;height:32px;border:1px solid #2B3644;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 14px 'Fira Sans';color:#A7ADB8">♡</span></div>
+        <div class="price" style="font:700 28px/1 'Fira Sans Condensed';white-space:nowrap">14 200 <span style="font:600 12px 'Fira Sans';color:#7E8794">AZN</span></div>
+        <div style="font:600 15px 'Fira Sans';margin-top:9px">Honda CB650R, 2023</div>
+        <div style="font:400 11.5px 'Fira Sans';color:#A7ADB8;margin-top:2px">6 200 km · Bakı · Bu gün</div>
+        <div class="ctaG" style="margin-top:13px;font-size:13px;padding:12px">Nömrəni göstər</div>
+        <div style="border-top:1px solid #2B3644;margin-top:12px;padding-top:10px;font:600 12px 'Fira Sans'">Tural B. <span style="font:400 10.5px 'Fira Sans';color:#7E8794">· Fərdi satıcı</span></div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:16px 32px 20px">
+    <div class="wpanel" style="padding:14px 16px">
+      <div class="secH" style="font-size:13.5px">Əsas göstəricilər</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">
+        <sc-for list="{{ motoSpecs }}" as="s" hint-placeholder-count="6">
+          <div style="background:#F5F4F0;border-radius:8px;padding:8px 10px"><div style="font:400 10px 'Fira Sans';color:#8A8F98">{{ s.l }}</div><div style="font:600 12px 'Fira Sans';margin-top:1px">{{ s.v }}</div></div>
+        </sc-for>
+      </div>
+      <div style="font:400 10.5px/1.5 'Fira Sans';color:#8A8F98;margin-top:10px">Avtomobilə xas sahələr (Ban növü, Ötürücü, Avtomobil vəziyyəti) motosikletdə göstərilmir — mövcud kataloq müqaviləsi.</div>
+    </div>
+    <div class="wpanel" style="padding:14px 16px">
+      <div class="secH" style="font-size:13.5px">Təsvir</div>
+      <div style="font:400 12.5px/1.6 'Fira Sans';color:#45413c">Motosiklet ilk sahibindədir, qışda sürülməyib. Servis vaxtında olunub.</div>
+    </div>
+  </div>
+</div>
+</div>
+<div class="cap" style="font:600 10.5px ui-monospace,Menlo,monospace;letter-spacing:.06em;color:rgba(0,0,0,.45);margin:22px 0 8px;text-transform:uppercase">390 — ACTIVE + Premium/Boost + sticky CTA · 768 — panel below gallery · SOLD · EXPIRED</div>
+<div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+<div class="frame" style="width:390px">
+  <div style="background:#141A22;color:#fff">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px"><span style="font:500 12px 'Fira Sans';color:#A7ADB8">← Geri</span><div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:16px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 14px 'Fira Sans'">AVTOSH</span></div><span style="width:34px;height:34px;border:1px solid #2B3644;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 15px 'Fira Sans';color:#A7ADB8">♡</span></div>
+    <div style="position:relative"><div style="aspect-ratio:4/3"><image-slot id="r-mhero" shape="rect" placeholder="Şəkil — foto atın"></image-slot></div>
+      <span class="cnt">3 / 12</span>
+      <span style="position:absolute;left:10px;bottom:10px;display:flex;gap:3px"><span style="width:14px;height:3px;background:#fff;border-radius:2px"></span><span style="width:14px;height:3px;background:rgba(255,255,255,.35);border-radius:2px"></span><span style="width:14px;height:3px;background:rgba(255,255,255,.35);border-radius:2px"></span></span>
+    </div>
+    <div style="padding:12px 16px 16px">
+      <div style="display:flex;gap:5px;margin-bottom:8px"><span class="bPremD" style="font-size:8.5px">PREMIUM</span><span class="bBoost" style="font-size:8.5px"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"></path></svg>BOOST</span></div>
+      <div class="price" style="font:700 26px/1 'Fira Sans Condensed';white-space:nowrap">64 500 <span style="font:600 12px 'Fira Sans';color:#7E8794">AZN</span></div>
+      <div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap"><span style="border:1px solid #2B3644;border-radius:999px;padding:4px 10px;font:500 11px 'Fira Sans';color:#A7ADB8">Kredit mümkündür</span><span style="border:1px solid #2B3644;border-radius:999px;padding:4px 10px;font:500 11px 'Fira Sans';color:#A7ADB8">Barter</span></div>
+      <div style="font:600 15px 'Fira Sans';margin-top:10px">BMW 530e, 2023</div>
+      <div style="font:400 12px 'Fira Sans';color:#A7ADB8;margin-top:2px">21 000 km · Hibrid · Bakı · Bu gün</div>
+    </div>
+  </div>
+  <div style="padding:12px 16px 4px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+      <sc-for list="{{ specs6 }}" as="s" hint-placeholder-count="6">
+        <div style="background:#fff;border:1px solid #E3E0D8;border-radius:8px;padding:8px 10px"><div style="font:400 10.5px 'Fira Sans';color:#8A8F98">{{ s.l }}</div><div style="font:600 12px 'Fira Sans';margin-top:1px">{{ s.v }}</div></div>
+      </sc-for>
+    </div>
+    <div style="display:flex;gap:7px;margin:10px 0;flex-wrap:wrap"><span class="chipF" style="border-color:#147A4E;color:#0F6440;font-weight:600;font-size:11px">✓ Vuruğu yoxdur</span><span class="chipF" style="border-color:#147A4E;color:#0F6440;font-weight:600;font-size:11px">✓ Rənglənməyib</span></div>
+    <div style="font:400 12px/1.55 'Fira Sans';color:#45413c">Avtomobil rəsmi dilerdən alınıb, bir sahibi olub… <span style="color:#147A4E;font-weight:600">Daha çox ▾</span></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 0">
+      <div style="width:32px;height:32px;border-radius:50%;background:#EDEBE4;color:#147A4E;display:flex;align-items:center;justify-content:center;font:600 13px 'Fira Sans'">E</div>
+      <div style="flex:1"><div style="font:600 12.5px 'Fira Sans'">Elvin M.</div><div style="font:400 11px 'Fira Sans';color:#8A8F98">Fərdi satıcı · Bakı</div></div>
+      <span style="font:500 11px 'Fira Sans';color:#B3261E">Şikayət et</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;padding:10px 14px 16px;background:#fff;border-top:1px solid #E3E0D8;box-shadow:0 -1px 2px rgba(20,26,34,.06)">
+    <div onClick="{{ reveal2 }}" class="ctaG" style="flex:1;padding:13px">{{ phone2 }}</div>
+    <div style="width:48px;border:1px solid #C6C2B6;border-radius:6px;display:flex;align-items:center;justify-content:center;background:#fff;font:600 16px 'Fira Sans';color:#45413c">♡</div>
+  </div>
+  <div style="font:400 10px 'Fira Sans';color:#8A8F98;padding:6px 16px 12px;background:#fff">Sticky bar: 48px hədəflər, safe-area-inset-bottom + 6px; məzmunun sonuna 72px alt boşluq əlavə olunur ki, heç nə örtülməsin.</div>
+</div>
+<div class="frame" style="width:768px">
+  <div class="hdrN" style="height:48px;padding:0 24px">
+    <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:16px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 14px 'Fira Sans'">AVTOSH<span style="font:700 10px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+    <span class="crumb" style="font-size:11px">Avtomobillər / BMW / 530e</span>
+  </div>
+  <div style="background:#141A22;padding:6px 24px 20px">
+    <div style="position:relative">
+      <div style="aspect-ratio:16/10;background:#1D2733;border-radius:10px;position:relative"><span class="tlab" style="color:#7E8794;font-size:10px;left:10px;bottom:8px">Əsas şəkil — tam en</span></div>
+      <span class="navArr" style="left:10px">‹</span><span class="navArr" style="right:10px">›</span>
+      <span class="cnt">3 / 12</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:6px">
+      <sc-for list="{{ thumbs }}" as="th" hint-placeholder-count="6"><div class="thumbD"><span class="tlab" style="color:#7E8794;font-size:7px">{{ th }}</span></div></sc-for>
+      <div class="thumbD"></div>
+      <div class="thumbD" style="position:relative"><span style="position:absolute;inset:0;background:rgba(20,26,34,.6);border-radius:8px;display:flex;align-items:center;justify-content:center;font:600 11px 'Fira Sans';color:#fff">+4</span></div>
+    </div>
+    <div style="background:#1D2733;border:1px solid #2B3644;border-radius:12px;padding:16px;color:#fff;margin-top:12px;display:grid;grid-template-columns:1fr auto;gap:6px 16px;align-items:center">
+      <div>
+        <div style="display:flex;gap:5px;margin-bottom:7px"><span class="bPremD" style="font-size:8.5px">PREMIUM</span></div>
+        <div class="price" style="font:700 27px/1 'Fira Sans Condensed';white-space:nowrap">64 500 <span style="font:600 12px 'Fira Sans';color:#7E8794">AZN</span></div>
+        <div style="font:600 14.5px 'Fira Sans';margin-top:6px">BMW 530e, 2023 <span style="font:400 11.5px 'Fira Sans';color:#A7ADB8">· 21 000 km · Bakı</span></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="ctaG" style="padding:12px 22px;font-size:13px">Nömrəni göstər</div>
+        <span style="width:42px;height:42px;border:1px solid #2B3644;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 16px 'Fira Sans';color:#A7ADB8">♡</span>
+      </div>
+    </div>
+  </div>
+  <div style="padding:14px 24px 18px;font:400 11px/1.6 'Fira Sans';color:#565B63">768: panel tam enli lövhəyə çevrilir (qiymət solda, CTA + sevimli sağda); aşağı məzmun tək sütunda: göstəricilər → vəziyyət/təchizat → təsvir → satıcı.</div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="background:#141A22;color:#fff">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px"><span style="font:500 12px 'Fira Sans';color:#A7ADB8">← Geri</span><span style="font:800 14px 'Fira Sans'">AVTOSH</span><span style="width:34px;height:34px;border:1px solid #2B3644;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 15px 'Fira Sans';color:#A7ADB8">♡</span></div>
+    <div style="position:relative">
+      <div style="aspect-ratio:4/3;background:#1D2733;position:relative"><span class="tlab" style="color:#7E8794;font-size:10px;left:12px;bottom:10px">Şəkillər saxlanılır (boz filtrsiz)</span></div>
+      <span style="position:absolute;left:12px;top:12px;background:#EDEBE4;color:#565B63;font:700 10px 'Fira Sans';letter-spacing:.06em;padding:4px 9px;border-radius:5px">SATILIB</span>
+      <span class="cnt">1 / 12</span>
+    </div>
+    <div style="padding:12px 16px 16px">
+      <div class="price" style="font:700 24px/1 'Fira Sans Condensed';color:#A7ADB8">64 500 <span style="font:600 11px 'Fira Sans';color:#7E8794">AZN</span></div>
+      <div style="font:600 15px 'Fira Sans';margin-top:6px">BMW 530e, 2023</div>
+      <div style="font:400 12px 'Fira Sans';color:#A7ADB8;margin-top:2px">21 000 km · Bakı</div>
+    </div>
+  </div>
+  <div style="margin:12px 16px;background:#EDEBE4;border-radius:8px;padding:14px 16px">
+    <div style="font:700 13.5px 'Fira Sans';color:#1B1E24">Bu avtomobil satılıb</div>
+    <div style="font:400 12px/1.5 'Fira Sans';color:#565B63;margin-top:4px">Elan arxivdədir — satıcı ilə əlaqə mümkün deyil. Oxşar elanlara baxın.</div>
+    <span style="display:inline-block;border:1px solid #147A4E;color:#147A4E;font:600 12.5px 'Fira Sans';padding:9px 14px;border-radius:6px;margin-top:10px">Oxşar BMW elanları →</span>
+  </div>
+  <div style="font:400 10px/1.5 'Fira Sans';color:#8A8F98;padding:0 16px 14px">SOLD: sticky CTA yoxdur, nömrə gizlidir, qiymət tutqun; sevimli qalır (mövcud davranış), şəkillər tam baxılır.</div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="background:#141A22;color:#fff">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px"><span style="font:500 12px 'Fira Sans';color:#A7ADB8">← Geri</span><span style="font:800 14px 'Fira Sans'">AVTOSH</span><span style="width:34px;height:34px;border:1px solid #2B3644;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 15px 'Fira Sans';color:#A7ADB8">♡</span></div>
+    <div style="position:relative">
+      <div style="aspect-ratio:4/3;background:#1D2733;position:relative"><span class="tlab" style="color:#7E8794;font-size:10px;left:12px;bottom:10px">Şəkil</span></div>
+      <span style="position:absolute;left:12px;top:12px;background:#FBEED8;color:#9A5B06;font:700 10px 'Fira Sans';letter-spacing:.06em;padding:4px 9px;border-radius:5px">MÜDDƏTİ BİTİB</span>
+    </div>
+    <div style="padding:12px 16px 16px">
+      <div class="price" style="font:700 24px/1 'Fira Sans Condensed';color:#A7ADB8">64 500 <span style="font:600 11px 'Fira Sans';color:#7E8794">AZN</span></div>
+      <div style="font:600 15px 'Fira Sans';margin-top:6px">BMW 530e, 2023</div>
+    </div>
+  </div>
+  <div style="margin:12px 16px;background:#FBEED8;border-radius:8px;padding:14px 16px">
+    <div style="font:700 13.5px 'Fira Sans';color:#9A5B06">Elanın müddəti bitib</div>
+    <div style="font:400 12px/1.5 'Fira Sans';color:#9A5B06;margin-top:4px">Satıcı ilə əlaqə bağlıdır. Elan yenilənərsə, yenidən aktiv olacaq.</div>
+  </div>
+  <div style="font:400 10px/1.5 'Fira Sans';color:#8A8F98;padding:0 16px 14px">EXPIRED: CTA görünmür (aldadıcı aktiv görünüş yoxdur); alıcıya yeniləmə hərəkəti təklif edilmir — bu, satıcının işidir.</div>
+</div>
+</div>
+<!--RCLOSE-->
+<div class="cap" style="font:600 10.5px ui-monospace,Menlo,monospace;letter-spacing:.06em;color:rgba(0,0,0,.45);margin:22px 0 8px;text-transform:uppercase">Component close-ups · interaction notes · breakpoint summary</div>
+<div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+  <div style="width:600px;background:#fff;border:1px solid rgba(0,0,0,.09);padding:18px 22px">
+    <div style="font:700 13px 'Fira Sans';color:#141A22;margin-bottom:10px">Close-ups</div>
+    <div style="font:500 11px 'Fira Sans';color:#8A8F98;margin-bottom:6px">Badge states — neither · Premium · Boost · Premium + Boost (navy-stage variant)</div>
+    <div style="display:flex;gap:10px;align-items:center;background:#141A22;border-radius:8px;padding:10px 12px;margin-bottom:14px;flex-wrap:wrap">
+      <span style="font:400 10.5px 'Fira Sans';color:#7E8794">heç biri: nişan yoxdur</span>
+      <span class="bPremD">PREMIUM</span>
+      <span class="bBoost"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"></path></svg>BOOST</span>
+      <span style="display:flex;gap:4px"><span class="bPremD">PREMIUM</span><span class="bBoost"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"></path></svg>BOOST</span></span>
+    </div>
+    <div style="font:500 11px 'Fira Sans';color:#8A8F98;margin-bottom:6px">Contact CTA — unrevealed · revealed · Favorite un/selected · gallery controls</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+      <span class="ctaG" style="padding:11px 18px;font-size:13px">Nömrəni göstər</span>
+      <span class="ctaG" style="padding:11px 18px;font-size:13px;background:#0F6440">(050) 555 31 07</span>
+      <span style="width:38px;height:38px;border:1px solid #C6C2B6;border-radius:6px;display:flex;align-items:center;justify-content:center;background:#fff;font:600 16px 'Fira Sans';color:#45413c">♡</span>
+      <span style="width:38px;height:38px;border:1px solid #B3261E;border-radius:6px;display:flex;align-items:center;justify-content:center;background:#F9E4E1;font:600 16px 'Fira Sans';color:#B3261E">♥</span>
+      <span class="navArr" style="position:static;transform:none">‹</span>
+      <span style="background:rgba(20,26,34,.8);color:#fff;font:500 10.5px 'Fira Sans';padding:3px 8px;border-radius:5px">3 / 12</span>
+    </div>
+    <div style="font:500 11px 'Fira Sans';color:#8A8F98;margin-bottom:6px">Price block · Kredit/Barter (passive attributes, not toggles) · key-spec tile · condition claim · feature row</div>
+    <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap">
+      <div style="background:#1D2733;border-radius:8px;padding:10px 12px;color:#fff"><span class="price" style="font:700 24px/1 'Fira Sans Condensed'">64 500 <span style="font:600 11px 'Fira Sans';color:#7E8794">AZN</span></span><div style="display:flex;gap:5px;margin-top:6px"><span style="border:1px solid #2B3644;border-radius:999px;padding:3px 9px;font:500 10.5px 'Fira Sans';color:#A7ADB8">Kredit mümkündür</span></div></div>
+      <div style="background:#F5F4F0;border-radius:8px;padding:9px 11px"><div style="font:400 10.5px 'Fira Sans';color:#8A8F98">Yürüş</div><div style="font:600 12.5px 'Fira Sans'">21 000 km</div></div>
+      <span class="chipF" style="border-color:#147A4E;color:#0F6440;font-weight:600">✓ Vuruğu yoxdur</span>
+      <span class="ftr"><b>✓</b> Panoram dam</span>
+    </div>
+  </div>
+  <div style="width:620px;background:#fff;border:1px solid rgba(0,0,0,.09);padding:18px 22px;font:400 12px/1.65 'Fira Sans';color:#3d4148">
+    <div style="font:700 13px 'Fira Sans';color:#141A22;margin-bottom:8px">Interaction notes</div>
+    <b>Gallery:</b> ‹ › arrows + thumbnail click select the image (selected thumb: 2px green outline); "+n" tile jumps into sequence. Keyboard: ←/→ navigate, thumbs focusable. Full-screen view is a pure UX layer over the same images — no new backend contract. Fewer images: thumb row shows only real images; single image hides the row; ratios fixed, zero layout shift.<br>
+    <b>Mobile gallery:</b> swipe + counter + segment progress; no thumb rail, no arrows; tap opens full-screen swipe view.<br>
+    <b>Contact:</b> "Nömrəni göstər" → existing reveal endpoint → button becomes the phone number (pressed #0F6440); SOLD/EXPIRED never render the CTA.<br>
+    <b>Favorite:</b> existing tri-state contract; selected = filled red heart on tinted ground; outline variant on navy. Never competes with the CTA.<br>
+    <b>Description:</b> clamp at 6 lines → "Daha çox ▾" expands in place, "Daha az ▴" collapses; short text never clamps.<br>
+    <b>Sticky bar (390):</b> phone CTA + favorite, 48px targets, safe-area padded, content gets 72px bottom offset; hidden for SOLD/EXPIRED.<br>
+    <b>Report:</b> "Şikayət et" quiet red text in the seller row — existing flow, never competing with contact.<br>
+    <div style="font:700 13px 'Fira Sans';color:#141A22;margin:12px 0 6px">Breakpoint summary</div>
+    <b>1440:</b> stage = gallery + 400px panel, gutter 40; hero 16:10; lower page 2-col.<br>
+    <b>1024:</b> panel 340, gutter 32; same architecture, spec tiles 3-up.<br>
+    <b>768:</b> gallery full-width; panel becomes a full-width board (price left, CTA + favorite right); lower content single column; gutter 24.<br>
+    <b>390:</b> swipe gallery 4:3, dark identity block, paper content, sticky contact bar; gutter 16; targets ≥44px.<br>
+    <b>Accessibility:</b> AA contrast on navy (#A7ADB8+ text, white values); 2px green focus ring on all controls; badges carry text, never color alone.
+  </div>
+</div>
+</div>
+</section>
+<section class="dv-turn" id="t1">
+<div style="max-width:1180px;background:#fff;border:1px solid rgba(0,0,0,.1);padding:16px 22px;margin-bottom:26px;font:12.5px/1.6 system-ui,sans-serif;color:#333">
+  <b style="font-size:13.5px;color:#111">O.7.1 — Listing Detail: three material directions.</b> Same functional contract in all three (existing fields only: gallery, price + Kredit/Barter flags, key specs, attributes, features, description, seller module, phone reveal, favorite, report, ACTIVE/SOLD/EXPIRED). Differences are architectural: <a class="dv-oid" href="#1a">1a</a> gallery-dominant navy stage · <a class="dv-oid" href="#1b">1b</a> decision-first light marketplace · <a class="dv-oid" href="#1c">1c</a> hybrid mosaic + sticky conversion rail. Comparison + recommendation at the <a class="dv-oid" href="#cmp">bottom</a>. No chat, ratings, counters, or verification invented.
+</div>
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a><b style="color:#111">SƏHNƏ — Gallery-dominant navy stage</b> · full-width showroom gallery inside the navy band, identity + CTA float on a dark panel beside it; content below on paper</div>
+<div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+<div class="frame" style="width:1440px">
+  <div class="hdrN">
+    <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:18px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 17px 'Fira Sans'">AVTOSH<span style="font:700 11px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+    <span class="crumb">Avtomobillər / BMW / 530e</span>
+  </div>
+  <div style="background:#141A22;padding:6px 40px 30px">
+    <div style="display:grid;grid-template-columns:1fr 400px;gap:28px">
+      <div>
+        <div style="position:relative">
+          <div style="aspect-ratio:16/10;border-radius:12px;overflow:hidden"><image-slot id="a-hero" shape="rect" placeholder="Əsas şəkil — foto atın"></image-slot></div>
+          <span class="navArr" style="left:12px">‹</span><span class="navArr" style="right:12px">›</span>
+          <span class="cnt">3 / 12</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:8px">
+          <sc-for list="{{ thumbs }}" as="th" hint-placeholder-count="6"><div class="thumbD"><span class="tlab" style="color:#7E8794">{{ th }}</span></div></sc-for>
+        </div>
+      </div>
+      <div style="align-self:start;background:#1D2733;border:1px solid #2B3644;border-radius:12px;padding:20px;color:#fff">
+        <div style="display:flex;gap:5px;margin-bottom:10px"><span class="bPremD">PREMIUM</span><span class="bBoost"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"></path></svg>BOOST</span></div>
+        <div class="price" style="font:700 34px/1 'Fira Sans Condensed'">64 500 <span style="font:600 14px 'Fira Sans';color:#7E8794">AZN</span></div>
+        <div style="display:flex;gap:6px;margin-top:8px"><span style="border:1px solid #2B3644;border-radius:999px;padding:4px 10px;font:500 11px 'Fira Sans';color:#A7ADB8">Kredit mümkündür</span><span style="border:1px solid #2B3644;border-radius:999px;padding:4px 10px;font:500 11px 'Fira Sans';color:#A7ADB8">Barter</span></div>
+        <div style="font:600 17px 'Fira Sans';margin-top:12px">BMW 530e</div>
+        <div style="font:400 12.5px 'Fira Sans';color:#A7ADB8;margin-top:3px">2023 · 21 000 km · Hibrid · Bakı</div>
+        <div onClick="{{ reveal1 }}" class="ctaG" style="margin-top:16px" style-hover="background:#189459">{{ phone1 }}</div>
+        <div style="border:1px solid #2B3644;color:#fff;font:600 13px 'Fira Sans';text-align:center;padding:11px;border-radius:6px;margin-top:8px;cursor:pointer" style-hover="border-color:#2FAE74;color:#2FAE74">WhatsApp ilə yaz</div>
+        <div style="display:flex;justify-content:center;gap:20px;font:500 12.5px 'Fira Sans';color:#A7ADB8;padding:12px 0 0"><span style="cursor:pointer">♡ Sevimlilərə</span><span style="cursor:pointer;color:#7E8794">Paylaş</span></div>
+        <div style="border-top:1px solid #2B3644;margin-top:13px;padding-top:12px;display:flex;align-items:center;gap:10px">
+          <div style="width:36px;height:36px;border-radius:50%;background:#2B3644;color:#2FAE74;display:flex;align-items:center;justify-content:center;font:600 14px 'Fira Sans'">E</div>
+          <div><div style="font:600 13px 'Fira Sans'">Elvin M.</div><div style="font:400 11.5px 'Fira Sans';color:#7E8794">Fərdi satıcı · Bakı</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font:400 11px 'Fira Sans';color:#7E8794;margin-top:12px"><span>Elan № 482 913 · Bu gün 14:32</span><span style="color:#D08A82;cursor:pointer">Şikayət et</span></div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:24px 40px 8px">
+    <div class="wpanel">
+      <div class="secH">Əsas göstəricilər</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        <sc-for list="{{ specs6 }}" as="s" hint-placeholder-count="6">
+          <div style="background:#F5F4F0;border-radius:8px;padding:9px 11px"><div style="font:400 10.5px 'Fira Sans';color:#8A8F98">{{ s.l }}</div><div style="font:600 12.5px 'Fira Sans';margin-top:2px">{{ s.v }}</div></div>
+        </sc-for>
+      </div>
+      <div style="border-top:1px solid #EDEBE4;margin-top:12px;padding-top:10px">
+        <div class="secH" style="font-size:13px">Texniki</div>
+        <sc-for list="{{ attrsTech }}" as="s" hint-placeholder-count="6"><div class="kv"><span>{{ s.l }}</span><b>{{ s.v }}</b></div></sc-for>
+      </div>
+    </div>
+    <div>
+      <div class="wpanel">
+        <div class="secH">Vəziyyət · Təchizat</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px"><span class="chipF" style="border-color:#147A4E;color:#0F6440;font-weight:600">✓ Vuruğu yoxdur</span><span class="chipF" style="border-color:#147A4E;color:#0F6440;font-weight:600">✓ Rənglənməyib</span><span style="font:400 10.5px 'Fira Sans';color:#8A8F98;align-self:center">satıcının bəyanı</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+          <sc-for list="{{ feats }}" as="f" hint-placeholder-count="8"><span class="ftr"><b>✓</b> {{ f }}</span></sc-for>
+        </div>
+      </div>
+      <div class="wpanel" style="margin-top:16px">
+        <div class="secH">Təsvir</div>
+        <div style="font:400 13px/1.6 'Fira Sans';color:#45413c">Avtomobil rəsmi dilerdən alınıb, bir sahibi olub. Servis tarixçəsi tam, qəzasız. Real yürüş. Barter yoxdur.</div>
+      </div>
+    </div>
+  </div>
+  <div style="padding:0 40px 26px;font:400 11px 'Fira Sans';color:#8A8F98">SOLD/EXPIRED: qiymət qalır, CTA paneli boz "Elan aktiv deyil" lövhəsi ilə əvəzlənir; şəkillər saxlanılır.</div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="background:#141A22;color:#fff">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px"><span style="font:500 12px 'Fira Sans';color:#A7ADB8">← Geri</span><div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:16px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 14px 'Fira Sans'">AVTOSH</span></div><span style="font:500 14px 'Fira Sans';color:#A7ADB8">♡</span></div>
+    <div style="position:relative"><div style="aspect-ratio:4/3"><image-slot id="a-mhero" shape="rect" placeholder="Şəkil — foto atın"></image-slot></div><span class="cnt">3 / 12</span></div>
+    <div style="display:flex;gap:5px;overflow:hidden;padding:8px 14px 0">
+      <sc-for list="{{ thumbs }}" as="th" hint-placeholder-count="6"><div class="thumbD" style="width:56px;flex:none"><span class="tlab" style="color:#7E8794;font-size:7px">{{ th }}</span></div></sc-for>
+    </div>
+    <div style="padding:12px 16px 16px">
+      <div style="display:flex;gap:5px;margin-bottom:8px"><span class="bPremD" style="font-size:8.5px">PREMIUM</span><span class="bBoost" style="font-size:8.5px">BOOST</span></div>
+      <div class="price" style="font:700 26px/1 'Fira Sans Condensed'">64 500 <span style="font:600 12px 'Fira Sans';color:#7E8794">AZN</span></div>
+      <div style="font:600 15px 'Fira Sans';margin-top:6px">BMW 530e</div>
+      <div style="font:400 12px 'Fira Sans';color:#A7ADB8;margin-top:2px">2023 · 21 000 km · Hibrid · Bakı</div>
+      <div style="display:flex;gap:6px;margin-top:8px"><span style="border:1px solid #2B3644;border-radius:999px;padding:4px 10px;font:500 11px 'Fira Sans';color:#A7ADB8">Kredit mümkündür</span><span style="border:1px solid #2B3644;border-radius:999px;padding:4px 10px;font:500 11px 'Fira Sans';color:#A7ADB8">Barter</span></div>
+    </div>
+  </div>
+  <div style="padding:12px 16px 4px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+      <sc-for list="{{ specs6 }}" as="s" hint-placeholder-count="6">
+        <div style="background:#fff;border:1px solid #E3E0D8;border-radius:8px;padding:8px 10px"><div style="font:400 10.5px 'Fira Sans';color:#8A8F98">{{ s.l }}</div><div style="font:600 12px 'Fira Sans';margin-top:1px">{{ s.v }}</div></div>
+      </sc-for>
+    </div>
+    <div style="font:400 12px/1.55 'Fira Sans';color:#45413c;padding:12px 0">Avtomobil rəsmi dilerdən alınıb, bir sahibi olub. Servis tarixçəsi tam, qəzasız.</div>
+  </div>
+  <div style="display:flex;gap:8px;padding:10px 14px 12px;background:#fff;border-top:1px solid #E3E0D8;box-shadow:0 -1px 2px rgba(20,26,34,.06)">
+    <div class="ctaG" style="flex:1.3;padding:13px">Nömrəni göstər</div>
+    <div style="width:48px;border:1px solid #C6C2B6;border-radius:6px;display:flex;align-items:center;justify-content:center;background:#fff;font:600 16px 'Fira Sans';color:#45413c">♡</div>
+  </div>
+</div>
+</div>
+<div class="notes">
+  <div><b style="color:#141A22">Composition.</b> The R.2 navy stage pushed further: gallery is the widest element on the page, thumbnails live on the dark band, all identity/CTA float in one dark panel. Below, paper carries specs → condition/features → description in two columns.</div>
+  <div><b style="color:#141A22">Gallery.</b> 16:10 hero, prev/next arrows, 3/12 counter, 6-thumb rail (dark tiles). Mobile: 4:3 swipe + horizontal thumb rail. Fixed ratios — zero layout shift at any image count; ≤6 images simply fill fewer tiles.</div>
+  <div><b style="color:#141A22">1024/768.</b> 1024: panel narrows to 340; 768: panel drops below the gallery full-width (identity → CTA → seller), content single column. Mobile sticky bar: phone CTA + favorite only.</div>
+  <div><b style="color:#141A22">Pros / risks.</b> + most premium, strongest photo desire; + CTA anchored top-right at eye level. − dark band demands photo quality; − specs arrive one scroll later than 1b; − tallest above-fold block at 768.</div>
+</div>
+</div>
+<!--B-->
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a><b style="color:#111">QƏRAR — Fast decision marketplace</b> · light page, compact gallery left, everything the buyer decides on (price, specs, CTA) visible without scrolling; navy only in the header</div>
+<div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+<div class="frame" style="width:1440px">
+  <div class="hdrN" style="height:52px">
+    <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:18px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 16px 'Fira Sans'">AVTOSH<span style="font:700 10px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+    <span class="crumb">Avtomobillər / BMW / 530e</span>
+  </div>
+  <div style="display:grid;grid-template-columns:540px 1fr 340px;gap:24px;padding:22px 40px 8px">
+    <div>
+      <div style="position:relative">
+        <div style="aspect-ratio:4/3;border-radius:10px;overflow:hidden"><image-slot id="b-hero" shape="rect" placeholder="Əsas şəkil — foto atın"></image-slot></div>
+        <span class="navArr" style="left:10px">‹</span><span class="navArr" style="right:10px">›</span>
+        <span class="cnt">3 / 12</span>
+        <span style="position:absolute;left:10px;top:10px;display:flex;gap:4px"><span class="bPrem">PREMIUM</span><span class="bBoost"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"></path></svg>BOOST</span></span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:6px">
+        <sc-for list="{{ thumbs }}" as="th" hint-placeholder-count="6"><div class="thumb"><span class="tlab">{{ th }}</span></div></sc-for>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font:700 22px/1.15 'Fira Sans';letter-spacing:-.01em">BMW 530e</div>
+          <div style="font:400 12.5px 'Fira Sans';color:#565B63;margin-top:3px">Bakı · Bu gün 14:32 · Elan № 482 913</div>
+        </div>
+        <span style="width:36px;height:36px;border:1px solid #C6C2B6;border-radius:6px;display:flex;align-items:center;justify-content:center;background:#fff;font:600 15px 'Fira Sans';color:#45413c;cursor:pointer">♡</span>
+      </div>
+      <div style="margin-top:10px">
+        <span class="price" style="font:700 30px/1 'Fira Sans Condensed';white-space:nowrap">64 500 <span style="font:600 13px 'Fira Sans';color:#565B63">AZN</span></span>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><span class="chipF">Kredit mümkündür</span><span class="chipF">Barter</span></div>
+      </div>
+      <div style="border-top:1px solid #E3E0D8;margin-top:14px;padding-top:8px">
+        <sc-for list="{{ specs6 }}" as="s" hint-placeholder-count="6"><div class="kv" style="font-size:13px"><span>{{ s.l }}</span><b>{{ s.v }}</b></div></sc-for>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px"><span class="chipF" style="border-color:#147A4E;color:#0F6440;font-weight:600">✓ Vuruğu yoxdur</span><span class="chipF" style="border-color:#147A4E;color:#0F6440;font-weight:600">✓ Rənglənməyib</span></div>
+    </div>
+    <div>
+      <div class="wpanel" style="padding:16px">
+        <div onClick="{{ reveal2 }}" class="ctaG" style-hover="background:#0F6440">{{ phone2 }}</div>
+        <div class="ctaO" style="margin-top:8px" style-hover="border-color:#147A4E;color:#147A4E">WhatsApp ilə yaz</div>
+        <div style="border-top:1px solid #EDEBE4;margin-top:13px;padding-top:12px;display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:50%;background:#EDEBE4;color:#147A4E;display:flex;align-items:center;justify-content:center;font:600 13px 'Fira Sans'">E</div>
+          <div><div style="font:600 12.5px 'Fira Sans'">Elvin M.</div><div style="font:400 11px 'Fira Sans';color:#8A8F98">Fərdi satıcı · Bakı</div></div>
+        </div>
+        <div style="background:#FBEED8;border-radius:6px;padding:8px 10px;font:400 11px/1.5 'Fira Sans';color:#9A5B06;margin-top:12px">Avtomobili görmədən öncədən ödəniş etməyin.</div>
+        <div style="font:500 11px 'Fira Sans';color:#B3261E;margin-top:10px;cursor:pointer">Şikayət et</div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 40px 8px">
+    <div class="wpanel">
+      <div class="secH">Ətraflı məlumat</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;column-gap:32px">
+        <div><div style="font:600 11px 'Fira Sans';letter-spacing:.05em;color:#8A8F98;margin-bottom:4px">AVTOMOBİL</div><sc-for list="{{ attrsVehicle }}" as="s" hint-placeholder-count="5"><div class="kv"><span>{{ s.l }}</span><b>{{ s.v }}</b></div></sc-for></div>
+        <div><div style="font:600 11px 'Fira Sans';letter-spacing:.05em;color:#8A8F98;margin-bottom:4px">TEXNİKİ</div><sc-for list="{{ attrsTech }}" as="s" hint-placeholder-count="6"><div class="kv"><span>{{ s.l }}</span><b>{{ s.v }}</b></div></sc-for></div>
+      </div>
+    </div>
+    <div>
+      <div class="wpanel">
+        <div class="secH">Təchizat</div>
+        <div style="display:flex;flex-wrap:wrap;gap:7px">
+          <sc-for list="{{ feats }}" as="f" hint-placeholder-count="8"><span class="chipF">{{ f }}</span></sc-for>
+        </div>
+      </div>
+      <div class="wpanel" style="margin-top:16px">
+        <div class="secH">Təsvir</div>
+        <div style="font:400 13px/1.6 'Fira Sans';color:#45413c">Avtomobil rəsmi dilerdən alınıb, bir sahibi olub. Servis tarixçəsi tam, qəzasız. Real yürüş. Barter yoxdur. <span style="color:#147A4E;font-weight:600;cursor:pointer">Daha çox</span></div>
+      </div>
+    </div>
+  </div>
+  <div style="padding:0 40px 24px;font:400 11px 'Fira Sans';color:#8A8F98">SOLD: CTA paneli "Satılıb" boz lövhəsi + axtarışa qayıt linki. EXPIRED: "Elanın müddəti bitib".</div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="background:#141A22;color:#fff;display:flex;justify-content:space-between;align-items:center;padding:10px 14px"><span style="font:500 12px 'Fira Sans';color:#A7ADB8">← Geri</span><div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:16px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 14px 'Fira Sans'">AVTOSH</span></div><span style="font:500 14px 'Fira Sans';color:#A7ADB8">♡</span></div>
+  <div style="position:relative"><div style="aspect-ratio:4/3"><image-slot id="b-mhero" shape="rect" placeholder="Şəkil — foto atın"></image-slot></div><span class="cnt">3 / 12</span><span style="position:absolute;left:8px;top:8px;display:flex;gap:4px"><span class="bPrem" style="font-size:8.5px">PREMIUM</span><span class="bBoost" style="font-size:8.5px">BOOST</span></span></div>
+  <div style="background:#fff;padding:12px 16px;border-bottom:1px solid #E3E0D8">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="price" style="font:700 24px/1 'Fira Sans Condensed'">64 500 <span style="font:600 11px 'Fira Sans';color:#565B63">AZN</span></span><span style="font:400 10.5px 'Fira Sans';color:#8A8F98">Bu gün 14:32</span></div>
+    <div style="font:600 15px 'Fira Sans';margin-top:4px">BMW 530e</div>
+    <div style="display:flex;gap:6px;margin-top:7px"><span class="chipF" style="font-size:11px">Kredit mümkündür</span><span class="chipF" style="font-size:11px">Barter</span></div>
+  </div>
+  <div style="padding:10px 16px 4px">
+    <sc-for list="{{ specs6 }}" as="s" hint-placeholder-count="6"><div class="kv" style="font-size:12.5px"><span>{{ s.l }}</span><b>{{ s.v }}</b></div></sc-for>
+    <div style="display:flex;gap:7px;margin:10px 0"><span class="chipF" style="border-color:#147A4E;color:#0F6440;font-weight:600;font-size:11px">✓ Vuruğu yoxdur</span><span class="chipF" style="border-color:#147A4E;color:#0F6440;font-weight:600;font-size:11px">✓ Rənglənməyib</span></div>
+    <div style="font:400 12px/1.55 'Fira Sans';color:#45413c;padding-bottom:10px">Avtomobil rəsmi dilerdən alınıb, bir sahibi olub… <span style="color:#147A4E;font-weight:600">Daha çox</span></div>
+  </div>
+  <div style="display:flex;gap:8px;padding:10px 14px 12px;background:#fff;border-top:1px solid #E3E0D8;box-shadow:0 -1px 2px rgba(20,26,34,.06)">
+    <div class="ctaG" style="flex:1.2;padding:13px">Zəng et</div>
+    <div style="flex:1;background:#141A22;color:#fff;font:600 13.5px 'Fira Sans';text-align:center;padding:13px;border-radius:6px">WhatsApp</div>
+  </div>
+</div>
+</div>
+<div class="notes">
+  <div><b style="color:#141A22">Composition.</b> Three-column decision row: gallery 640 / identity+specs fluid / 360 conversion rail. Everything from §5 is answered above the fold; lower page is only detailed attributes, features, description.</div>
+  <div><b style="color:#141A22">Gallery.</b> Compact 4:3 hero with badges on-image (marketplace continuity with cards), 6-thumb strip. Mobile: swipe + counter, no thumb rail — thumbnails traded for immediate price/specs.</div>
+  <div><b style="color:#141A22">1024/768.</b> 1024: gallery 520, specs move under it, rail stays right. 768: two columns (gallery + rail), specs below. Mobile sticky bar: Zəng et + WhatsApp (favorite stays in header).</div>
+  <div><b style="color:#141A22">Pros / risks.</b> + fastest scan, shortest path to contact; + cheapest to build (closest to R.2 patterns). − least premium of the three; − gallery smaller, photos judge worse; − 3-col row is tight for long model names.</div>
+</div>
+</div>
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a><b style="color:#111">MOZAİKA — Hybrid mosaic + sticky conversion rail</b> · editorial 1+2 photo mosaic on paper, right rail stays sticky through the whole page; specs directly under the mosaic</div>
+<div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+<div class="frame" style="width:1440px">
+  <div class="hdrN" style="height:52px">
+    <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:18px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 16px 'Fira Sans'">AVTOSH<span style="font:700 10px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+    <span class="crumb">Avtomobillər / BMW / 530e</span>
+  </div>
+  <div style="padding:18px 40px 8px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px">
+      <div>
+        <div style="display:flex;gap:5px;margin-bottom:6px"><span class="bPrem">PREMIUM</span><span class="bBoost"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"></path></svg>BOOST</span></div>
+        <div style="font:700 24px/1.1 'Fira Sans';letter-spacing:-.01em">BMW 530e</div>
+        <div style="font:400 12.5px 'Fira Sans';color:#565B63;margin-top:3px">Bakı · Bu gün 14:32 · Elan № 482 913</div>
+      </div>
+      <span style="width:38px;height:38px;border:1px solid #C6C2B6;border-radius:6px;display:flex;align-items:center;justify-content:center;background:#fff;font:600 16px 'Fira Sans';color:#45413c;cursor:pointer">♡</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start">
+      <div>
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px">
+          <div style="position:relative">
+            <div style="aspect-ratio:4/3;border-radius:10px;overflow:hidden"><image-slot id="c-hero" shape="rect" placeholder="Əsas şəkil — foto atın"></image-slot></div>
+            <span class="navArr" style="left:10px">‹</span><span class="navArr" style="right:10px">›</span>
+            <span class="cnt">1 / 12</span>
+          </div>
+          <div style="display:grid;grid-template-rows:1fr 1fr;gap:8px">
+            <div style="background:#E4DFD4;border-radius:10px;position:relative"><span class="tlab" style="font-size:9.5px;left:8px;bottom:6px">SALON</span></div>
+            <div style="background:#E4DFD4;border-radius:10px;position:relative"><span class="tlab" style="font-size:9.5px;left:8px;bottom:6px">ARXA</span><span style="position:absolute;inset:0;background:rgba(20,26,34,.55);border-radius:10px;display:flex;align-items:center;justify-content:center;font:600 14px 'Fira Sans';color:#fff">+9 şəkil</span></div>
+          </div>
+        </div>
+        <div class="wpanel" style="margin-top:16px">
+          <div class="secH">Əsas göstəricilər</div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">
+            <sc-for list="{{ specs6 }}" as="s" hint-placeholder-count="6">
+              <div style="background:#F5F4F0;border-radius:8px;padding:9px 10px"><div style="font:400 10px 'Fira Sans';color:#8A8F98">{{ s.l }}</div><div style="font:600 12px 'Fira Sans';margin-top:2px">{{ s.v }}</div></div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+          <div class="wpanel">
+            <div class="secH">Ətraflı məlumat</div>
+            <sc-for list="{{ attrsVehicle }}" as="s" hint-placeholder-count="5"><div class="kv"><span>{{ s.l }}</span><b>{{ s.v }}</b></div></sc-for>
+            <sc-for list="{{ attrsTech }}" as="s" hint-placeholder-count="6"><div class="kv"><span>{{ s.l }}</span><b>{{ s.v }}</b></div></sc-for>
+          </div>
+          <div>
+            <div class="wpanel">
+              <div class="secH">Vəziyyət · Təchizat</div>
+              <div style="display:flex;gap:8px;margin-bottom:10px"><span class="chipF" style="border-color:#147A4E;color:#0F6440;font-weight:600">✓ Vuruğu yoxdur</span><span class="chipF" style="border-color:#147A4E;color:#0F6440;font-weight:600">✓ Rənglənməyib</span></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+                <sc-for list="{{ feats }}" as="f" hint-placeholder-count="8"><span class="ftr"><b>✓</b> {{ f }}</span></sc-for>
+              </div>
+            </div>
+            <div class="wpanel" style="margin-top:16px">
+              <div class="secH">Təsvir</div>
+              <div style="font:400 13px/1.6 'Fira Sans';color:#45413c">Avtomobil rəsmi dilerdən alınıb, bir sahibi olub. Servis tarixçəsi tam, qəzasız. Real yürüş.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="position:sticky;top:16px">
+        <div class="wpanel" style="padding:18px">
+          <div class="price" style="font:700 32px/1 'Fira Sans Condensed'">64 500 <span style="font:600 13px 'Fira Sans';color:#565B63">AZN</span></div>
+          <div style="display:flex;gap:6px;margin-top:8px"><span class="chipF">Kredit mümkündür</span><span class="chipF">Barter</span></div>
+          <div onClick="{{ reveal3 }}" class="ctaG" style="margin-top:14px" style-hover="background:#0F6440">{{ phone3 }}</div>
+          <div class="ctaO" style="margin-top:8px" style-hover="border-color:#147A4E;color:#147A4E">WhatsApp ilə yaz</div>
+          <div style="border-top:1px solid #EDEBE4;margin-top:13px;padding-top:12px;display:flex;align-items:center;gap:10px">
+            <div style="width:34px;height:34px;border-radius:50%;background:#EDEBE4;color:#147A4E;display:flex;align-items:center;justify-content:center;font:600 13px 'Fira Sans'">E</div>
+            <div><div style="font:600 12.5px 'Fira Sans'">Elvin M.</div><div style="font:400 11px 'Fira Sans';color:#8A8F98">Fərdi satıcı · Bakı</div></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font:400 11px 'Fira Sans';color:#8A8F98;margin-top:12px"><span>♡ Sevimlilərə · Paylaş</span><span style="color:#B3261E;cursor:pointer">Şikayət et</span></div>
+        </div>
+        <div style="font:400 10.5px/1.5 'Fira Sans';color:#8A8F98;margin-top:8px;padding:0 4px">Panel sticky — bütün səhifə boyu görünür. SOLD/EXPIRED: qiymət qalır, düymələr "Elan aktiv deyil" lövhəsi ilə əvəzlənir.</div>
+      </div>
+    </div>
+  </div>
+  <div style="height:18px"></div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="background:#141A22;color:#fff;display:flex;justify-content:space-between;align-items:center;padding:10px 14px"><span style="font:500 12px 'Fira Sans';color:#A7ADB8">← Geri</span><div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:16px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 14px 'Fira Sans'">AVTOSH</span></div><span style="font:500 14px 'Fira Sans';color:#A7ADB8">♡</span></div>
+  <div style="position:relative"><div style="aspect-ratio:4/3"><image-slot id="c-mhero" shape="rect" placeholder="Şəkil — foto atın"></image-slot></div><span class="cnt">1 / 12</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px 14px 0">
+    <div style="aspect-ratio:16/9;background:#E4DFD4;border-radius:8px;position:relative"><span class="tlab">SALON</span></div>
+    <div style="aspect-ratio:16/9;background:#E4DFD4;border-radius:8px;position:relative"><span style="position:absolute;inset:0;background:rgba(20,26,34,.55);border-radius:8px;display:flex;align-items:center;justify-content:center;font:600 12px 'Fira Sans';color:#fff">+9 şəkil</span></div>
+  </div>
+  <div style="padding:12px 16px 4px">
+    <div style="display:flex;gap:5px;margin-bottom:7px"><span class="bPrem" style="font-size:8.5px">PREMIUM</span><span class="bBoost" style="font-size:8.5px">BOOST</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="price" style="font:700 25px/1 'Fira Sans Condensed'">64 500 <span style="font:600 11px 'Fira Sans';color:#565B63">AZN</span></span><span style="font:400 10.5px 'Fira Sans';color:#8A8F98">Bu gün</span></div>
+    <div style="font:600 15px 'Fira Sans';margin-top:4px">BMW 530e</div>
+    <div style="display:flex;gap:6px;margin:8px 0 10px"><span class="chipF" style="font-size:11px">Kredit mümkündür</span><span class="chipF" style="font-size:11px">Barter</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+      <sc-for list="{{ specs6 }}" as="s" hint-placeholder-count="6">
+        <div style="background:#fff;border:1px solid #E3E0D8;border-radius:8px;padding:8px 10px"><div style="font:400 10px 'Fira Sans';color:#8A8F98">{{ s.l }}</div><div style="font:600 12px 'Fira Sans';margin-top:1px">{{ s.v }}</div></div>
+      </sc-for>
+    </div>
+    <div style="display:flex;gap:7px;margin:10px 0"><span class="chipF" style="border-color:#147A4E;color:#0F6440;font-weight:600;font-size:11px">✓ Vuruğu yoxdur</span><span class="chipF" style="border-color:#147A4E;color:#0F6440;font-weight:600;font-size:11px">✓ Rənglənməyib</span></div>
+  </div>
+  <div style="display:flex;gap:8px;padding:10px 14px 12px;background:#fff;border-top:1px solid #E3E0D8;box-shadow:0 -1px 2px rgba(20,26,34,.06)">
+    <div class="ctaG" style="flex:1.3;padding:13px">Nömrəni göstər</div>
+    <div style="width:48px;background:#141A22;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font:600 11px 'Fira Sans'">WA</div>
+    <div style="width:48px;border:1px solid #C6C2B6;border-radius:6px;display:flex;align-items:center;justify-content:center;background:#fff;font:600 16px 'Fira Sans';color:#45413c">♡</div>
+  </div>
+</div>
+</div>
+<div class="notes">
+  <div><b style="color:#141A22">Composition.</b> Identity row up top (title + badges + favorite), then mosaic left / sticky conversion rail right. Price lives only in the rail — one price, always on screen. Specs land immediately under the mosaic, before any scroll decision.</div>
+  <div><b style="color:#141A22">Gallery.</b> 1+2 mosaic (4:3 hero + salon/rear tiles, "+9 şəkil" overlay opens full gallery). Communicates image depth instantly; any count ≥1 works — tiles hide when fewer images. Mobile: swipe hero + 2 preview tiles.</div>
+  <div><b style="color:#141A22">1024/768.</b> 1024: rail 340, mosaic 2fr/1fr keeps ratio. 768: rail un-sticks, becomes a full-width block after specs; mosaic keeps 1+2. Mobile sticky bar: phone + WhatsApp + favorite (48px targets).</div>
+  <div><b style="color:#141A22">Pros / risks.</b> + rail keeps CTA visible entire page (strongest conversion); + mosaic sells photo depth without navy dependency; + balanced density. − sticky rail needs height care at short viewports; − mosaic crops need decent secondary photos.</div>
+</div>
+</div>
+<div id="cmp" style="max-width:1180px;background:#fff;border:1px solid rgba(0,0,0,.1);padding:20px 24px;scroll-margin-top:16px">
+  <div style="font:700 15px system-ui;color:#111;margin-bottom:12px">Comparison &amp; recommendation</div>
+  <div style="display:grid;grid-template-columns:220px 1fr 1fr 1fr;font:400 12.5px system-ui;color:#333">
+    <div style="border-bottom:2px solid #222;padding:6px 0"></div>
+    <div style="border-bottom:2px solid #222;padding:6px 0;font-weight:700"><a class="dv-oid" href="#1a">1a</a> SƏHNƏ</div>
+    <div style="border-bottom:2px solid #222;padding:6px 0;font-weight:700"><a class="dv-oid" href="#1b">1b</a> QƏRAR</div>
+    <div style="border-bottom:2px solid #222;padding:6px 0;font-weight:700"><a class="dv-oid" href="#1c">1c</a> MOZAİKA</div>
+    <sc-for list="{{ cmp }}" as="r" hint-placeholder-count="7">
+      <div style="padding:7px 0;border-bottom:1px solid #e8e8e8;color:#444">{{ r.k }}</div>
+      <div style="padding:7px 0;border-bottom:1px solid #e8e8e8"><span style="color:#141A22;letter-spacing:2px">{{ r.ad }}</span></div>
+      <div style="padding:7px 0;border-bottom:1px solid #e8e8e8"><span style="color:#141A22;letter-spacing:2px">{{ r.bd }}</span></div>
+      <div style="padding:7px 0;border-bottom:1px solid #e8e8e8"><span style="color:#141A22;letter-spacing:2px">{{ r.cd }}</span></div>
+    </sc-for>
+  </div>
+  <div style="font:400 13px/1.6 system-ui;color:#333;margin-top:14px"><b>Recommendation: <a class="dv-oid" href="#1c">1c</a> MOZAİKA.</b> It carries Direction C's premium quality through photo depth rather than the dark band (less photo-quality risk than 1a), keeps every §5 buyer question answered above the fold, and the sticky rail gives the strongest contact conversion of the three. If chosen, I'd adopt 1b's grouped attribute columns for the lower page. Pick 1a if brand theatre outweighs spec speed; 1b if implementation speed and density are paramount.</div>
+  <div style="margin-top:10px;padding:10px 12px;background:#faf7ee;border:1px solid #e7dfc8;font:500 12px system-ui;color:#6b5d2e">Stage gate: awaiting owner selection of A, B, or C before responsive refinement. No code written.</div>
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { r1: false, r2: false, r3: false };
+  renderVals() {
+    const specs6 = [
+      {l:"İl",v:"2023"},{l:"Yürüş",v:"21 000 km"},{l:"Mühərrik",v:"2.0 L / 292 a.g."},
+      {l:"Yanacaq",v:"Hibrid (plug-in)"},{l:"Sürətlər qutusu",v:"Avtomat"},{l:"Ötürücü",v:"Arxa"}
+    ];
+    const attrsVehicle = [
+      {l:"Marka",v:"BMW"},{l:"Model",v:"530e"},{l:"Buraxılış ili",v:"2023"},{l:"Ban növü",v:"Sedan"},{l:"Rəng",v:"Qara"}
+    ];
+    const attrsTech = [
+      {l:"Mühərrikin həcmi",v:"1 998 sm³"},{l:"Güc",v:"292 a.g."},{l:"Yanacaq növü",v:"Hibrid (plug-in)"},{l:"Sürətlər qutusu",v:"Avtomat"},{l:"Ötürücü",v:"Arxa"},{l:"Yürüş",v:"21 000 km"}
+    ];
+    const feats = ["Dəri salon","Panoram dam","Adaptiv kruiz","360° kamera","Yaddaşlı oturacaqlar","Keyless","Ventilyasiyalı oturacaqlar","Sürücü asistenti"];
+    const thumbs = ["ÖN","ARXA","SALON","TORPEDO","MÜHƏRRİK","TƏKƏR"];
+    const motoSpecs = [
+      {l:"İl",v:"2023"},{l:"Yürüş",v:"6 200 km"},{l:"Mühərrikin həcmi",v:"649 sm³"},
+      {l:"Güc",v:"95 a.g."},{l:"Yanacaq",v:"Benzin"},{l:"Rəng",v:"Qırmızı"}
+    ];
+    const rev = (k) => () => this.setState({ [k]: true });
+    const dots = (n) => "●●●●●".slice(0, n) + "○○○○○".slice(0, 5 - n);
+    const row = (k, a, b, c) => ({ k, ad: dots(a), bd: dots(b), cd: dots(c) });
+    const cmp = [
+      row("Visual premium feel", 5, 3, 4),
+      row("Information scan speed", 3, 5, 4),
+      row("Contact conversion", 4, 4, 5),
+      row("Mobile usability", 4, 4, 4),
+      row("Gallery quality", 5, 3, 4),
+      row("Implementation ease", 3, 5, 3),
+      row("Fit with Direction C system", 5, 4, 5)
+    ];
+    return {
+      specs6, attrsVehicle, attrsTech, feats, thumbs, cmp, motoSpecs,
+      phone1: this.state.r1 ? "(050) 555 31 07" : "Nömrəni göstər", reveal1: rev("r1"),
+      phone2: this.state.r2 ? "(050) 555 31 07" : "Nömrəni göstər", reveal2: rev("r2"),
+      phone3: this.state.r3 ? "(050) 555 31 07" : "Nömrəni göstər", reveal3: rev("r3")
+    };
+  }
+}
+</script>
+</body>
+</html>
