@@ -125,4 +125,58 @@ test.describe("listing detail visual review (Stage A — 1440)", () => {
       await sql.end();
     }
   });
+
+  /** Phase 4.17O.8 — fullscreen viewer states for Owner review. */
+  test("o8-fullscreen-captures", async ({ page, context }) => {
+    test.setTimeout(180_000);
+    const { userId } = await loginAs(context, testPhone("desktop", 58));
+    const rich = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 9 });
+    const single = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 1 });
+    await context.clearCookies();
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    // hero entry at the current image
+    await page.goto(`/elan/${rich.publicId}`);
+    await expect(page.getByTestId("gallery-more")).toBeVisible();
+    await page.getByTestId("gallery-main").click();
+    await expect(page.getByTestId("gallery-fullscreen")).toBeVisible();
+    await page.screenshot({ path: `${OUT}/o8-1440-hero-fullscreen.png` });
+    await page.keyboard.press("Escape");
+
+    // thumbnail direct entry
+    await page.getByTestId("gallery-thumb-3").click();
+    await expect(page.getByTestId("gallery-fullscreen")).toContainText("4 / 9");
+    await page.screenshot({ path: `${OUT}/o8-1440-thumbnail-fullscreen.png` });
+    await page.keyboard.press("Escape");
+
+    // single-image viewer: close only
+    await page.goto(`/elan/${single.publicId}`);
+    await page.getByTestId("gallery-main").click();
+    await expect(page.getByTestId("gallery-fullscreen")).toBeVisible();
+    await page.screenshot({ path: `${OUT}/o8-single-image-fullscreen.png` });
+    await page.keyboard.press("Escape");
+
+    // portrait photo letterboxed by the contain geometry
+    await page.route("**/api/dev-storage/**", (route) =>
+      route.fulfill({
+        contentType: "image/svg+xml",
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="2400"><rect width="800" height="2400" fill="#22304a"/><circle cx="400" cy="1200" r="320" fill="#3d5170"/></svg>',
+      }),
+    );
+    await page.goto(`/elan/${rich.publicId}`);
+    await page.getByTestId("gallery-main").click();
+    await expect(page.getByTestId("gallery-fullscreen")).toBeVisible();
+    await page.screenshot({ path: `${OUT}/o8-portrait-contain.png` });
+    await page.keyboard.press("Escape");
+    await page.unroute("**/api/dev-storage/**");
+
+    // 390 mobile viewer
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/elan/${rich.publicId}`);
+    await expect(page.getByTestId("gallery-counter")).toBeVisible();
+    await page.getByTestId("gallery-slide-0").click();
+    await expect(page.getByTestId("gallery-fullscreen")).toBeVisible();
+    await page.screenshot({ path: `${OUT}/o8-390-fullscreen.png` });
+  });
 });

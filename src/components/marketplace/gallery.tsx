@@ -35,6 +35,7 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
   const stageRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
   const touchX = useRef<number | null>(null);
   const current = list[active] ?? list[0];
   const many = list.length > 1;
@@ -45,6 +46,25 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
     },
     [list.length],
   );
+
+  // O.8: every real photo is a fullscreen entry point. The triggering
+  // element is remembered so close can hand focus straight back to it.
+  function openFullscreenFrom(el: HTMLElement) {
+    triggerRef.current = el;
+    setFullscreen(true);
+  }
+
+  // preventScroll: refocusing a strip slide must not scroll the snap
+  // strip (its scroll handler would overwrite the shared index).
+  const closeFullscreen = useCallback(() => {
+    setFullscreen(false);
+    const trigger = triggerRef.current;
+    if (trigger !== null && trigger.isConnected && trigger.offsetParent !== null) {
+      trigger.focus({ preventScroll: true });
+    } else {
+      stageRef.current?.focus();
+    }
+  }, []);
 
   function onStageKeyDown(event: React.KeyboardEvent) {
     if (event.key === "ArrowLeft") {
@@ -66,7 +86,19 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
     if (current !== active) el.scrollTo({ left: active * el.clientWidth });
   }, [active]);
 
-  // Fullscreen layer: Esc closes and focus returns to the stage.
+  // O.8 body scroll lock: the page must not move behind the open
+  // viewer; the exact previous inline value is restored on close and
+  // on unmount via the effect cleanup.
+  useEffect(() => {
+    if (!fullscreen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [fullscreen]);
+
+  // Fullscreen layer: Esc closes and focus returns to the trigger.
   useEffect(() => {
     if (!fullscreen) return;
     overlayRef.current?.focus();
@@ -74,8 +106,7 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
       if (event.key === "Escape") {
         event.stopPropagation();
         event.preventDefault();
-        setFullscreen(false);
-        stageRef.current?.focus();
+        closeFullscreen();
       } else if (event.key === "ArrowLeft") {
         step(-1);
       } else if (event.key === "ArrowRight") {
@@ -97,7 +128,7 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
     };
     document.addEventListener("keydown", onKeyDown, true);
     return () => document.removeEventListener("keydown", onKeyDown, true);
-  }, [fullscreen, step]);
+  }, [fullscreen, step, closeFullscreen]);
 
   const arrow =
     "absolute top-1/2 z-10 flex h-[34px] w-[34px] -translate-y-1/2 items-center justify-center rounded-full bg-white/[.92] text-[15px] font-semibold text-ink shadow-sm transition-opacity duration-150 disabled:cursor-default disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2";
@@ -131,8 +162,9 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
             {list.map((img, i) => (
               <div
                 key={i}
+                tabIndex={-1}
                 className="aspect-[4/3] w-full shrink-0 snap-center overflow-hidden bg-navy-raised"
-                onClick={() => setFullscreen(true)}
+                onClick={(e) => openFullscreenFrom(e.currentTarget)}
                 data-testid={`gallery-slide-${i}`}
               >
                 <ListingImage src={img.url} alt={`${title} — ${UI.photoOf.toLowerCase()} ${i + 1}`} priority={i === 0} />
@@ -165,9 +197,15 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
           onKeyDown={onStageKeyDown}
           className="relative rounded-[10px] xl:rounded-[12px] focus:outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
         >
-          <div className="aspect-gallery w-full overflow-hidden rounded-[10px] bg-navy-raised xl:rounded-[12px]" data-testid="gallery-main">
+          <button
+            type="button"
+            aria-label="Şəkli tam ekranda aç"
+            onClick={(e) => openFullscreenFrom(e.currentTarget)}
+            className="block aspect-gallery w-full overflow-hidden rounded-[10px] bg-navy-raised focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 xl:rounded-[12px]"
+            data-testid="gallery-main"
+          >
             <ListingImage src={current.url} alt={`${title} — ${UI.photoOf.toLowerCase()} ${active + 1}`} priority />
-          </div>
+          </button>
           {many ? (
             <>
               <button
@@ -204,7 +242,12 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
                   type="button"
                   aria-label={`${UI.photoOf} ${i + 1}`}
                   aria-current={i === active ? "true" : undefined}
-                  onClick={() => setActive(i)}
+                  // O.8 Owner contract: ONE click selects the image AND
+                  // opens the viewer directly at it — no hero detour.
+                  onClick={(e) => {
+                    setActive(i);
+                    openFullscreenFrom(e.currentTarget);
+                  }}
                   data-testid={`gallery-thumb-${i}`}
                   className={`aspect-vehicle w-full overflow-hidden rounded-lg border border-navy-border bg-navy-raised transition-[outline] duration-150 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${
                     i === active ? "outline outline-2 outline-offset-1 outline-green-dark" : ""
@@ -219,10 +262,10 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
                 <button
                   type="button"
                   aria-label={`Daha ${deskMore} şəkil`}
-                  onClick={() => {
+                  onClick={(e) => {
                     const jump = window.matchMedia("(min-width: 1024px)").matches ? deskVisible : mdVisible;
                     setActive(Math.min(list.length - 1, jump));
-                    setFullscreen(true);
+                    openFullscreenFrom(e.currentTarget);
                   }}
                   data-testid="gallery-more"
                   className="relative aspect-vehicle w-full overflow-hidden rounded-lg border border-navy-border bg-navy-raised focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
@@ -268,19 +311,21 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
           <button
             type="button"
             aria-label="Bağla"
-            onClick={() => {
-              setFullscreen(false);
-              stageRef.current?.focus();
-            }}
+            onClick={closeFullscreen}
             className="absolute right-3.5 top-3.5 flex h-11 w-11 items-center justify-center rounded-full bg-white/[.92] text-ink focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
             data-testid="gallery-fullscreen-close"
           >
             <X size={18} aria-hidden="true" />
           </button>
-          <div className="max-h-[86vh] w-full max-w-6xl px-14">
-            <div className="overflow-hidden rounded-[12px]">
-              <ListingImage src={current.url} alt={`${title} — ${UI.photoOf.toLowerCase()} ${active + 1}`} />
-            </div>
+          {/* O.8: explicit contain geometry — the COMPLETE photo fits
+              inside the viewer for portrait, landscape and square. */}
+          <div className="flex w-full max-w-6xl items-center justify-center px-4 md:px-14">
+            <ListingImage
+              fit="contain"
+              src={current.url}
+              alt={`${title} — ${UI.photoOf.toLowerCase()} ${active + 1}`}
+              className="max-h-[86vh] rounded-[10px] xl:rounded-[12px]"
+            />
           </div>
           {many ? (
             <>
