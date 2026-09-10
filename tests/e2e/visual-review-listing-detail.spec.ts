@@ -93,6 +93,32 @@ test.describe("listing detail visual review (Stage A — 1440)", () => {
       await page.getByTestId("contact-reveal").click();
       await expect(page.getByTestId("contact-call")).toBeVisible();
       await page.screenshot({ path: `${OUT}/o7-768-contact-revealed.png` });
+
+      // Stage D — 390 states
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(`/elan/${s.activeCar}`);
+      await expect(page.getByTestId("contact-card")).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      await page.screenshot({ path: `${OUT}/o7-390-active.png`, fullPage: true });
+      await page.goto(`/elan/${rich.publicId}`);
+      await expect(page.getByTestId("detail-price")).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      await page.screenshot({ path: `${OUT}/o7-390-premium-boost.png`, fullPage: true });
+      await page.getByTestId("contact-reveal").click();
+      await expect(page.getByTestId("contact-call")).toBeVisible();
+      await page.screenshot({ path: `${OUT}/o7-390-contact-revealed.png` });
+      await page.goto(`/elan/${s.sold}`);
+      await expect(page.getByTestId("status-chip")).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      await page.screenshot({ path: `${OUT}/o7-sold.png`, fullPage: true });
+      await page.goto(`/elan/${s.expired}`);
+      await expect(page.getByTestId("status-chip")).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      await page.screenshot({ path: `${OUT}/o7-expired.png`, fullPage: true });
+      await page.goto(`/elan/${s.motos[0]}`);
+      await expect(page.getByTestId("detail-price")).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      await page.screenshot({ path: `${OUT}/o7-motorcycle.png`, fullPage: true });
     } finally {
       await sql`delete from listing_promotions where payment_id in (select id from payments where idempotency_key like 'o7cap:%')`;
       await sql`delete from payments where idempotency_key like 'o7cap:%'`;

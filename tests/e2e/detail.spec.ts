@@ -133,9 +133,9 @@ test.describe("Listing detail — Direction 1A (4.17O.7 Stage A)", () => {
     await expect(panel.getByTestId("detail-meta")).toContainText("km");
     await expect(panel.getByTestId("detail-meta")).toContainText("Benzin");
     // seller module: real public data only — name + city, never a
-    // seller classification. At the 768 board tier the seller (and the
-    // report entry) live in the lower seller row per responsive.md.
-    if (project.name === "tablet") {
+    // seller classification. At the 768 board and 390 tiers the seller
+    // (and the report entry) live in the lower seller row.
+    if (project.name !== "desktop") {
       await expect(page.getByTestId("seller-row")).toBeVisible();
       await expect(page.getByTestId("seller-row")).toContainText(`Elan № ${s.activeCar}`);
       await page.getByTestId("seller-row").getByText("Şikayət et").click();
@@ -393,8 +393,8 @@ test.describe("Listing detail — 768 board (4.17O.7 Stage C)", () => {
       const ctaBox = (await page.getByTestId("contact-reveal").boundingBox())!;
       expect(ctaBox.x).toBeGreaterThan(panelBox.x + panelBox.width * 0.5); // CTA in the right column
       expect(priceBox.x).toBeLessThan(panelBox.x + panelBox.width * 0.4);
-      const favBox = (await panel.getByTestId("favorite-button").boundingBox())!;
-      expect(Math.round(favBox.width)).toBe(42);
+      const favBox = (await panel.locator('[data-testid="favorite-button"]:visible').boundingBox())!;
+      expect(Math.round(favBox.width)).toBe(42); // the board's 42px favorite (the sticky one is hidden at md+)
       await expect(page.getByTestId("detail-meta")).toBeHidden(); // meta rides inline with the title
       await expect(panel.getByRole("heading", { level: 1 })).toContainText("Land Cruiser 300 GR Sport Executive");
       await expect(panel.getByRole("heading", { level: 1 })).toContainText("km");
@@ -427,6 +427,165 @@ test.describe("Listing detail — 768 board (4.17O.7 Stage C)", () => {
       }
       await sql`delete from listing_promotions where payment_id in (select id from payments where idempotency_key like 'o7c:%')`;
       await sql`delete from payments where idempotency_key like 'o7c:%'`;
+      await sql.end();
+    }
+  });
+});
+
+test.describe("Listing detail — 390 mobile (4.17O.7 Stage D)", () => {
+  test("mobile flow: top bar, swipe gallery, identity block, flowing content, sticky CTA", async ({ page }, { project }) => {
+    test.skip(project.name !== "mobile", "mobile-only flow");
+    const s = seed();
+    await page.goto(`/elan/${s.activeCar}`);
+    // top bar replaces the breadcrumb; favorite lives there
+    await expect(page.getByTestId("detail-back")).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Naviqasiya yolu" })).toBeHidden();
+    // full-bleed 4:3 swipe gallery with counter chip + segment progress
+    const strip = page.getByTestId("gallery-mobile");
+    const slideBox = (await page.getByTestId("gallery-slide-0").boundingBox())!;
+    expect(Math.round(slideBox.width)).toBe(390); // full-bleed
+    await expect(page.getByTestId("gallery-counter")).toHaveText("1 / 3");
+    expect(await page.getByTestId("gallery-progress").locator("span").count()).toBe(3);
+    // swipe (programmatic scroll = the same scroll-snap pathway)
+    await strip.evaluate((el) => el.scrollTo({ left: el.clientWidth }));
+    await expect(page.getByTestId("gallery-counter")).toHaveText("2 / 3");
+    // tap opens the fullscreen swipe layer at the same index
+    await page.getByTestId("gallery-slide-1").click();
+    const overlay = page.getByTestId("gallery-fullscreen");
+    await expect(overlay).toBeVisible();
+    await expect(overlay).toContainText("2 / 3");
+    await page.getByTestId("gallery-fullscreen-close").click();
+    await expect(overlay).toHaveCount(0);
+    await expect(page.getByTestId("gallery-counter")).toHaveText("2 / 3"); // shared index
+    // identity block: price, chip, title, meta
+    await expect(page.getByTestId("detail-price")).toContainText("AZN");
+    await expect(page.getByTestId("chip-credit")).toBeVisible();
+    await expect(page.getByTestId("detail-meta")).toBeVisible();
+    // flowing paper: 2-col tiles, seller row with report entry
+    const tiles = page.getByTestId("key-specs").locator("> div");
+    const t0 = (await tiles.nth(0).boundingBox())!;
+    const t1 = (await tiles.nth(1).boundingBox())!;
+    expect(t1.x).toBeGreaterThan(t0.x); // 2 columns
+    expect(Math.round(t1.y)).toBe(Math.round(t0.y));
+    await expect(page.getByTestId("seller-row")).toBeVisible();
+    await expect(page.getByTestId("seller-module")).toBeHidden();
+    // sticky white contact bar: fixed, 48px CTA + 48px favorite
+    const bar = page.getByTestId("contact-card");
+    expect(await bar.evaluate((el) => getComputedStyle(el).position)).toBe("fixed");
+    const cta = (await page.getByTestId("contact-reveal").boundingBox())!;
+    expect(cta.height).toBeGreaterThanOrEqual(47);
+    const stickyFav = bar.getByTestId("favorite-button");
+    const favBox = (await stickyFav.boundingBox())!;
+    expect(Math.round(favBox.width)).toBe(48);
+    // reveal inside the bar: phone primary + WhatsApp secondary, no overflow
+    await page.getByTestId("contact-reveal").click();
+    await expect(page.getByTestId("contact-call")).toBeVisible();
+    await expect(page.getByTestId("contact-whatsapp")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("all visible favorite instances synchronize immediately on toggle", async ({ page, context }, { project }) => {
+    test.skip(project.name !== "mobile", "mobile shows two favorite instances");
+    const s = seed();
+    await loginAs(context, testPhone(project.name, 54));
+    await page.goto(`/elan/${s.activeCar}`);
+    const hearts = page.locator('[data-testid="favorite-button"]:visible');
+    await expect(hearts).toHaveCount(2); // top bar + sticky bar
+    await expect(hearts.first()).toHaveAttribute("data-favorited", "false");
+    await expect(hearts.last()).toHaveAttribute("data-favorited", "false");
+    await hearts.last().click(); // toggle in the sticky bar
+    await expect(hearts.first()).toHaveAttribute("data-favorited", "true"); // top bar follows at once
+    await expect(hearts.last()).toHaveAttribute("data-favorited", "true");
+    await hearts.first().click(); // toggle back from the top bar
+    await expect(hearts.last()).toHaveAttribute("data-favorited", "false");
+  });
+
+  test("SOLD and EXPIRED mobile states: status board, no sticky CTA, favorite per contract", async ({ page }, { project }) => {
+    test.skip(project.name !== "mobile", "mobile status states");
+    const s = seed();
+    await page.goto(`/elan/${s.sold}`);
+    await expect(page.getByTestId("status-chip")).toHaveText("Satılıb"); // on-hero chip
+    await expect(page.getByTestId("limited-notice")).toContainText("Bu avtomobil satılıb");
+    await expect(page.getByTestId("contact-card")).toHaveCount(0); // no sticky CTA
+    await expect(page.locator('[data-testid="favorite-button"]:visible')).toHaveCount(0); // hidden on SOLD
+    await expectNoHorizontalOverflow(page);
+    await page.goto(`/elan/${s.expired}`);
+    await expect(page.getByTestId("status-chip")).toHaveText("Müddəti bitib");
+    await expect(page.getByTestId("limited-notice")).toContainText("Elanın müddəti bitib");
+    await expect(page.getByTestId("contact-card")).toHaveCount(0);
+    await expect(page.locator('[data-testid="favorite-button"]:visible')).toHaveCount(1); // top bar, per contract
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("motorcycle mobile detail is category-correct: real fields, no CAR-only content, no Güc", async ({ page }, { project }) => {
+    test.skip(project.name !== "mobile", "mobile moto state");
+    const s = seed();
+    await page.goto(`/elan/${s.motos[0]}`);
+    await expect(page.getByTestId("detail-price")).toContainText("AZN");
+    await expect(page.getByTestId("key-specs")).toContainText("Buraxılış ili");
+    await expect(page.getByTestId("condition-claims")).toHaveCount(0);
+    const detail = page.getByTestId("listing-detail");
+    await expect(detail).not.toContainText("Güc");
+    await expect(detail).not.toContainText("Ban növü");
+    await expect(detail).not.toContainText("Ötürücü");
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("worst-case content stays overflow-free at 360/375/390/414", async ({ page, context }, { project }) => {
+    test.skip(project.name !== "desktop", "explicit viewport matrix; one project");
+    const s = seed();
+    const { userId } = await loginAs(context, testPhone("desktop", 55));
+    const rich = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 9, noAccident: true, notRepainted: true });
+    const sql = (await import("postgres")).default(s.databaseUrl, { prepare: false, max: 1 });
+    let modelId: string | null = null;
+    try {
+      for (const type of ["PREMIUM", "BOOST"] as const) {
+        await sql`
+          with pay as (
+            insert into payments (user_id, listing_id, type, amount_minor, idempotency_key, status, provider)
+            values (${userId}, ${rich.id}, ${type}, 0, ${`o7d:${rich.id}:${type}`}, 'SUCCESS', 'KAPITAL')
+            returning id
+          )
+          insert into listing_promotions (listing_id, type, payment_id, starts_at, ends_at, status, purchased_duration_days, purchased_price_minor)
+          select ${rich.id}, ${type}, pay.id, now() - interval '1 hour', now() + interval '7 days', 'ACTIVE', 7, 0 from pay
+        `;
+      }
+      const [m] = await sql`
+        insert into models (brand_id, category_id, name, slug)
+        values (${s.toyotaBrandId}, (select id from categories where code = 'CAR'),
+                'Land Cruiser 300 GR Sport Executive', 'lc300-gr-sport-exec-o7d')
+        returning id
+      `;
+      modelId = m.id as string;
+      await sql`update listings set model_id = ${modelId}, credit_available = true, barter_available = true,
+        description = ${Array.from({ length: 14 }, (_, i) => `Sətir ${i + 1}: avtomobil haqqında geniş məlumat və təchizat təsviri.`).join("\n")}
+        where id = ${rich.id}`;
+      await context.clearCookies();
+      for (const width of [360, 375, 390, 414]) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.goto(`/elan/${rich.publicId}`);
+        await expect(page.getByTestId("detail-price")).toBeVisible();
+        await expectNoHorizontalOverflow(page);
+        if (width === 390) {
+          // expanded description, revealed phone and fullscreen all stay in-viewport
+          await page.getByTestId("description-toggle").click();
+          await expectNoHorizontalOverflow(page);
+          await page.getByTestId("contact-reveal").click();
+          await expect(page.getByTestId("contact-call")).toBeVisible();
+          await expectNoHorizontalOverflow(page);
+          await page.getByTestId("gallery-slide-0").click();
+          await expect(page.getByTestId("gallery-fullscreen")).toBeVisible();
+          await expectNoHorizontalOverflow(page);
+          await page.getByTestId("gallery-fullscreen-close").click();
+        }
+      }
+    } finally {
+      if (modelId !== null) {
+        await sql`update listings set model_id = ${s.corollaModelId} where id = ${rich.id}`;
+        await sql`delete from models where id = ${modelId}`;
+      }
+      await sql`delete from listing_promotions where payment_id in (select id from payments where idempotency_key like 'o7d:%')`;
+      await sql`delete from payments where idempotency_key like 'o7d:%'`;
       await sql.end();
     }
   });
