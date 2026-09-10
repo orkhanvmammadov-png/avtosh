@@ -34,6 +34,8 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
   const [fullscreen, setFullscreen] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const touchX = useRef<number | null>(null);
   const current = list[active] ?? list[0];
   const many = list.length > 1;
 
@@ -53,6 +55,16 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
       step(1);
     }
   }
+
+  // Keep the 390 swipe strip aligned with the shared index when it is
+  // changed elsewhere (fullscreen navigation) — scroll-snap and React
+  // state must never diverge.
+  useEffect(() => {
+    const el = stripRef.current;
+    if (el === null) return;
+    const current = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+    if (current !== active) el.scrollTo({ left: active * el.clientWidth });
+  }, [active]);
 
   // Fullscreen layer: Esc closes and focus returns to the stage.
   useEffect(() => {
@@ -88,21 +100,46 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
 
   return (
     <div data-testid="gallery">
-      {/* Mobile strip (final 390 treatment comes in the mobile gate). */}
+      {/* 390 — approved full-bleed 4:3 swipe treatment: counter chip,
+          segment progress, tap opens the fullscreen swipe layer. */}
       <div className="md:hidden">
-        <div className="no-scrollbar flex snap-x snap-mandatory gap-2 overflow-x-auto rounded-card" aria-label="Şəkillər" data-testid="gallery-mobile"
-          onScroll={(e) => {
-            const el = e.currentTarget;
-            const index = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
-            if (index !== active) setActive(Math.min(list.length - 1, index));
-          }}>
-          {list.map((img, i) => (
-            <div key={i} className="aspect-vehicle w-full shrink-0 snap-center overflow-hidden rounded-card bg-navy-raised">
-              <ListingImage src={img.url} alt={`${title} — ${UI.photoOf.toLowerCase()} ${i + 1}`} priority={i === 0} />
-            </div>
-          ))}
+        <div className="relative">
+          <div
+            ref={stripRef}
+            className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto"
+            aria-label="Şəkillər"
+            data-testid="gallery-mobile"
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              const index = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+              if (index !== active) setActive(Math.min(list.length - 1, index));
+            }}
+          >
+            {list.map((img, i) => (
+              <div
+                key={i}
+                className="aspect-[4/3] w-full shrink-0 snap-center overflow-hidden bg-navy-raised"
+                onClick={() => setFullscreen(true)}
+                data-testid={`gallery-slide-${i}`}
+              >
+                <ListingImage src={img.url} alt={`${title} — ${UI.photoOf.toLowerCase()} ${i + 1}`} priority={i === 0} />
+              </div>
+            ))}
+          </div>
+          {many ? (
+            <>
+              <span aria-hidden="true" className={`pointer-events-none absolute bottom-2.5 right-2.5 ${counterChip}`} data-testid="gallery-counter">
+                {active + 1} / {list.length}
+              </span>
+              <span aria-hidden="true" className="pointer-events-none absolute bottom-3 left-3 flex gap-[3px]" data-testid="gallery-progress">
+                {list.map((_, i) => (
+                  <span key={i} className={`h-[3px] w-3.5 rounded-[2px] ${i === active ? "bg-white" : "bg-white/35"}`} />
+                ))}
+              </span>
+            </>
+          ) : null}
         </div>
-        <p className="mt-2 text-center text-xs text-on-navy-muted" aria-live="polite" data-testid="gallery-counter">{active + 1} / {list.length}</p>
+        <p className="sr-only" aria-live="polite">{active + 1} / {list.length}</p>
       </div>
 
       {/* Desktop / tablet stage */}
@@ -203,8 +240,17 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
           aria-modal="true"
           aria-label={`Şəkillər — ${active + 1} / ${list.length}`}
           tabIndex={-1}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(20,26,34,0.96)] focus:outline-none"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(20,26,34,0.96)] pb-[env(safe-area-inset-bottom)] focus:outline-none"
           data-testid="gallery-fullscreen"
+          onTouchStart={(e) => {
+            touchX.current = e.touches[0]?.clientX ?? null;
+          }}
+          onTouchEnd={(e) => {
+            const from = touchX.current;
+            touchX.current = null;
+            const to = e.changedTouches[0]?.clientX ?? null;
+            if (from !== null && to !== null && Math.abs(to - from) > 40) step(to < from ? 1 : -1);
+          }}
         >
           <button
             type="button"
@@ -213,7 +259,7 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
               setFullscreen(false);
               stageRef.current?.focus();
             }}
-            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/[.92] text-ink focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
+            className="absolute right-3.5 top-3.5 flex h-11 w-11 items-center justify-center rounded-full bg-white/[.92] text-ink focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
             data-testid="gallery-fullscreen-close"
           >
             <X size={18} aria-hidden="true" />
@@ -225,10 +271,10 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
           </div>
           {many ? (
             <>
-              <button type="button" aria-label="Əvvəlki şəkil" disabled={active === 0} onClick={() => step(-1)} className={`${arrow} left-4`}>
+              <button type="button" aria-label="Əvvəlki şəkil" disabled={active === 0} onClick={() => step(-1)} className={`${arrow} left-4 hidden md:flex`}>
                 ‹
               </button>
-              <button type="button" aria-label="Növbəti şəkil" disabled={active === list.length - 1} onClick={() => step(1)} className={`${arrow} right-4`}>
+              <button type="button" aria-label="Növbəti şəkil" disabled={active === list.length - 1} onClick={() => step(1)} className={`${arrow} right-4 hidden md:flex`}>
                 ›
               </button>
               <span aria-hidden="true" className={`absolute bottom-5 right-5 ${counterChip}`}>

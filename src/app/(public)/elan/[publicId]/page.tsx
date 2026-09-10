@@ -8,10 +8,8 @@ import { DescriptionClamp, FeaturesList } from "@/components/marketplace/detail/
 import { FavoriteButton } from "@/components/shared/favorite-button";
 import { Gallery } from "@/components/marketplace/gallery";
 import { ReportListing } from "@/components/marketplace/report-listing";
-import { Badge } from "@/components/ui/badge";
 import { Notice } from "@/components/ui/notice";
 import { PromotionBadge } from "@/components/ui/promotion-badge";
-import { buttonClasses } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/errors";
 import { formatDateAz, formatFreshness, formatMileage, formatPriceMinor, formatYear, vehicleTitle } from "@/lib/format";
 import { CATEGORY_LABELS, SPEC_LABELS, STATUS_LABELS, UI } from "@/lib/marketplace/labels";
@@ -145,7 +143,17 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
       {/* Navy stage — full-bleed. */}
       <section className="bg-navy pb-6 pt-1.5 text-white xl:pb-7">
         <Container>
-          <nav aria-label="Naviqasiya yolu" className="mb-3 flex flex-wrap items-center gap-1.5 py-2 text-xs text-on-navy-muted">
+          <div className="flex items-center justify-between py-2 md:hidden">
+            <Link
+              href={`/elanlar?category=${listing.category}`}
+              className="inline-flex min-h-11 items-center gap-1 text-[12px] font-medium text-on-navy-muted hover:text-white"
+              data-testid="detail-back"
+            >
+              ← Geri
+            </Link>
+            {listing.status !== "SOLD" ? <FavoriteButton publicId={listing.publicId} skin="panel" /> : null}
+          </div>
+          <nav aria-label="Naviqasiya yolu" className="mb-3 hidden flex-wrap items-center gap-1.5 py-2 text-xs text-on-navy-muted md:flex">
             <Link href="/" className="hover:text-white">Əsas səhifə</Link>
             <span aria-hidden="true">/</span>
             <Link href={`/elanlar?category=${listing.category}`} className="hover:text-white">
@@ -154,27 +162,35 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             <span aria-hidden="true">/</span>
             <span className="truncate text-white/80">{title}</span>
           </nav>
-          <div className="grid gap-3 desk:grid-cols-[minmax(0,1fr)_340px] desk:gap-5 xl:grid-cols-[minmax(0,1fr)_400px] xl:gap-7">
+          <div className="grid gap-0 md:gap-3 desk:grid-cols-[minmax(0,1fr)_340px] desk:gap-5 xl:grid-cols-[minmax(0,1fr)_400px] xl:gap-7">
             {/* Gallery column — the dominant element. */}
-            <div className="min-w-0">
-              <div className={limited ? "saturate-[0.6]" : ""}>
+            <div className="-mx-4 min-w-0 md:mx-0">
+              <div className={`relative ${limited ? "saturate-[0.6]" : ""}`}>
+                {limited ? (
+                  <span
+                    className={`absolute left-3 top-3 z-10 rounded-[5px] px-[9px] py-1 text-[10px] font-bold uppercase tracking-[0.06em] ${
+                      listing.status === "SOLD" ? "bg-[#EDEBE4] text-[#565B63]" : "bg-[#FBEED8] text-[#9A5B06]"
+                    }`}
+                    data-testid="status-chip"
+                  >
+                    {listing.status === "SOLD" ? STATUS_LABELS.SOLD : STATUS_LABELS.EXPIRED}
+                  </span>
+                ) : null}
                 <Gallery images={listing.images} title={title} />
               </div>
             </div>
             {/* Identity panel. */}
             <div
-              className="relative self-start rounded-[12px] border border-navy-border bg-navy-raised p-5 md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-x-4 md:p-4 desk:sticky desk:top-20 desk:block desk:p-4 xl:p-5"
+              className="relative self-start rounded-none border-0 border-navy-border bg-transparent p-0 pt-3 md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-x-4 md:rounded-[12px] md:border md:bg-navy-raised md:p-4 desk:sticky desk:top-20 desk:block desk:p-4 xl:p-5"
               data-testid="identity-panel"
             >
               <div className="min-w-0">
               <div className="mb-2.5 flex flex-wrap items-center gap-[5px] pr-10 md:mb-[7px] md:pr-0 desk:mb-2.5 desk:pr-10">
-                {listing.status === "SOLD" ? <Badge tone="sold">{STATUS_LABELS.SOLD}</Badge> : null}
-                {listing.status === "EXPIRED" ? <Badge tone="expired">{STATUS_LABELS.EXPIRED}</Badge> : null}
                 {listing.badges.premium ? <PromotionBadge type="PREMIUM" onNavy /> : null}
                 {listing.badges.boosted ? <PromotionBadge type="BOOST" /> : null}
               </div>
               <p
-                className={`whitespace-nowrap font-condensed text-[34px] font-bold leading-none md:text-[27px] desk:text-[28px] xl:text-[34px] ${limited ? "text-on-navy-muted" : "text-white"}`}
+                className={`whitespace-nowrap font-condensed text-[26px] font-bold leading-none md:text-[27px] desk:text-[28px] xl:text-[34px] ${limited ? "text-on-navy-muted" : "text-white"}`}
                 data-testid="detail-price"
               >
                 {formatPriceMinor(listing.priceMinor, listing.currency)}
@@ -193,14 +209,14 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   ) : null}
                 </div>
               ) : null}
-              <h1 className="mt-3 break-words text-[17px] font-semibold leading-snug md:mt-1.5 md:text-[14.5px] desk:mt-2 desk:text-[15px] xl:mt-3 xl:text-[17px]">
+              <h1 className="mt-2.5 break-words text-[15px] font-semibold leading-snug md:mt-1.5 md:text-[14.5px] desk:mt-2 desk:text-[15px] xl:mt-3 xl:text-[17px]">
                 {title}
                 {meta.length > 0 ? (
                   <span className="hidden font-normal text-[11.5px] text-on-navy-muted md:inline desk:hidden"> · {meta.join(" · ")}</span>
                 ) : null}
               </h1>
               {meta.length > 0 ? (
-                <p className="mt-1 text-[12.5px] text-on-navy-muted md:hidden desk:mt-0.5 desk:block desk:text-[11.5px] xl:mt-1 xl:text-[12.5px]" data-testid="detail-meta">
+                <p className="mt-0.5 text-[12px] text-on-navy-muted md:hidden desk:mt-0.5 desk:block desk:text-[11.5px] xl:mt-1 xl:text-[12.5px]" data-testid="detail-meta">
                   {meta.join(" · ")}
                 </p>
               ) : null}
@@ -211,25 +227,40 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                     publicId={listing.publicId}
                     displayName={listing.seller.displayName}
                     maskedPhone={listing.seller.contactPhoneMasked}
+                    stickyAccessory={<FavoriteButton publicId={listing.publicId} skin="sticky" />}
                   />
                 ) : (
-                  <div>
-                    <p role="status" className="text-sm leading-relaxed text-on-navy-muted" data-testid="limited-notice">
-                      Bu elan artıq aktiv deyil. Satıcı ilə əlaqə mümkün deyil.
+                  <div
+                    role="status"
+                    className={`rounded-lg px-4 py-3.5 ${listing.status === "SOLD" ? "bg-[#EDEBE4]" : "bg-[#FBEED8]"}`}
+                    data-testid="limited-notice"
+                  >
+                    <p className={`text-[13.5px] font-bold ${listing.status === "SOLD" ? "text-ink" : "text-[#9A5B06]"}`}>
+                      {listing.status === "SOLD"
+                        ? listing.category === "CAR" ? "Bu avtomobil satılıb" : "Bu elan satılıb"
+                        : "Elanın müddəti bitib"}
                     </p>
-                    <Link href={`/elanlar?category=${listing.category}`} className={buttonClasses("primary", "mt-4 w-full")}>
-                      Oxşar elanlara bax
+                    <p className={`mt-1 text-[12px] leading-relaxed ${listing.status === "SOLD" ? "text-slate-strong" : "text-[#9A5B06]"}`}>
+                      {listing.status === "SOLD"
+                        ? "Elan arxivdədir — satıcı ilə əlaqə mümkün deyil. Oxşar elanlara baxın."
+                        : "Elanın müddəti bitib — satıcı ilə əlaqə bağlıdır. Oxşar aktiv elanlara baxın."}
+                    </p>
+                    <Link
+                      href={`/elanlar?category=${listing.category}`}
+                      className="mt-2.5 inline-flex min-h-10 items-center rounded-[6px] border border-primary px-3.5 text-[12.5px] font-semibold text-primary hover:bg-primary-tint"
+                    >
+                      Oxşar elanlara bax →
                     </Link>
                   </div>
                 )}
                 {listing.status !== "SOLD" ? (
-                  <span className="absolute right-5 top-5 md:static md:right-auto md:top-auto desk:absolute desk:right-4 desk:top-4 xl:right-5 xl:top-5">
+                  <span className="hidden md:static md:block desk:absolute desk:right-4 desk:top-4 xl:right-5 xl:top-5">
                     <FavoriteButton publicId={listing.publicId} skin="panel" autoIntent />
                   </span>
                 ) : null}
               </div>
               {contactable && listing.seller ? (
-                <div className="mt-3.5 flex items-center gap-2.5 border-t border-navy-border pt-3 md:hidden desk:mt-3 desk:flex desk:pt-2.5 xl:mt-3.5 xl:pt-3" data-testid="seller-module">
+                <div className="mt-3.5 hidden items-center gap-2.5 border-t border-navy-border pt-3 md:hidden desk:mt-3 desk:flex desk:pt-2.5 xl:mt-3.5 xl:pt-3" data-testid="seller-module">
                   <span aria-hidden="true" className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-border text-sm font-semibold text-green-dark">
                     {sellerInitial}
                   </span>
@@ -239,7 +270,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   </div>
                 </div>
               ) : null}
-              <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-on-navy-muted md:hidden desk:flex">
+              <div className="mt-3 hidden items-center justify-between gap-3 text-[11px] text-on-navy-muted md:hidden desk:flex">
                 <span data-testid="listing-ref">
                   Elan № {listing.publicId}
                   {listing.publishedAt !== null ? ` · ${formatDateAz(listing.publishedAt)}` : ""}
@@ -254,15 +285,15 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
       </section>
 
       {/* Paper content. */}
-      <Container className={`py-6 md:py-8 ${contactable ? "pb-[120px] desk:pb-8" : ""}`}>
-        <div className="grid items-start gap-4 desk:grid-cols-2">
+      <Container className={`py-4 md:py-8 ${contactable ? "pb-[calc(72px+env(safe-area-inset-bottom))] md:pb-[120px] desk:pb-8" : ""}`}>
+        <div className="grid items-start gap-3 md:gap-4 desk:grid-cols-2">
           {/* Left: key specs + grouped specifications. */}
-          <section aria-labelledby="specs-title" className="rounded-[10px] border border-line bg-raised px-[18px] py-4">
-            <h2 id="specs-title" className="text-[14.5px] font-bold text-ink">Əsas göstəricilər</h2>
+          <section aria-labelledby="specs-title" className="rounded-none border-0 bg-transparent p-0 md:rounded-[10px] md:border md:border-line md:bg-raised md:px-[18px] md:py-4">
+            <h2 id="specs-title" className="sr-only text-[14.5px] font-bold text-ink md:not-sr-only">Əsas göstəricilər</h2>
             {tiles.length > 0 ? (
-              <div className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-3" data-testid="key-specs">
+              <div className="grid grid-cols-2 gap-[7px] sm:grid-cols-3 sm:gap-2 md:mt-2.5" data-testid="key-specs">
                 {tiles.map(([label, value]) => (
-                  <div key={label} className="rounded-lg bg-surface px-[11px] py-[9px]">
+                  <div key={label} className="rounded-lg border border-line bg-raised px-2.5 py-2 md:border-0 md:bg-surface md:px-[11px] md:py-[9px]">
                     <p className="text-[10.5px] text-muted">{label}</p>
                     <p className="mt-0.5 text-[12.5px] font-semibold text-ink">{value}</p>
                   </div>
@@ -288,10 +319,10 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           {/* Right: condition + features, then description. */}
           <div className="min-w-0">
             {!limited && (hasConditions || listing.features.length > 0) ? (
-              <section aria-labelledby="cond-title" className="rounded-[10px] border border-line bg-raised px-[18px] py-4">
-                <h2 id="cond-title" className="text-[14.5px] font-bold text-ink">Vəziyyət · Təchizat</h2>
+              <section aria-labelledby="cond-title" className="rounded-none border-0 bg-transparent p-0 md:rounded-[10px] md:border md:border-line md:bg-raised md:px-[18px] md:py-4">
+                <h2 id="cond-title" className="sr-only text-[14.5px] font-bold text-ink md:not-sr-only">Vəziyyət · Təchizat</h2>
                 {hasConditions ? (
-                  <div className="mt-2.5 flex flex-wrap items-center gap-2" data-testid="condition-claims">
+                  <div className="flex flex-wrap items-center gap-2 md:mt-2.5" data-testid="condition-claims">
                     {listing.noAccident === true ? (
                       <span className="inline-flex items-center gap-1 rounded-pill border border-primary px-[11px] py-[5px] text-[12px] font-semibold text-boost">
                         <Check size={12} strokeWidth={3} aria-hidden="true" /> {UI.noAccident}
@@ -313,9 +344,9 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               </section>
             ) : null}
             {!limited && listing.description ? (
-              <section aria-labelledby="desc-title" className="mt-4 rounded-[10px] border border-line bg-raised px-[18px] py-4">
-                <h2 id="desc-title" className="text-[14.5px] font-bold text-ink">{UI.description}</h2>
-                <div className="mt-2.5">
+              <section aria-labelledby="desc-title" className="mt-3 rounded-none border-0 bg-transparent p-0 md:mt-4 md:rounded-[10px] md:border md:border-line md:bg-raised md:px-[18px] md:py-4">
+                <h2 id="desc-title" className="sr-only text-[14.5px] font-bold text-ink md:not-sr-only">{UI.description}</h2>
+                <div className="md:mt-2.5">
                   <DescriptionClamp text={listing.description} />
                 </div>
               </section>
@@ -325,7 +356,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
         {contactable && listing.seller ? (
           <section
             aria-label={UI.seller}
-            className="mt-4 hidden items-center justify-between gap-3 rounded-[10px] border border-line bg-raised px-[18px] py-3.5 md:flex desk:hidden"
+            className="mt-1 flex items-center justify-between gap-3 rounded-none border-0 bg-transparent px-0 py-3 md:mt-4 md:rounded-[10px] md:border md:border-line md:bg-raised md:px-[18px] md:py-3.5 desk:hidden"
             data-testid="seller-row"
           >
             <div className="flex min-w-0 items-center gap-2.5">
