@@ -11,11 +11,15 @@ export function ListingImage({
   src,
   alt,
   priority = false,
+  fit = "cover",
   className = "",
 }: {
   src: string | null;
   alt: string;
   priority?: boolean;
+  /** O.8 fullscreen viewer: "contain" shows the complete photo without
+      cropping; every existing caller keeps the "cover" default. */
+  fit?: "cover" | "contain";
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);
@@ -33,7 +37,7 @@ export function ListingImage({
       fetchPriority={priority ? "high" : "auto"}
       decoding="async"
       onError={() => setFailed(true)}
-      className={`h-full w-full object-cover text-transparent ${className}`}
+      className={`${fit === "contain" ? "max-w-full object-contain" : "h-full w-full object-cover"} text-transparent ${className}`}
     />
   );
 }
