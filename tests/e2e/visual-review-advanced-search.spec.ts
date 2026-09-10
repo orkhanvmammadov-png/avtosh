@@ -246,7 +246,7 @@ test.describe("advanced search visual artifacts", () => {
     await context.clearCookies();
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`/elan/${claimed.publicId}`);
-    await expect(page.getByTestId("specs")).toContainText("Vuruğu yoxdur");
+    await expect(page.getByTestId("condition-claims")).toContainText("Vuruğu yoxdur"); // O.7: claims are chips
     await page.screenshot({ path: `${OUT}/asv2-detail-condition-claims-1440.png`, fullPage: true });
   });
 
