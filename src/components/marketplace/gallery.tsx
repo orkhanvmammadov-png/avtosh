@@ -80,6 +80,19 @@ export function Gallery({ images, title }: { images: GalleryImage[]; title: stri
         step(-1);
       } else if (event.key === "ArrowRight") {
         step(1);
+      } else if (event.key === "Tab") {
+        // Minimal focus trap: Tab cycles through the overlay's own
+        // controls only — background content is unreachable while open.
+        const overlay = overlayRef.current;
+        if (overlay === null) return;
+        const focusables = Array.from(overlay.querySelectorAll<HTMLElement>("button:not(:disabled)"));
+        if (focusables.length === 0) return;
+        event.preventDefault();
+        const index = focusables.indexOf(document.activeElement as HTMLElement);
+        const next = event.shiftKey
+          ? focusables[(index <= 0 ? focusables.length : index) - 1]
+          : focusables[(index + 1) % focusables.length];
+        next?.focus();
       }
     };
     document.addEventListener("keydown", onKeyDown, true);
