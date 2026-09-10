@@ -93,10 +93,12 @@ test("Boost purchase activates and shows the public badge; both types coexist", 
   await page.goto("/profil/elanlar");
   await expect(page.getByTestId("owner-premium-until").first()).toBeVisible();
   await expect(page.getByTestId("owner-boost-until").first()).toBeVisible();
-  // public detail carries both badges
+  // public detail carries both badges — O.7 sealed wording: PREMIUM
+  // and BOOST as full words, never "Reklam"
   await page.goto(`/elan/${fixture.publicId}`);
   await expect(page.getByTestId("listing-detail")).toContainText("Premium");
-  await expect(page.getByTestId("listing-detail")).toContainText("Reklam");
+  await expect(page.getByTestId("listing-detail")).toContainText("Boost");
+  await expect(page.getByTestId("listing-detail")).not.toContainText("Reklam");
   await expireListingPromotions(fixture.id);
 });
 

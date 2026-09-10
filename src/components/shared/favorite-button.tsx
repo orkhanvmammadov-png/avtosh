@@ -10,6 +10,10 @@ import {
 } from "@/lib/marketplace/favorites-client";
 import { publicFetch, PublicApiError } from "@/lib/marketplace/public-api";
 
+/** Broadcast so every visible instance of the same listing's heart
+    (card, panel, top bar, sticky bar) reflects a toggle immediately. */
+const SYNC_EVENT = "avtosh-favorite-sync";
+
 /**
  * Heart control for cards and detail. Anonymous click → /giris with
  * `return_to=/elan/{id}?fav=1`; after login the detail page's button
@@ -19,10 +23,14 @@ export function FavoriteButton({
   publicId,
   size = "sm",
   autoIntent = false,
+  skin = "card",
 }: {
   publicId: string;
   size?: "sm" | "lg";
   autoIntent?: boolean;
+  /** O.7 identity-panel skin (square on navy) — additive; existing
+      callers keep the default round card treatment. */
+  skin?: "card" | "panel" | "sticky";
 }) {
   const router = useRouter();
   const [favorited, setFavorited] = useState<boolean | null>(null);
@@ -48,6 +56,15 @@ export function FavoriteButton({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [publicId]);
 
+  useEffect(() => {
+    const onSync = (event: Event) => {
+      const detail = (event as CustomEvent<{ publicId: string; favorited: boolean }>).detail;
+      if (detail?.publicId === publicId) setFavorited(detail.favorited);
+    };
+    document.addEventListener(SYNC_EVENT, onSync);
+    return () => document.removeEventListener(SYNC_EVENT, onSync);
+  }, [publicId]);
+
   async function toggle(nextState?: boolean, fromIntent = false) {
     if (busy) return;
     const target = nextState ?? !(favorited ?? false);
@@ -58,6 +75,7 @@ export function FavoriteButton({
       });
       setFavorited(target);
       invalidateFavoriteIds();
+      document.dispatchEvent(new CustomEvent(SYNC_EVENT, { detail: { publicId, favorited: target } }));
       if (fromIntent) {
         router.replace(`/elan/${publicId}`); // clean ?fav=1 from the URL
       }
@@ -90,11 +108,25 @@ export function FavoriteButton({
         e.stopPropagation();
         void toggle();
       }}
-      className={`inline-flex items-center justify-center rounded-full bg-white/90 transition-colors duration-150 ${
-        size === "lg" ? "min-h-12 min-w-12 border border-line" : "h-7 w-7 md:h-[30px] md:w-[30px]"
-      } ${active ? "text-[#B3261E]" : "text-slate-strong hover:text-[#B3261E]"}`}
+      className={
+        skin === "sticky"
+          ? `inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-[6px] border transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${
+              active
+                ? "border-[#B3261E] bg-[#F9E4E1] text-[#B3261E]"
+                : "border-line-strong bg-raised text-slate-strong hover:text-[#B3261E]"
+            }`
+          : skin === "panel"
+          ? `inline-flex h-[34px] w-[34px] items-center justify-center rounded-[6px] border md:h-[42px] md:w-[42px] desk:h-8 desk:w-8 xl:h-[34px] xl:w-[34px] transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${
+              active
+                ? "border-[#B3261E] bg-[#F9E4E1] text-[#B3261E]"
+                : "border-navy-border bg-transparent text-on-navy-muted hover:border-green-dark hover:text-green-dark"
+            }`
+          : `inline-flex items-center justify-center rounded-full bg-white/90 transition-colors duration-150 ${
+              size === "lg" ? "min-h-12 min-w-12 border border-line" : "h-7 w-7 md:h-[30px] md:w-[30px]"
+            } ${active ? "text-[#B3261E]" : "text-slate-strong hover:text-[#B3261E]"}`
+      }
     >
-      <svg width={size === "lg" ? 20 : 15} height={size === "lg" ? 20 : 15} viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width={size === "lg" ? 20 : skin === "sticky" ? 16 : 15} height={size === "lg" ? 20 : skin === "sticky" ? 16 : 15} viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
       </svg>
     </button>

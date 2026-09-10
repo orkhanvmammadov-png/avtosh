@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button, buttonClasses } from "@/components/ui/button";
-import { PromotionBadge } from "@/components/ui/promotion-badge";
 import { UI } from "@/lib/marketplace/labels";
 import { publicFetch, PublicApiError } from "@/lib/marketplace/public-api";
 
@@ -15,15 +14,14 @@ export function ContactCard({
   publicId,
   displayName,
   maskedPhone,
-  priceLabel,
-  premium = false,
+  stickyAccessory,
 }: {
   publicId: string;
   displayName: string | null;
   maskedPhone: string | null;
-  /** Presentation-only: Condensed price rendered inside the panel (≥desk). */
-  priceLabel?: string;
-  premium?: boolean;
+  /** 390 sticky-bar companion (the 48px favorite) — rendered only in
+      the fixed mobile form factor. */
+  stickyAccessory?: ReactNode;
 }) {
   const [contact, setContact] = useState<{ phone: string; whatsappUrl: string } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,54 +45,54 @@ export function ContactCard({
   }
 
   // ONE instance serves both form factors purely via classes: the
-  // approved fixed MobileStickyContact bar below desk, the sticky
-  // navy-raised ContactPanel at desk+. Same DOM, same testids, same
-  // reveal/rate-limit behavior.
+  // fixed mobile contact bar below desk, and the unchromed CTA block
+  // inside the O.7 identity panel at desk+ (the panel supplies the
+  // surface). Same DOM, same testids, same reveal/rate-limit behavior.
   return (
     <aside
       aria-labelledby="contact-title"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-navy-border bg-navy p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-white desk:static desk:rounded-[12px] desk:border desk:bg-navy-raised desk:p-5"
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-raised px-3.5 pt-2.5 pb-[max(0.625rem,calc(env(safe-area-inset-bottom)+6px))] text-ink shadow-[0_-1px_2px_rgba(20,26,34,0.06)] md:static md:border-0 md:bg-transparent md:p-0 md:text-white md:shadow-none"
       data-testid="contact-card"
     >
-      <div className="mx-auto flex max-w-xl items-center gap-3 desk:mx-0 desk:block desk:max-w-none">
-        <div className="min-w-0 flex-1 desk:flex-none">
-          {premium ? <span className="mb-2 hidden desk:block"><PromotionBadge type="PREMIUM" /></span> : null}
-          {priceLabel !== undefined ? (
-            <p className="hidden font-condensed text-[34px] font-bold leading-none desk:block">{priceLabel}</p>
-          ) : null}
-          <h2 id="contact-title" className="hidden text-[11px] font-semibold uppercase tracking-[0.06em] text-on-navy-muted desk:mt-4 desk:block">{UI.seller}</h2>
-          <p className="truncate text-sm font-semibold text-white desk:mt-0.5 desk:text-base">{displayName ?? "Satıcı"}</p>
+      <h2 id="contact-title" className="sr-only">{UI.seller}</h2>
+      <div className="mx-auto flex max-w-xl items-center gap-2 md:mx-0 md:block md:max-w-none">
+        {/* Masked-contact context stays in the DOM contract; the sealed
+            390 bar shows only the CTA + favorite. */}
+        <div className="hidden">
+          <p className="truncate text-sm font-semibold">{displayName ?? "Satıcı"}</p>
           {contact === null && maskedPhone ? (
-            <p className="truncate font-mono text-xs text-on-navy-muted desk:mt-1.5 desk:text-sm" data-testid="contact-masked">{maskedPhone}</p>
+            <p className="truncate font-mono text-xs" data-testid="contact-masked">{maskedPhone}</p>
           ) : null}
         </div>
         {contact === null ? (
-          <div className="shrink-0 desk:mt-4 desk:block">
-            <Button onClick={reveal} disabled={loading || maskedPhone === null} className="w-full min-w-40 desk:min-w-0" data-testid="contact-reveal">
+          <div className="min-w-0 flex-1 md:flex-none">
+            <Button onClick={reveal} disabled={loading || maskedPhone === null} className="min-h-12 w-full min-w-40 md:min-h-11 md:w-auto md:min-w-0 md:px-[22px] md:text-[13px] desk:w-full xl:min-h-12 xl:text-sm" data-testid="contact-reveal">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M6 4h4l2 5-2.5 1.5a11 11 0 0 0 4 4L15 12l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 4 6a2 2 0 0 1 2-2z" />
               </svg>
               {loading ? UI.loading : UI.showPhone}
             </Button>
-            {maskedPhone === null ? <p className="mt-1 text-xs text-on-navy-muted desk:mt-2">{UI.contactUnavailable}</p> : null}
-            {error ? <p role="alert" className="mt-1 text-xs text-[#F2B8B5] desk:mt-2 desk:text-sm">{error}</p> : null}
+            {maskedPhone === null ? <p className="mt-1 text-xs text-muted md:text-on-navy-muted desk:mt-2">{UI.contactUnavailable}</p> : null}
+            {error ? <p role="alert" className="mt-1 text-xs text-[#B3261E] md:text-[#F2B8B5] desk:mt-2 desk:text-sm">{error}</p> : null}
           </div>
         ) : (
-          <div className="flex shrink-0 gap-2 desk:mt-4 desk:flex-col">
-            <a href={`tel:${contact.phone}`} className={buttonClasses("primary", "w-full whitespace-nowrap")} data-testid="contact-call">
+          <div className="flex min-w-0 flex-1 items-center gap-2 md:flex-none desk:flex-col desk:items-stretch">
+            {/* Revealed: phone = PRIMARY, WhatsApp = SECONDARY (existing contract). */}
+            <a href={`tel:${contact.phone}`} className={buttonClasses("primary", "min-h-12 w-full min-w-0 flex-1 whitespace-nowrap px-2 text-[13px] md:min-h-11 md:w-auto md:flex-none md:px-4 md:text-sm desk:w-full xl:min-h-12")} data-testid="contact-call">
               {UI.callSeller}: {contact.phone}
             </a>
             <a
               href={contact.whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={buttonClasses("secondary", "w-full border-navy-border bg-transparent text-white hover:border-green-dark hover:text-green-dark active:bg-white/5")}
+              className={buttonClasses("secondary", "w-auto shrink-0 px-3 text-[12.5px] md:w-auto md:border-navy-border md:bg-transparent md:px-4 md:text-sm md:text-white md:hover:border-green-dark md:hover:text-green-dark md:active:bg-white/5 desk:w-full")}
               data-testid="contact-whatsapp"
             >
               {UI.whatsapp}
             </a>
           </div>
         )}
+        {stickyAccessory !== undefined ? <span className="shrink-0 md:hidden">{stickyAccessory}</span> : null}
       </div>
     </aside>
   );
