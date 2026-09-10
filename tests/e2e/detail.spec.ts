@@ -157,7 +157,7 @@ test.describe("Listing detail — Direction 1A (4.17O.7 Stage A)", () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test("gallery: thumbnails, arrows with boundaries, counter and keyboard share one index", async ({ page }, testInfo) => {
+  test("gallery: arrows with boundaries, counter and keyboard share one index", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name === "mobile", "desktop gallery controls");
     const s = seed();
     await page.goto(`/elan/${s.activeCar}`); // 3 seeded images
@@ -166,16 +166,17 @@ test.describe("Listing detail — Direction 1A (4.17O.7 Stage A)", () => {
     await expect(page.getByTestId("gallery-prev")).toBeDisabled(); // lower boundary
     await page.getByTestId("gallery-next").click();
     await expect(counter).toHaveText("2 / 3");
-    await page.getByTestId("gallery-thumb-2").click();
+    await page.getByTestId("gallery-next").click();
     await expect(counter).toHaveText("3 / 3");
     await expect(page.getByTestId("gallery-next")).toBeDisabled(); // upper boundary
-    await expect(page.getByTestId("gallery-thumb-2")).toHaveAttribute("aria-current", "true");
-    // keyboard on the focusable stage
-    await page.getByTestId("gallery-main").click();
+    await expect(page.getByTestId("gallery-thumb-2")).toHaveAttribute("aria-current", "true"); // rail follows
+    // keyboard on the focusable stage (O.7 closed-state behavior kept)
+    await page.getByTestId("gallery-main").focus();
     await page.keyboard.press("ArrowLeft");
     await expect(counter).toHaveText("2 / 3");
     await page.keyboard.press("ArrowRight");
     await expect(counter).toHaveText("3 / 3");
+    await expect(page.getByTestId("gallery-fullscreen")).toHaveCount(0); // keyboard alone never opens the viewer
     // no "+n" tile at 3 images
     await expect(page.getByTestId("gallery-more")).toHaveCount(0);
     // ≤8 features never renders the expander for the seeded listing
@@ -588,5 +589,188 @@ test.describe("Listing detail — 390 mobile (4.17O.7 Stage D)", () => {
       await sql`delete from payments where idempotency_key like 'o7d:%'`;
       await sql.end();
     }
+  });
+});
+
+test.describe("Listing detail — fullscreen viewer (4.17O.8)", () => {
+  test("hero click opens fullscreen at the current image; close keeps the index and returns focus", async ({ page }, { project }) => {
+    test.skip(project.name === "mobile", "hero stage is md+");
+    const s = seed();
+    await page.goto(`/elan/${s.activeCar}`); // 3 seeded images
+    await page.getByTestId("gallery-next").click(); // browse to 2/3 first
+    await expect(page.getByTestId("gallery-hero-counter")).toHaveText("2 / 3");
+    await page.getByTestId("gallery-main").click();
+    const overlay = page.getByTestId("gallery-fullscreen");
+    await expect(overlay).toBeVisible();
+    await expect(overlay).toContainText("2 / 3"); // opens at the CURRENT image
+    await page.getByTestId("gallery-fullscreen-close").click();
+    await expect(overlay).toHaveCount(0);
+    await expect(page.getByTestId("gallery-hero-counter")).toHaveText("2 / 3"); // index untouched by open/close
+    await expect(page.getByTestId("gallery-main")).toBeFocused(); // focus returns to the trigger
+  });
+
+  test("ONE thumbnail click opens fullscreen directly at that image; close syncs the gallery", async ({ page, context }, { project }) => {
+    test.skip(project.name === "mobile", "thumbnail rail is md+");
+    const { userId } = await loginAs(context, testPhone(project.name, 56));
+    const fixture = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 9 });
+    await context.clearCookies();
+    await page.goto(`/elan/${fixture.publicId}`);
+    await page.getByTestId("gallery-thumb-3").click(); // ONE click — no hero detour
+    const overlay = page.getByTestId("gallery-fullscreen");
+    await expect(overlay).toBeVisible();
+    await expect(overlay).toContainText("4 / 9"); // directly at that exact image
+    // navigate inside the viewer, then close via the X button
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowRight");
+    await expect(overlay).toContainText("6 / 9");
+    await page.getByTestId("gallery-fullscreen-close").click();
+    await expect(overlay).toHaveCount(0);
+    await expect(page.getByTestId("gallery-hero-counter")).toHaveText("6 / 9"); // gallery follows the viewer
+    await expect(page.getByTestId("gallery-thumb-3")).toBeFocused(); // focus returns to the triggering thumbnail
+  });
+
+  test("fullscreen navigation is sequential with disabled boundaries and no wrap", async ({ page }, { project }) => {
+    test.skip(project.name === "mobile", "arrow buttons are md+");
+    const s = seed();
+    await page.goto(`/elan/${s.activeCar}`);
+    await page.getByTestId("gallery-main").click();
+    const overlay = page.getByTestId("gallery-fullscreen");
+    await expect(overlay).toBeVisible();
+    const prev = overlay.getByRole("button", { name: "Əvvəlki şəkil" });
+    const next = overlay.getByRole("button", { name: "Növbəti şəkil" });
+    await expect(overlay).toContainText("1 / 3");
+    await expect(prev).toBeDisabled(); // first image
+    await page.keyboard.press("ArrowLeft"); // boundary keyboard no-op — no wrap to last
+    await expect(overlay).toContainText("1 / 3");
+    await next.click();
+    await expect(overlay).toContainText("2 / 3");
+    await next.click();
+    await expect(overlay).toContainText("3 / 3");
+    await expect(next).toBeDisabled(); // last image
+    await page.keyboard.press("ArrowRight"); // boundary keyboard no-op — no wrap to first
+    await expect(overlay).toContainText("3 / 3");
+    await prev.click();
+    await expect(overlay).toContainText("2 / 3");
+    await page.keyboard.press("Escape");
+    await expect(overlay).toHaveCount(0);
+    await expect(page.getByTestId("gallery-hero-counter")).toHaveText("2 / 3"); // Esc close-sync
+  });
+
+  test("body scroll is locked while the viewer is open and restored on close", async ({ page }, { project }) => {
+    const s = seed();
+    await page.goto(`/elan/${s.activeCar}`);
+    const before = await page.evaluate(() => document.body.style.overflow);
+    if (project.name === "mobile") await page.getByTestId("gallery-slide-0").click();
+    else await page.getByTestId("gallery-main").click();
+    await expect(page.getByTestId("gallery-fullscreen")).toBeVisible();
+    // the lock mechanism: body overflow hidden disables USER viewport
+    // scrolling (programmatic scrollTo always bypasses overflow, so
+    // the gesture check below uses a real wheel event)
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe("hidden");
+    if (project.name !== "mobile") {
+      await page.mouse.wheel(0, 400); // real user wheel gesture
+      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))); // two frames — scroll would have applied
+      expect(await page.evaluate(() => window.scrollY)).toBe(0); // page did not move
+    }
+    // close via both pathways across tiers: X on mobile, Esc elsewhere
+    if (project.name === "mobile") await page.getByTestId("gallery-fullscreen-close").click();
+    else await page.keyboard.press("Escape");
+    await expect(page.getByTestId("gallery-fullscreen")).toHaveCount(0);
+    expect(await page.evaluate(() => document.body.style.overflow)).toBe(before); // exact previous value restored
+    if (project.name !== "mobile") {
+      await page.mouse.wheel(0, 400);
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0); // page scrolls again
+    }
+  });
+
+  test("fullscreen presents the complete photo with explicit contain geometry", async ({ page }, { project }) => {
+    test.skip(project.name !== "desktop", "geometry scenario; one project");
+    const s = seed();
+    // serve a deterministic tall PORTRAIT photo for every gallery image
+    await page.route("**/api/dev-storage/**", (route) =>
+      route.fulfill({
+        contentType: "image/svg+xml",
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="2400"><rect width="800" height="2400" fill="#22304a"/></svg>',
+      }),
+    );
+    await page.goto(`/elan/${s.activeCar}`);
+    // sealed O.7 normal hero stays cover-cropped
+    const hero = page.getByTestId("gallery-main").locator("img");
+    expect(await hero.evaluate((el) => getComputedStyle(el).objectFit)).toBe("cover");
+    await page.getByTestId("gallery-main").click();
+    const overlay = page.getByTestId("gallery-fullscreen");
+    await expect(overlay).toBeVisible();
+    const img = overlay.locator("img");
+    await expect(img).toBeVisible();
+    expect(await img.evaluate((el) => getComputedStyle(el).objectFit)).toBe("contain");
+    const viewport = page.viewportSize()!;
+    const box = (await img.boundingBox())!;
+    expect(box.height).toBeLessThanOrEqual(viewport.height * 0.86 + 1); // explicit viewport-safe max height
+    expect(box.height).toBeGreaterThan(viewport.height * 0.5); // genuinely constrained, not collapsed
+    expect(box.width / box.height).toBeCloseTo(800 / 2400, 1); // aspect preserved — the whole photo, no crop
+  });
+
+  test("a one-image listing opens the viewer with close only — no misleading navigation", async ({ page, context }, { project }) => {
+    test.skip(project.name === "mobile", "hero entry is md+");
+    const { userId } = await loginAs(context, testPhone(project.name, 57));
+    const fixture = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 1 });
+    await context.clearCookies();
+    await page.goto(`/elan/${fixture.publicId}`);
+    await expect(page.getByTestId("gallery-hero-counter")).toHaveCount(0); // single image: no counter (O.7 contract)
+    await page.getByTestId("gallery-main").click();
+    const overlay = page.getByTestId("gallery-fullscreen");
+    await expect(overlay).toBeVisible();
+    await expect(overlay.getByRole("button", { name: "Əvvəlki şəkil" })).toHaveCount(0);
+    await expect(overlay.getByRole("button", { name: "Növbəti şəkil" })).toHaveCount(0);
+    await page.getByTestId("gallery-fullscreen-close").click();
+    await expect(overlay).toHaveCount(0);
+  });
+
+  test("SOLD and EXPIRED open fullscreen with only their one exposed image", async ({ page }, { project }) => {
+    test.skip(project.name !== "desktop", "single-source scenario; one project");
+    const s = seed();
+    for (const id of [s.sold, s.expired]) {
+      await page.goto(`/elan/${id}`);
+      await page.getByTestId("gallery-main").click();
+      const overlay = page.getByTestId("gallery-fullscreen");
+      await expect(overlay).toBeVisible();
+      await expect(overlay.getByRole("button", { name: "Əvvəlki şəkil" })).toHaveCount(0); // no navigation at all
+      await expect(overlay.getByRole("button", { name: "Növbəti şəkil" })).toHaveCount(0);
+      expect(await overlay.locator("img, [role=img]").count()).toBe(1); // ONLY the exposed primary image
+      await page.keyboard.press("ArrowRight"); // no hidden extra image is reachable
+      expect(await overlay.locator("img, [role=img]").count()).toBe(1);
+      await page.keyboard.press("Escape");
+      await expect(overlay).toHaveCount(0);
+    }
+  });
+
+  test("mobile fullscreen swipe steps the shared index; close focuses a visible mobile element", async ({ page }, { project }) => {
+    test.skip(project.name !== "mobile", "mobile viewer");
+    const s = seed();
+    await page.goto(`/elan/${s.activeCar}`);
+    await page.getByTestId("gallery-slide-0").click();
+    const overlay = page.getByTestId("gallery-fullscreen");
+    await expect(overlay).toBeVisible();
+    await expect(overlay).toContainText("1 / 3");
+    const swipe = (from: number, to: number) =>
+      overlay.evaluate((el, [a, b]) => {
+        const touch = (x: number) => new Touch({ identifier: 1, target: el, clientX: x, clientY: 400 });
+        el.dispatchEvent(new TouchEvent("touchstart", { touches: [touch(a)], bubbles: true }));
+        el.dispatchEvent(new TouchEvent("touchend", { changedTouches: [touch(b)], bubbles: true }));
+      }, [from, to]);
+    await swipe(300, 150); // swipe left → next
+    await expect(overlay).toContainText("2 / 3");
+    await swipe(150, 300); // swipe right → previous
+    await expect(overlay).toContainText("1 / 3");
+    await swipe(150, 300); // first-image boundary: no wrap
+    await expect(overlay).toContainText("1 / 3");
+    await swipe(300, 150);
+    await expect(overlay).toContainText("2 / 3");
+    await page.getByTestId("gallery-fullscreen-close").click();
+    await expect(overlay).toHaveCount(0);
+    await expect(page.getByTestId("gallery-counter")).toHaveText("2 / 3"); // strip stays on the final viewer index
+    // focus lands on the triggering slide — a visible MOBILE element, never the hidden desktop stage
+    expect(await page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset?.testid ?? null)).toBe("gallery-slide-0");
+    await expectNoHorizontalOverflow(page);
   });
 });
