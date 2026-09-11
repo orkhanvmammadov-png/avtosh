@@ -1,0 +1,4 @@
+# Tokens
+Global R.2 tokens apply unchanged (colors, Fira Sans/Condensed, radii 12/10/8/6/999, focus ring 2px #147A4E, status tints, promo chip colors).
+Seller-flow-specific values (documented here only): content column 680/640/492/full · section-card active border 2px #147A4E · collapsed row h44 · control h40 desktop / h44 touch · sticky bar h48 + safe-area + ~72px content offset · photo tile 4:3 r8 · ƏSAS chip #147A4E/white 7.5–8.5/600 · AUDİT chip #FBEED8/#9A5B06 · autosave chip 11/500 muted. No new palette colors.
+Accessibility: labels bound to inputs; validation announced inline (aria-live polite); progress exposed as "n/7"; toggles = real buttons with aria-pressed; promo cards = checkbox semantics; photo reorder keyboard alternative (move up/down actions) required; targets ≥44px; selection never color-only (✓ marks).
