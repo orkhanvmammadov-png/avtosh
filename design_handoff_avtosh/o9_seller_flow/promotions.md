@@ -1,0 +1,6 @@
+# Promotion module (optional, review step)
+Products: PREMIUM (navy/gold chip — homepage exposure per existing AVTOSH behavior) and BOOST (green tint chip + zap — placement near top of relevant Search per existing rules; never "always #1"). Separate products; both selectable simultaneously; NO combined package invented; neither preselected.
+Cards: white r10 border #E3E0D8 p14; selected = 2px #147A4E border + green ✓ checkbox; duration chips (conceptually 1/3/7 gün) with price per chip — ALL package data (durations, prices, availability) backend-provided; inactive packages not rendered as purchasable; every price in the design source is demo-labelled.
+Copy (pre-activation): "Seçiminiz elan aktiv olduqdan sonra tətbiq edilə bilər." Never "Aktivdir / Başladı / Premium edildi / Boost edildi" before real activation.
+No-promotion path: "Təşviqsiz davam et" — always visible, equal ease, no dark patterns (no shaming, urgency, or fake scarcity).
+ORCHESTRATION — AUDIT DEPENDENT: design captures seller intent only. It does not define persistence, payment-intent timing, or any combined listing-fee+promo checkout (explicitly not designed). Claude Code must audit the payment/promotion architecture; activation only after listing = ACTIVE.

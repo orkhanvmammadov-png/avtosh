@@ -1,0 +1,11 @@
+# Before → After (current wizard → 1C AXIN)
+- Quick Start: 5 equal steps → 30-second navy quick start (Category/Brand/Model/Year) that configures everything after.
+- Structure: paged wizard → one page of collapsing section cards (progressive disclosure, n/7 progress, summaries + Dəyiş).
+- Field grouping: implementation order → seller-logic order (identity → details → sale → photos → extras → contact → review); booleans demoted to light toggle chips.
+- Brand/Model: plain selects → typeahead with dependency reset.
+- Photos: late step, basic list → dedicated card with ƏSAS badge, drag reorder, per-tile states, min/max guidance.
+- Contact: NOT present before → dedicated ƏLAQƏ MƏLUMATLARI section (name + AZ-friendly phone, audit-gated second number).
+- Review: full-form reread → compact summary incl. contact, fee line, Dəyiş links.
+- Listing fee: buried in payment step → explicit Pulsuz / 2 AZN line on review, separate from promo.
+- Promotion: absent → optional Premium/Boost intent cards on review with post-ACTIVE activation copy.
+- Mobile: shrunk desktop → same section-card architecture with h44 controls, tel/numeric keyboards, sticky actions.

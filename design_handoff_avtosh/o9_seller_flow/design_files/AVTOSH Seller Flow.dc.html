@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/modernist-cf7ae464-5c45-401c-ae72-b0749af952b1/styles.css">
+<script src="_ds/modernist-cf7ae464-5c45-401c-ae72-b0749af952b1/_ds_bundle.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800&family=Fira+Sans+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E7E2;font-family:'Fira Sans',system-ui,sans-serif;color:#1B1E24}
+a{color:#147A4E}a:hover{color:#0F6440}
+.turn{padding:40px 44px 32px}
+.opt{scroll-margin-top:16px;margin-bottom:48px}
+.oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.opt:target .oid{background:#2a78d6;color:#fff}
+.olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.6);margin-bottom:12px}
+.frame{background:#F5F4F0;border:1px solid rgba(0,0,0,.09);box-shadow:0 1px 3px rgba(20,26,34,.06)}
+.cap{font:600 10.5px ui-monospace,Menlo,monospace;letter-spacing:.06em;color:rgba(0,0,0,.45);margin:16px 0 6px;text-transform:uppercase}
+.row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.wcard{background:#fff;border:1px solid #E3E0D8;border-radius:12px}
+.lb{font:500 11.5px 'Fira Sans';color:#565B63;margin-bottom:5px;display:block}
+.ct{height:40px;border:1px solid #C6C2B6;border-radius:6px;background:#fff;display:flex;align-items:center;padding:0 12px;font:400 13px 'Fira Sans';box-sizing:border-box}
+.mut{color:#8A8F98}
+.vv{font-weight:500;color:#1B1E24}
+.chev{margin-left:auto;color:#8A8F98;font-size:11px}
+.tg{height:36px;border:1px solid #C6C2B6;border-radius:6px;background:#fff;display:inline-flex;align-items:center;gap:6px;padding:0 12px;font:500 12.5px 'Fira Sans';color:#3d4148;cursor:pointer}
+.tgon{background:#E7F2EC;border-color:#147A4E;color:#0F6440;font-weight:600}
+.btnP{background:#147A4E;color:#fff;font:600 13.5px 'Fira Sans';padding:11px 24px;border-radius:6px;text-align:center;cursor:pointer}
+.btnS{border:1px solid #C6C2B6;background:#fff;color:#1B1E24;font:600 13px 'Fira Sans';padding:10px 18px;border-radius:6px;cursor:pointer}
+.save{display:inline-flex;gap:6px;align-items:center;font:500 11px 'Fira Sans';color:#8A8F98}
+.err{border-color:#B3261E}
+.errt{font:400 11px 'Fira Sans';color:#B3261E;margin-top:4px}
+.ptile{aspect-ratio:4/3;background:#EDEBE4;border:1px solid #E3E0D8;border-radius:8px;position:relative}
+.pcard{border:1px solid #E3E0D8;border-radius:10px;padding:14px;background:#fff}
+.pcOn{border:2px solid #147A4E;padding:13px}
+.dchip{border:1px solid #C6C2B6;border-radius:6px;padding:5px 10px;font:500 11.5px 'Fira Sans';color:#3d4148}
+.dchipOn{background:#141A22;color:#fff;border-color:#141A22;font-weight:600}
+.bPrem{background:#141A22;color:#D9B45B;font:600 9px 'Fira Sans';letter-spacing:.06em;padding:3px 7px;border-radius:5px}
+.bBoost{background:#E7F2EC;color:#0F6440;font:600 9px 'Fira Sans';letter-spacing:.04em;padding:3px 7px;border-radius:5px;display:inline-flex;gap:4px;align-items:center}
+.note{background:#fff;border:1px solid rgba(0,0,0,.09);padding:16px 22px;font:400 12px/1.6 'Fira Sans';color:#3d4148;display:grid;grid-template-columns:repeat(4,1fr);gap:8px 28px}
+.stp{display:flex;gap:9px;align-items:center;font:500 12.5px 'Fira Sans';color:#8A8F98;padding:7px 0}
+.stN{width:22px;height:22px;border-radius:50%;border:1.5px solid #C6C2B6;display:inline-flex;align-items:center;justify-content:center;font:600 11px 'Fira Sans';flex:none}
+.stDone .stN{background:#147A4E;border-color:#147A4E;color:#fff}
+.stCur{color:#141A22;font-weight:600}
+.stCur .stN{border-color:#141A22;color:#141A22}
+.sec2{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border:1px solid #E3E0D8;border-radius:10px;background:#fff;font:600 13px 'Fira Sans'}
+.ok{color:#147A4E;font-weight:700}
+</style>
+</helmet>
+<section class="turn" id="t2">
+<div class="opt" id="2a">
+<div class="olabel"><a class="oid" href="#2a">2a</a><b style="color:#111">O.9.2R — AXIN RESPONSIVE REFINEMENT</b> · owner-selected 1C, restarted to add the missing ƏLAQƏ MƏLUMATLARI section · authoritative refinement — <a href="#1c">1c</a> below is exploration history</div>
+<div style="max-width:1180px;background:#fff;border:1px solid rgba(0,0,0,.1);padding:14px 20px;margin-bottom:20px;font:12.5px/1.55 system-ui,sans-serif;color:#333">
+  <b>Final flow:</b> Quick Start (Kateqoriya·Marka·Model·İl — unchanged, contact NOT here) → Detallar → Satış məlumatı (+vəziyyət) → Şəkillər → Əlavə məlumat (təchizat/təsvir) → <b>ƏLAQƏ MƏLUMATLARI</b> → Baxış (contact summary + fee + optional Premium/Boost) → Dərc. Login phone ≠ listing contact phone — the section asks "Bu elanda alıcılar sizinlə necə əlaqə saxlasın?"; editing it never touches auth. Second number is a <b style="color:#9A5B06">TECHNICAL AUDIT REQUIRED</b> proposal — flow is complete with one number.
+</div>
+<div class="cap" style="margin-top:0">1440 — page architecture with ƏLAQƏ MƏLUMATLARI active (prefilled state A)</div>
+<div class="frame" style="width:1240px">
+  <div style="display:flex;justify-content:space-between;align-items:center;background:#141A22;color:#fff;padding:12px 36px">
+    <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:18px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 16px 'Fira Sans'">AVTOSH<span style="font:700 10px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+    <span style="font:500 12px 'Fira Sans';color:#A7ADB8">Yeni elan · Qaralama avtomatik saxlanılır</span>
+  </div>
+  <div style="max-width:680px;margin:0 auto;padding:20px 0 26px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:12px"><span style="font:700 14px 'Fira Sans'">BMW 530e, 2023 · Bakı</span><span class="save">✓ Saxlanıldı · 5/7 tamam</span></div>
+    <div style="display:grid;gap:8px">
+      <div class="sec2"><span><span class="ok">✓</span> Nəqliyyat</span><span style="font:600 12px 'Fira Sans';color:#147A4E">Dəyiş</span></div>
+      <div class="sec2"><span><span class="ok">✓</span> Detallar <span class="mut" style="font:400 11px 'Fira Sans'">Sedan · 2.0 · Hibrid · AT</span></span><span style="font:600 12px 'Fira Sans';color:#147A4E">Dəyiş</span></div>
+      <div class="sec2"><span><span class="ok">✓</span> Satış məlumatı <span class="mut" style="font:400 11px 'Fira Sans'">64 500 AZN · Barter</span></span><span style="font:600 12px 'Fira Sans';color:#147A4E">Dəyiş</span></div>
+      <div class="sec2"><span><span class="ok">✓</span> Şəkillər <span class="mut" style="font:400 11px 'Fira Sans'">5 şəkil · əsas: ön</span></span><span style="font:600 12px 'Fira Sans';color:#147A4E">Dəyiş</span></div>
+      <div class="sec2"><span><span class="ok">✓</span> Əlavə məlumat <span class="mut" style="font:400 11px 'Fira Sans'">6 təchizat · təsvir</span></span><span style="font:600 12px 'Fira Sans';color:#147A4E">Dəyiş</span></div>
+      <div class="wcard" style="padding:16px 18px;border:2px solid #147A4E">
+        <div style="font:700 13.5px 'Fira Sans'">Əlaqə məlumatları <span class="mut" style="font:400 11px 'Fira Sans'">· indiki bölmə</span></div>
+        <div style="font:400 11.5px/1.5 'Fira Sans';color:#565B63;margin:4px 0 12px">Bu elanda alıcılar sizinlə necə əlaqə saxlasın? Bu məlumat alıcıların sizinlə əlaqə saxlaması üçün istifadə olunacaq. Giriş nömrənizə təsir etmir.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px 13px">
+          <div><span class="lb">Satıcının adı <span class="mut">· elanda görünür</span></span><div class="ct"><span class="vv">Orxan Məmmədov</span></div><div style="font:400 10px 'Fira Sans';color:#8A8F98;margin-top:3px">profilinizdən gətirilib — dəyişə bilərsiniz</div></div>
+          <div><span class="lb">Əlaqə nömrəsi</span><div class="ct"><span style="font:400 12.5px 'Fira Sans';color:#565B63;background:#F5F4F0;margin:0 8px 0 -12px;padding:11px 10px;border-right:1px solid #E3E0D8;border-radius:6px 0 0 6px">+994</span><span class="vv">10 218 41 91</span></div><div style="font:400 10px 'Fira Sans';color:#8A8F98;margin-top:3px">yerli formatda yazın — 010 218 41 91</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:11px">
+          <span class="tg" style="height:34px;font-size:12px;color:#147A4E;border-style:dashed">+ Digər nömrə əlavə et</span>
+          <span style="background:#FBEED8;color:#9A5B06;font:600 9.5px 'Fira Sans';letter-spacing:.04em;padding:3px 8px;border-radius:4px">TEXNİKİ AUDİT TƏLƏB OLUNUR</span>
+          <span style="font:400 10px 'Fira Sans';color:#8A8F98">mövcud kontrakt yalnız bir nömrəni təsdiqləyənədək əsas axın tək nömrə ilə tamdır</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #EDEBE4;margin-top:14px;padding-top:12px">
+          <span class="save">✓ Saxlanıldı</span><span class="btnP" style="padding:9px 20px;font-size:12.5px">Bölməni tamamla</span>
+        </div>
+      </div>
+      <div class="sec2" style="opacity:.55"><span>○ Baxış və dərc</span><span></span></div>
+    </div>
+  </div>
+</div>
+<div class="cap">Contact states — B missing name · C missing phone (blocks section) · D invalid number · WhatsApp note</div>
+<div class="row">
+<div class="wcard" style="width:280px;padding:14px 16px">
+  <span class="lb">Satıcının adı</span><div class="ct"><span class="mut">Ad daxil edin</span></div>
+  <div style="font:400 10px 'Fira Sans';color:#8A8F98;margin-top:4px">B — placeholder boz, prefill tünd: heç vaxt qarışmır</div>
+</div>
+<div class="wcard" style="width:300px;padding:14px 16px">
+  <span class="lb">Əlaqə nömrəsi</span><div class="ct err"><span class="mut">10 ___ __ __</span></div>
+  <div class="errt">Əlaqə nömrəsi mütləqdir — bölmə tamamlana bilməz</div>
+</div>
+<div class="wcard" style="width:300px;padding:14px 16px">
+  <span class="lb">Əlaqə nömrəsi</span><div class="ct err"><span class="vv">10 21</span></div>
+  <div class="errt">Nömrə natamamdır — Azərbaycan nömrəsi 9 rəqəmdir</div>
+  <div style="font:400 10px 'Fira Sans';color:#8A8F98;margin-top:4px">sahə tərk edilən anda yoxlanır, modal yoxdur</div>
+</div>
+<div class="wcard" style="width:300px;padding:14px 16px">
+  <div style="font:600 12px 'Fira Sans';margin-bottom:5px">WhatsApp</div>
+  <div style="font:400 11px/1.5 'Fira Sans';color:#565B63">Ayrıca sahə yoxdur — mövcud kontrakt üzrə WhatsApp əlaqəsi bu nömrədən istifadə edir. Yeni hesab/istifadəçi adı sahəsi yaradılmır.</div>
+</div>
+</div>
+<div class="cap">1440 — Baxış with contact summary · 390 — Əlaqə (keyboard open) · 390 — Baxış</div>
+<div class="row">
+<div class="wcard" style="width:620px;padding:16px 18px">
+  <div style="font:700 13.5px 'Fira Sans';margin-bottom:10px">Baxış və dərc</div>
+  <div style="display:flex;gap:12px;border:1px solid #E3E0D8;border-radius:10px;padding:9px 11px;align-items:center">
+    <div style="width:84px;aspect-ratio:4/3;background:#EDEBE4;border-radius:6px;flex:none"></div>
+    <div style="flex:1"><div style="font:700 14px 'Fira Sans Condensed'">64 500 <span style="font:600 9px 'Fira Sans';color:#565B63">AZN</span></div><div style="font:600 12px 'Fira Sans'">BMW 530e, 2023 · Bakı · 5 şəkil</div></div>
+    <span style="font:600 11.5px 'Fira Sans';color:#147A4E">Dəyiş</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;border:1px solid #E3E0D8;border-radius:10px;padding:10px 12px;margin-top:8px;align-items:center">
+    <div><div style="font:600 10.5px 'Fira Sans';letter-spacing:.05em;color:#8A8F98">ƏLAQƏ</div><div style="font:600 12.5px 'Fira Sans';margin-top:2px">Orxan Məmmədov</div><div style="font:500 12px 'Fira Sans';color:#565B63">010 218 41 91</div></div>
+    <span style="font:600 11.5px 'Fira Sans';color:#147A4E">Dəyiş</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;background:#E7F2EC;border-radius:8px;padding:9px 11px;margin-top:8px"><span style="font:600 12px 'Fira Sans';color:#0F6440">Elanın yerləşdirilməsi: Pulsuz</span><span style="font:400 10.5px 'Fira Sans';color:#0F6440">3 pulsuz elandan 2-cisi</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px">
+    <div class="pcard"><div style="display:flex;justify-content:space-between"><span class="bPrem">PREMIUM</span><span style="width:16px;height:16px;border:1.5px solid #C6C2B6;border-radius:4px"></span></div><div style="display:flex;gap:5px;margin-top:8px"><span class="dchip">1 gün</span><span class="dchip">3 gün</span><span class="dchip">7 gün</span></div></div>
+    <div class="pcard"><div style="display:flex;justify-content:space-between"><span class="bBoost">BOOST</span><span style="width:16px;height:16px;border:1.5px solid #C6C2B6;border-radius:4px"></span></div><div style="display:flex;gap:5px;margin-top:8px"><span class="dchip">1 gün</span><span class="dchip">3 gün</span><span class="dchip">7 gün</span></div></div>
+  </div>
+  <div style="font:400 10px/1.5 'Fira Sans';color:#8A8F98;margin-top:7px">Təşviq istəyə bağlıdır, əlaqə məlumatından və yerləşdirmə haqqından ayrıdır; qiymətlər backend-dən; ödəniş yalnız elan AKTİV olandan sonra.</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><span style="font:600 12px 'Fira Sans';color:#8A8F98">Təşviqsiz davam et</span><span class="btnP">Elanı dərc et</span></div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="background:#141A22;color:#fff;padding:10px 16px;display:flex;justify-content:space-between"><span style="font:500 12px 'Fira Sans';color:#A7ADB8">✕</span><span style="font:600 13px 'Fira Sans'">Yeni elan · 6/7</span><span class="save" style="color:#7E8794">✓</span></div>
+  <div style="padding:12px 16px">
+    <div style="font:700 13px 'Fira Sans'">Əlaqə məlumatları</div>
+    <div style="font:400 11px/1.5 'Fira Sans';color:#565B63;margin:4px 0 10px">Alıcıların sizinlə əlaqəsi üçün. Giriş nömrənizə təsir etmir.</div>
+    <div style="display:grid;gap:10px">
+      <div><span class="lb">Satıcının adı</span><div class="ct" style="height:44px"><span class="vv">Orxan Məmmədov</span></div></div>
+      <div><span class="lb">Əlaqə nömrəsi</span><div class="ct" style="height:44px;border-color:#147A4E;outline:2px solid rgba(20,122,78,.25)"><span style="font:400 12.5px 'Fira Sans';color:#565B63;margin-right:8px">+994</span><span class="vv">10 218 4|</span></div><div style="font:400 10px 'Fira Sans';color:#8A8F98;margin-top:3px">rəqəm klaviaturası (inputmode="tel") · yerli format</div></div>
+      <span class="tg" style="height:44px;font-size:12px;color:#147A4E;border-style:dashed;justify-content:center">+ Digər nömrə əlavə et <span style="background:#FBEED8;color:#9A5B06;font:600 8px 'Fira Sans';padding:2px 5px;border-radius:3px;margin-left:6px">AUDİT</span></span>
+    </div>
+  </div>
+  <div style="background:#EDEBE4;text-align:center;font:500 10px 'Fira Sans';color:#8A8F98;padding:6px">⌨ klaviatura — sticky düymə klaviaturanın üstündə qalır</div>
+  <div style="background:#fff;border-top:1px solid #E3E0D8;padding:10px 14px"><span class="btnP" style="display:block;padding:13px">Bölməni tamamla</span></div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="padding:12px 16px 12px">
+    <div style="font:600 13px 'Fira Sans';margin-bottom:8px">Baxış və dərc · 7/7</div>
+    <div style="display:flex;gap:9px;border:1px solid #E3E0D8;border-radius:10px;padding:8px 10px;background:#fff;align-items:center">
+      <div style="width:64px;aspect-ratio:4/3;background:#EDEBE4;border-radius:5px;flex:none"></div>
+      <div style="flex:1"><div style="font:700 13px 'Fira Sans Condensed'">64 500 AZN</div><div style="font:600 11px 'Fira Sans'">BMW 530e, 2023</div></div>
+      <span style="font:600 10.5px 'Fira Sans';color:#147A4E">Dəyiş</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;border:1px solid #E3E0D8;border-radius:10px;padding:9px 11px;margin-top:7px;background:#fff;align-items:center">
+      <div><div style="font:600 9.5px 'Fira Sans';letter-spacing:.05em;color:#8A8F98">ƏLAQƏ</div><div style="font:600 12px 'Fira Sans';margin-top:2px">Orxan Məmmədov</div><div style="font:500 11.5px 'Fira Sans';color:#565B63">010 218 41 91</div></div>
+      <span style="font:600 10.5px 'Fira Sans';color:#147A4E">Dəyiş</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;background:#FBEED8;border-radius:8px;padding:8px 10px;margin-top:7px"><span style="font:600 11.5px 'Fira Sans';color:#9A5B06">Yerləşdirmə: 2 AZN</span><span style="font:400 9.5px 'Fira Sans';color:#9A5B06">4-cü elan · təşviqdən ayrı</span></div>
+    <div class="pcard" style="margin-top:8px"><div style="display:flex;justify-content:space-between;align-items:center"><span><span class="bPrem">PREMIUM</span> <span class="bBoost" style="margin-left:4px">BOOST</span></span><span style="font:600 11px 'Fira Sans';color:#147A4E">Bax ▾</span></div><div style="font:400 10px 'Fira Sans';color:#565B63;margin-top:5px">İstəyə bağlı · AKTİV olandan sonra ödənilir</div></div>
+  </div>
+  <div style="background:#fff;border-top:1px solid #E3E0D8;padding:10px 14px;display:grid;gap:7px"><span class="btnP" style="padding:13px">Elanı dərc et — 2 AZN</span><span style="font:600 12px 'Fira Sans';text-align:center;color:#8A8F98">Təşviqsiz davam et</span></div>
+</div>
+</div>
+<div class="cap">1024 · 768 — contact section treatment</div>
+<div class="row">
+<div class="frame" style="width:700px">
+  <div style="font:500 10px 'Fira Sans';color:#8A8F98;padding:8px 12px 0">1024 — content max 640 centered; name + phone side-by-side (2×1fr, gap 13)</div>
+  <div style="max-width:640px;margin:0 auto;padding:10px 0 16px">
+    <div class="wcard" style="padding:14px 16px;border:2px solid #147A4E">
+      <div style="font:700 13px 'Fira Sans';margin-bottom:9px">Əlaqə məlumatları</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+        <div><span class="lb">Satıcının adı</span><div class="ct"><span class="vv">Orxan Məmmədov</span></div></div>
+        <div><span class="lb">Əlaqə nömrəsi</span><div class="ct"><span style="font:400 12px 'Fira Sans';color:#565B63;margin-right:7px">+994</span><span class="vv">10 218 41 91</span></div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:11px"><span class="save">✓ Saxlanıldı</span><span class="btnP" style="padding:8px 18px;font-size:12px">Bölməni tamamla</span></div>
+    </div>
+  </div>
+</div>
+<div class="frame" style="width:540px">
+  <div style="font:500 10px 'Fira Sans';color:#8A8F98;padding:8px 12px 0">768 — fields stack (1 column, gap 10); section cards full-width, gutter 24; sticky action per AXIN</div>
+  <div style="max-width:492px;margin:0 auto;padding:10px 0 16px">
+    <div class="wcard" style="padding:14px 16px;border:2px solid #147A4E">
+      <div style="font:700 13px 'Fira Sans';margin-bottom:9px">Əlaqə məlumatları</div>
+      <div style="display:grid;gap:10px">
+        <div><span class="lb">Satıcının adı</span><div class="ct" style="height:44px"><span class="vv">Orxan Məmmədov</span></div></div>
+        <div><span class="lb">Əlaqə nömrəsi</span><div class="ct" style="height:44px"><span style="font:400 12px 'Fira Sans';color:#565B63;margin-right:7px">+994</span><span class="vv">10 218 41 91</span></div></div>
+      </div>
+      <span class="btnP" style="display:block;margin-top:11px;padding:11px;text-align:center;font-size:12.5px">Bölməni tamamla</span>
+    </div>
+  </div>
+</div>
+</div>
+<div class="note" style="margin-top:14px">
+  <div><b style="color:#141A22">Section states.</b> Not started (○, 55% opacity) · Complete (✓ green, one-line summary + Dəyiş) · Needs attention (red dot + inline error inside the reopened card). Contact participates in the same n/7 progress and autosave chips.</div>
+  <div><b style="color:#141A22">Correction / edit / resubmit.</b> Existing listings open with contact prefilled from the listing (not the profile); editing contact never re-triggers new-listing fee; correction banner sits above the section list per approved O.9 rules.</div>
+  <div><b style="color:#141A22">Secondary number.</b> Dashed affordance + AUDİT chip only — hidden entirely if the audit finds single-number contract; primary flow never depends on it. No verified badges, seller types, Telegram, office hours.</div>
+  <div><b style="color:#141A22">Separation guarantees.</b> Contact = mandatory listing data (white card in main flow); fee = its own tinted line; Premium/Boost = optional cards below fee. Three never share a container. Promo pays/starts only after AKTİV.</div>
+</div>
+</div>
+</section>
+<section class="turn" id="t1">
+<div style="max-width:1180px;background:#fff;border:1px solid rgba(0,0,0,.1);padding:18px 24px;margin-bottom:28px;font:13px/1.55 system-ui,sans-serif;color:#333">
+  <div style="font-weight:700;font-size:14px;color:#111;margin-bottom:6px">O.9.1 — Seller listing creation + promotion upsell · three UX directions</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 28px;font-size:12.5px">
+    <div><b>Current-flow observations:</b> the 5-step wizard is safe but slow — every seller pays the full step cost regardless of experience; booleans (Kredit/Barter/vəziyyət) carry the same weight as Price; photos arrive late; promotion isn't offered in the journey at all.</div>
+    <div><b>Shared across all directions:</b> O.2/O.3/O.4 attribute contracts intact · CAR/MOTO conditional fields (moto omits Ban/Ötürücü/vəziyyət, gains Motosiklet növü) · Brand→Model reset on change · autosave chips ("Saxlanılır… / Saxlanıldı") · promo optional, never preselected, prices/durations backend-fed (values below are <b>demo-labelled</b>) · promotion activates only after the listing becomes AKTİV · listing fee (Pulsuz / 2 AZN) always separate from promo pricing.</div>
+  </div>
+  <div style="margin-top:8px;font-size:12.5px">Directions: <a class="oid" href="#1a">1a</a> ADDIM — guided wizard · <a class="oid" href="#1b">1b</a> CƏLD — fast single form · <a class="oid" href="#1c">1c</a> AXIN — hybrid smart flow. Comparison + recommendation at the <a class="oid" href="#cmp">bottom</a>.</div>
+</div>
+<div class="opt" id="1a">
+<div class="olabel"><a class="oid" href="#1a">1a</a><b style="color:#111">ADDIM — Guided Wizard</b> · 6 focused steps, one decision group per screen, left step rail; maximum clarity for first-time sellers</div>
+<div class="cap" style="margin-top:0">1440 — Step 1 · Nəqliyyat (start) — page architecture</div>
+<div class="frame" style="width:1240px">
+  <div style="display:flex;justify-content:space-between;align-items:center;background:#141A22;color:#fff;padding:12px 36px">
+    <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:18px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 16px 'Fira Sans'">AVTOSH<span style="font:700 10px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+    <span style="font:500 12px 'Fira Sans';color:#A7ADB8">Yeni elan · Qaralama avtomatik saxlanılır</span>
+  </div>
+  <div style="display:grid;grid-template-columns:230px 1fr;gap:28px;padding:24px 36px 28px">
+    <div>
+      <div class="stp stCur"><span class="stN">1</span>Nəqliyyat</div>
+      <div class="stp"><span class="stN">2</span>Detallar</div>
+      <div class="stp"><span class="stN">3</span>Satış məlumatı</div>
+      <div class="stp"><span class="stN">4</span>Şəkillər</div>
+      <div class="stp"><span class="stN">5</span>Əlavə məlumat</div>
+      <div class="stp"><span class="stN">6</span>Baxış və dərc</div>
+      <div style="font:400 10.5px/1.5 'Fira Sans';color:#8A8F98;margin-top:12px">Addım 1 / 6 · tamamlanan addımlar yaşıl işarələnir; rail-dən geri qayıtmaq olar.</div>
+    </div>
+    <div class="wcard" style="padding:20px 22px;max-width:640px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px"><span style="font:700 17px 'Fira Sans'">Nə satırsınız?</span><span class="save">✓ Saxlanıldı</span></div>
+      <span class="lb">Kateqoriya</span>
+      <div style="display:flex;gap:8px;margin-bottom:14px"><span class="tg tgon" style="height:40px">✓ Avtomobil</span><span class="tg" style="height:40px">Motosiklet</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 14px">
+        <div><span class="lb">Marka</span><div class="ct"><span class="vv">BMW</span><span class="chev">▾</span></div><div style="font:400 10.5px 'Fira Sans';color:#8A8F98;margin-top:3px">axtarışla seçim — yazdıqca süzülür</div></div>
+        <div><span class="lb">Model</span><div class="ct"><span class="vv">530e</span><span class="chev">▾</span></div></div>
+        <div><span class="lb">Buraxılış ili</span><div class="ct"><span class="vv">2023</span><span class="chev">▾</span></div></div>
+        <div><span class="lb">Şəhər</span><div class="ct"><span class="vv">Bakı</span><span class="chev">▾</span></div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #EDEBE4;margin-top:18px;padding-top:14px">
+        <span style="font:500 12.5px 'Fira Sans';color:#8A8F98">Çıx və qaralamada saxla</span>
+        <span class="btnP">Davam et →</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="cap">1440 — mid-flow (Step 2 · Detallar, inline error) · Step 4 · Şəkillər · Step 6 · Baxış + təşviq</div>
+<div class="row">
+<div class="wcard" style="width:560px;padding:18px 20px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px"><span style="font:700 15px 'Fira Sans'">Detallar <span class="mut" style="font:400 11px 'Fira Sans'">· Addım 2/6</span></span><span class="save"><span style="width:10px;height:10px;border:2px solid #C6C2B6;border-top-color:#147A4E;border-radius:50%"></span>Saxlanılır…</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px 13px">
+    <div><span class="lb">Ban növü</span><div class="ct"><span class="vv">Sedan</span><span class="chev">▾</span></div></div>
+    <div><span class="lb">Mühərrikin həcmi, sm³</span><div class="ct err"><span class="mut">Seçin</span><span class="chev">▾</span></div><div class="errt">Mühərrik həcmi seçilməlidir</div></div>
+    <div><span class="lb">Yanacaq növü</span><div class="ct"><span class="vv">Hibrid (plug-in)</span><span class="chev">▾</span></div></div>
+    <div><span class="lb">Sürətlər qutusu</span><div class="ct"><span class="vv">Avtomat (AT)</span><span class="chev">▾</span></div></div>
+    <div><span class="lb">Ötürücü</span><div class="ct"><span class="vv">Arxa</span><span class="chev">▾</span></div></div>
+    <div><span class="lb">Rəng</span><div class="ct"><span style="width:12px;height:12px;border-radius:50%;background:#1B1E24;border:1px solid rgba(0,0,0,.15);margin-right:7px"></span><span class="vv">Qara</span><span class="chev">▾</span></div></div>
+  </div>
+  <div style="font:400 10.5px/1.5 'Fira Sans';color:#8A8F98;margin-top:10px">Motosiklet seçilsəydi: Ban/Ötürücü əvəzinə "Motosiklet növü"; vəziyyət blokları yoxdur. Xəta sahə tərk edilən anda göstərilir — son addımda yox.</div>
+</div>
+<div class="wcard" style="width:560px;padding:18px 20px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px"><span style="font:700 15px 'Fira Sans'">Şəkillər <span class="mut" style="font:400 11px 'Fira Sans'">· Addım 4/6 · min 3, maks 20</span></span><span class="save">✓ Saxlanıldı</span></div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+    <div class="ptile" style="border:2px solid #147A4E"><span style="position:absolute;left:6px;top:6px;background:#147A4E;color:#fff;font:600 8.5px 'Fira Sans';padding:2px 6px;border-radius:4px">ƏSAS ŞƏKİL</span><span style="position:absolute;right:5px;top:5px;width:20px;height:20px;background:rgba(255,255,255,.9);border-radius:4px;display:flex;align-items:center;justify-content:center;font:600 11px 'Fira Sans';color:#B3261E">✕</span><span style="position:absolute;left:6px;bottom:5px;font:500 9px 'Fira Sans';color:#8A8F98">1 · ön</span></div>
+    <div class="ptile"><span style="position:absolute;left:6px;bottom:5px;font:500 9px 'Fira Sans';color:#8A8F98">2</span><span style="position:absolute;right:5px;top:5px;width:20px;height:20px;background:rgba(255,255,255,.9);border-radius:4px;display:flex;align-items:center;justify-content:center;font:600 11px 'Fira Sans';color:#B3261E">✕</span></div>
+    <div class="ptile" style="background:linear-gradient(100deg,#EDEBE4 40%,#F5F3EC 50%,#EDEBE4 60%)"><span style="position:absolute;left:6px;bottom:5px;font:500 9px 'Fira Sans';color:#8A8F98">yüklənir… 64%</span></div>
+    <div class="ptile" style="border:1.5px dashed #C6C2B6;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span style="font:600 18px 'Fira Sans';color:#147A4E">+</span><span style="font:500 10px 'Fira Sans';color:#8A8F98">Əlavə et</span></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-top:10px;font:400 11px 'Fira Sans';color:#8A8F98"><span>Sürüklə-yerdəyiş: birinci şəkil elanı təmsil edir</span><span style="color:#9A5B06">2 / 3 minimum — daha 1 şəkil lazımdır</span></div>
+  <div style="background:#F9E4E1;border-radius:6px;padding:8px 11px;font:400 11px 'Fira Sans';color:#B3261E;margin-top:8px">arxa.jpg yüklənmədi — yenidən cəhd edin ↻</div>
+</div>
+<div class="wcard" style="width:640px;padding:18px 20px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px"><span style="font:700 15px 'Fira Sans'">Baxış və dərc <span class="mut" style="font:400 11px 'Fira Sans'">· Addım 6/6</span></span><span class="save">✓ Saxlanıldı</span></div>
+  <div style="display:flex;gap:12px;border:1px solid #E3E0D8;border-radius:10px;padding:10px 12px;align-items:center">
+    <div style="width:96px;aspect-ratio:4/3;background:#EDEBE4;border-radius:6px;flex:none"></div>
+    <div style="flex:1"><div style="font:700 15px 'Fira Sans Condensed'">64 500 <span style="font:600 9.5px 'Fira Sans';color:#565B63">AZN</span></div><div style="font:600 12.5px 'Fira Sans'">BMW 530e, 2023</div><div style="font:400 11px 'Fira Sans';color:#565B63">21 000 km · Hibrid · Bakı · 5 şəkil</div></div>
+    <span style="font:600 12px 'Fira Sans';color:#147A4E;cursor:pointer">Dəyiş</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;background:#E7F2EC;border-radius:8px;padding:10px 12px;margin-top:10px">
+    <span style="font:600 12.5px 'Fira Sans';color:#0F6440">Elanın yerləşdirilməsi: Pulsuz</span><span style="font:400 11px 'Fira Sans';color:#0F6440">3 pulsuz elandan 2-cisi</span>
+  </div>
+  <div style="border-top:1px solid #EDEBE4;margin-top:14px;padding-top:12px">
+    <div style="font:700 13.5px 'Fira Sans'">Elanını daha çox alıcıya göstər <span style="font:400 11px 'Fira Sans';color:#8A8F98">· istəyə bağlı</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="pcard"><div style="display:flex;justify-content:space-between"><span class="bPrem">PREMIUM</span><span style="width:16px;height:16px;border:1.5px solid #C6C2B6;border-radius:4px"></span></div>
+        <div style="font:400 11.5px/1.5 'Fira Sans';color:#565B63;margin:8px 0 10px">Ana səhifədə Premium bölməsində görünür.</div>
+        <div style="display:flex;gap:6px"><span class="dchip">1 gün</span><span class="dchip">3 gün</span><span class="dchip">7 gün</span></div>
+        <div style="font:400 10px 'Fira Sans';color:#8A8F98;margin-top:7px">qiymətlər paket üzrə — backend (demo)</div>
+      </div>
+      <div class="pcard pcOn"><div style="display:flex;justify-content:space-between"><span class="bBoost"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"></path></svg>BOOST</span><span style="width:16px;height:16px;background:#147A4E;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font:700 11px 'Fira Sans'">✓</span></div>
+        <div style="font:400 11.5px/1.5 'Fira Sans';color:#565B63;margin:8px 0 10px">Uyğun axtarış nəticələrinin yuxarısında görünür.</div>
+        <div style="display:flex;gap:6px"><span class="dchip">1 gün</span><span class="dchip dchipOn">3 gün · 5 AZN*</span><span class="dchip">7 gün</span></div>
+        <div style="font:400 10px 'Fira Sans';color:#8A8F98;margin-top:7px">*demo qiymət · aktiv olmayan paket göstərilmir</div>
+      </div>
+    </div>
+    <div style="background:#FBEED8;border-radius:6px;padding:8px 11px;font:400 11px/1.5 'Fira Sans';color:#9A5B06;margin-top:10px">Təşviq elan moderasiyadan keçib AKTİV olduqdan sonra ödənilir və başlayır — indi yalnız seçim saxlanılır.</div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #EDEBE4;margin-top:14px;padding-top:12px">
+    <span style="font:600 12.5px 'Fira Sans';color:#8A8F98;cursor:pointer">Təşviqsiz davam et</span>
+    <span class="btnP">Elanı dərc et</span>
+  </div>
+</div>
+</div>
+<div class="cap">390 — start · şəkillər · baxış + təşviq (sticky Davam)</div>
+<div class="row">
+<div class="frame" style="width:390px">
+  <div style="background:#141A22;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center"><span style="font:500 12px 'Fira Sans';color:#A7ADB8">✕ Çıx</span><span style="font:600 13px 'Fira Sans'">Yeni elan</span><span class="save" style="color:#7E8794">✓</span></div>
+  <div style="padding:12px 16px 0"><div style="display:flex;gap:4px;margin-bottom:4px"><span style="flex:1;height:4px;background:#147A4E;border-radius:2px"></span><span style="flex:1;height:4px;background:#E3E0D8;border-radius:2px"></span><span style="flex:1;height:4px;background:#E3E0D8;border-radius:2px"></span><span style="flex:1;height:4px;background:#E3E0D8;border-radius:2px"></span><span style="flex:1;height:4px;background:#E3E0D8;border-radius:2px"></span><span style="flex:1;height:4px;background:#E3E0D8;border-radius:2px"></span></div><div style="font:500 11px 'Fira Sans';color:#8A8F98;margin-bottom:12px">Addım 1/6 · Nəqliyyat</div>
+    <span class="lb">Kateqoriya</span>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><span class="tg tgon" style="height:44px;justify-content:center">✓ Avtomobil</span><span class="tg" style="height:44px;justify-content:center">Motosiklet</span></div>
+    <div style="display:grid;gap:11px;padding-bottom:14px">
+      <div><span class="lb">Marka</span><div class="ct" style="height:44px"><span class="vv">BMW</span><span class="chev">▾</span></div></div>
+      <div><span class="lb">Model</span><div class="ct" style="height:44px"><span class="mut">Seçin</span><span class="chev">▾</span></div></div>
+      <div><span class="lb">Buraxılış ili</span><div class="ct" style="height:44px"><span class="mut">Seçin</span><span class="chev">▾</span></div></div>
+    </div>
+  </div>
+  <div style="background:#fff;border-top:1px solid #E3E0D8;padding:10px 14px;display:flex;gap:8px"><span class="btnS" style="flex:none">←</span><span class="btnP" style="flex:1;padding:13px">Davam et</span></div>
+  <div style="font:400 9.5px 'Fira Sans';color:#8A8F98;padding:6px 16px 10px;background:#fff">Sticky: 48px, safe-area; seçim overlay-ları bottom-sheet kimi açılır.</div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="padding:12px 16px 0"><div style="font:500 11px 'Fira Sans';color:#8A8F98;margin-bottom:10px">Addım 4/6 · Şəkillər · min 3</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">
+      <div class="ptile" style="border:2px solid #147A4E"><span style="position:absolute;left:4px;top:4px;background:#147A4E;color:#fff;font:600 7.5px 'Fira Sans';padding:2px 5px;border-radius:3px">ƏSAS</span></div>
+      <div class="ptile"><span style="position:absolute;left:5px;bottom:4px;font:500 8px 'Fira Sans';color:#8A8F98">2</span></div>
+      <div class="ptile"><span style="position:absolute;left:5px;bottom:4px;font:500 8px 'Fira Sans';color:#8A8F98">3</span></div>
+      <div class="ptile" style="border:1.5px dashed #C6C2B6;background:#fff;display:flex;align-items:center;justify-content:center"><span style="font:600 16px 'Fira Sans';color:#147A4E">+</span></div>
+    </div>
+    <div style="font:400 10.5px/1.5 'Fira Sans';color:#8A8F98;margin:8px 0 12px">Basılı tutub sürüklə — sıra dəyişir; birinci şəkil "Əsas" olur. Kameradan və qalereyadan çoxlu seçim.</div>
+  </div>
+  <div style="background:#fff;border-top:1px solid #E3E0D8;padding:10px 14px;display:flex;gap:8px"><span class="btnS" style="flex:none">←</span><span class="btnP" style="flex:1;padding:13px">Davam et (3/3 ✓)</span></div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="padding:12px 16px 12px"><div style="font:500 11px 'Fira Sans';color:#8A8F98;margin-bottom:10px">Addım 6/6 · Baxış və dərc</div>
+    <div style="display:flex;gap:10px;border:1px solid #E3E0D8;border-radius:10px;padding:9px 11px;background:#fff;align-items:center">
+      <div style="width:72px;aspect-ratio:4/3;background:#EDEBE4;border-radius:6px;flex:none"></div>
+      <div style="flex:1"><div style="font:700 14px 'Fira Sans Condensed'">64 500 AZN</div><div style="font:600 11.5px 'Fira Sans'">BMW 530e, 2023</div></div>
+      <span style="font:600 11px 'Fira Sans';color:#147A4E">Dəyiş</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;background:#FBEED8;border-radius:8px;padding:9px 11px;margin-top:8px"><span style="font:600 12px 'Fira Sans';color:#9A5B06">Yerləşdirmə haqqı: 2 AZN</span><span style="font:400 10px 'Fira Sans';color:#9A5B06">4-cü elan</span></div>
+    <div style="font:700 12.5px 'Fira Sans';margin:12px 0 8px">Elanını daha çox alıcıya göstər</div>
+    <div class="pcard" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center"><span class="bPrem">PREMIUM</span><span style="width:18px;height:18px;border:1.5px solid #C6C2B6;border-radius:4px"></span></div><div style="font:400 11px 'Fira Sans';color:#565B63;margin-top:6px">Ana səhifədə görünmə · 1/3/7 gün</div></div>
+    <div class="pcard"><div style="display:flex;justify-content:space-between;align-items:center"><span class="bBoost">BOOST</span><span style="width:18px;height:18px;border:1.5px solid #C6C2B6;border-radius:4px"></span></div><div style="font:400 11px 'Fira Sans';color:#565B63;margin-top:6px">Axtarışda yuxarı yerləşmə · 1/3/7 gün</div></div>
+    <div style="font:400 10px/1.5 'Fira Sans';color:#8A8F98;margin-top:8px">Təşviq AKTİV olandan sonra ödənilir. Keçmək sərbəstdir.</div>
+  </div>
+  <div style="background:#fff;border-top:1px solid #E3E0D8;padding:10px 14px;display:grid;gap:7px"><span class="btnP" style="padding:13px">Elanı dərc et</span><span style="font:600 12px 'Fira Sans';color:#8A8F98;text-align:center">Təşviqsiz davam et</span></div>
+</div>
+</div>
+<div class="note" style="margin-top:14px">
+  <div><b style="color:#141A22">Responsive.</b> 1024: rail 200px, card max 600. 768: rail collapses into the top progress bar (as at 390); card full-width. 390: segment progress + sticky Davam.</div>
+  <div><b style="color:#141A22">Promotion position.</b> Inside Step 6 review — one screen holds summary, fee, promo, submit; nothing after submit.</div>
+  <div><b style="color:#141A22">Speed assessment.</b> Steps: 6 · visible decisions per screen: 3–6 · slowest of the three but clearest for first-time sellers; mobile comfort high (short screens, one thumb).</div>
+  <div><b style="color:#141A22">Risks.</b> Experienced sellers pay full step cost; 6 taps of "Davam" overhead; closest to the current wizard → lowest implementation risk.</div>
+</div>
+</div>
+<!--B-->
+<div class="opt" id="1b">
+<div class="olabel"><a class="oid" href="#1b">1b</a><b style="color:#111">CƏLD — Fast Form</b> · one scrolling page, all sections visible, sticky checklist rail; minimum interactions for experienced sellers</div>
+<div class="cap" style="margin-top:0">1440 — single page with sticky summary rail (start + mid-flow in one architecture)</div>
+<div class="frame" style="width:1240px">
+  <div style="display:flex;justify-content:space-between;align-items:center;background:#141A22;color:#fff;padding:12px 36px">
+    <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:18px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 16px 'Fira Sans'">AVTOSH<span style="font:700 10px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+    <span style="font:500 12px 'Fira Sans';color:#A7ADB8">Yeni elan</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:24px;padding:22px 36px 26px">
+    <div class="wcard" style="padding:20px 22px">
+      <div style="font:700 14px 'Fira Sans';margin-bottom:10px">Nəqliyyat</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:11px 13px">
+        <div><span class="lb">Kateqoriya</span><div class="ct"><span class="vv">Avtomobil</span><span class="chev">▾</span></div></div>
+        <div><span class="lb">Marka</span><div class="ct" style="border-color:#147A4E;outline:2px solid rgba(20,122,78,.25)"><span class="vv">BM|</span></div></div>
+        <div><span class="lb">Model</span><div class="ct"><span class="mut">Marka seçin</span><span class="chev">▾</span></div></div>
+        <div><span class="lb">Buraxılış ili</span><div class="ct"><span class="mut">Seçin</span><span class="chev">▾</span></div></div>
+      </div>
+      <div style="font:400 10.5px 'Fira Sans';color:#8A8F98;margin:4px 0 0">Typeahead: "BM" → BMW; Tab növbəti sahəyə keçir — bütün form klaviatura ilə doldurula bilir. Marka dəyişəndə Model sıfırlanır.</div>
+      <div style="font:700 14px 'Fira Sans';margin:16px 0 10px;border-top:1px solid #EDEBE4;padding-top:14px">Detallar</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:11px 13px">
+        <div><span class="lb">Ban növü</span><div class="ct"><span class="vv">Sedan</span><span class="chev">▾</span></div></div>
+        <div><span class="lb">Mühərrik, sm³</span><div class="ct"><span class="vv">2 000</span><span class="chev">▾</span></div></div>
+        <div><span class="lb">Yanacaq</span><div class="ct"><span class="vv">Hibrid</span><span class="chev">▾</span></div></div>
+        <div><span class="lb">Sürətlər qutusu</span><div class="ct"><span class="vv">Avtomat (AT)</span><span class="chev">▾</span></div></div>
+        <div><span class="lb">Ötürücü</span><div class="ct"><span class="vv">Arxa</span><span class="chev">▾</span></div></div>
+        <div><span class="lb">Rəng</span><div class="ct"><span style="width:12px;height:12px;border-radius:50%;background:#1B1E24;border:1px solid rgba(0,0,0,.15);margin-right:7px"></span><span class="vv">Qara</span><span class="chev">▾</span></div></div>
+        <div><span class="lb">Yürüş, km</span><div class="ct"><span class="vv">21 000</span></div></div>
+        <div><span class="lb">Qiymət, AZN</span><div class="ct"><span class="vv" style="font-family:'Fira Sans Condensed';font-weight:600;font-size:14px">64 500</span></div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
+        <span class="lb" style="margin:0">Satış:</span>
+        <span class="tg">Kredit mümkündür</span><span class="tg tgon">✓ Barter</span>
+        <span class="lb" style="margin:0 0 0 14px">Vəziyyət:</span>
+        <span class="tg tgon">✓ Vuruğu yoxdur</span><span class="tg">Rənglənməyib</span>
+      </div>
+      <div style="font:700 14px 'Fira Sans';margin:16px 0 10px;border-top:1px solid #EDEBE4;padding-top:14px">Şəkillər <span class="mut" style="font:400 11px 'Fira Sans'">min 3 · maks 20 · birinci = əsas</span></div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">
+        <div class="ptile" style="border:2px solid #147A4E"><span style="position:absolute;left:5px;top:5px;background:#147A4E;color:#fff;font:600 7.5px 'Fira Sans';padding:2px 5px;border-radius:3px">ƏSAS</span></div>
+        <div class="ptile"></div><div class="ptile"></div>
+        <div class="ptile" style="border:1.5px dashed #C6C2B6;background:#fff;display:flex;align-items:center;justify-content:center"><span style="font:600 12px 'Fira Sans';color:#147A4E">+ sürüklə</span></div>
+      </div>
+      <div style="font:700 14px 'Fira Sans';margin:16px 0 8px;border-top:1px solid #EDEBE4;padding-top:14px">Əlavə məlumat <span class="mut" style="font:400 11px 'Fira Sans'">· istəyə bağlı</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="tg" style="height:32px;font-size:12px">Təchizat seç (6) ▾</span><span class="tg" style="height:32px;font-size:12px">Təsvir yaz ▾</span></div>
+    </div>
+    <div>
+      <div class="wcard" style="padding:16px;position:sticky;top:14px">
+        <div style="font:700 13px 'Fira Sans';margin-bottom:8px">Elanın vəziyyəti</div>
+        <div style="display:grid;gap:5px;font:500 12px 'Fira Sans'">
+          <span class="ok">✓ Nəqliyyat</span><span class="ok">✓ Detallar</span><span class="ok">✓ Satış məlumatı</span><span style="color:#9A5B06">● Şəkillər — yüklənir</span><span class="mut">○ Əlavə (istəyə bağlı)</span>
+        </div>
+        <div style="border-top:1px solid #EDEBE4;margin:12px 0;padding-top:10px;display:flex;justify-content:space-between"><span style="font:500 12px 'Fira Sans';color:#565B63">Yerləşdirmə</span><span style="font:600 12px 'Fira Sans';color:#0F6440">Pulsuz</span></div>
+        <span class="btnP" style="display:block">Baxışa keç</span>
+        <div class="save" style="margin-top:8px;justify-content:center;display:flex">✓ Saxlanıldı 14:32</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="cap">1440 — review panel + promo before submit · 390 — form (jump chips) · 390 — baxış + təşviq</div>
+<div class="row">
+<div class="wcard" style="width:640px;padding:18px 20px">
+  <div style="font:700 15px 'Fira Sans';margin-bottom:10px">Baxış <span class="mut" style="font:400 11px 'Fira Sans'">— yoxlama paneli, ayrıca səhifə deyil</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;font:400 12px 'Fira Sans';color:#3d4148">
+    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #EDEBE4;padding:5px 0"><span class="mut">Nəqliyyat</span><b>BMW 530e, 2023</b></div>
+    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #EDEBE4;padding:5px 0"><span class="mut">Qiymət</span><b>64 500 AZN</b></div>
+    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #EDEBE4;padding:5px 0"><span class="mut">Yürüş</span><b>21 000 km</b></div>
+    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #EDEBE4;padding:5px 0"><span class="mut">Şəhər</span><b>Bakı</b></div>
+    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #EDEBE4;padding:5px 0"><span class="mut">Şəkillər</span><b>5 ✓</b></div>
+    <div style="display:flex;justify-content:space-between;border-bottom:1px solid #EDEBE4;padding:5px 0"><span class="mut">Vəziyyət</span><b>Vuruğu yoxdur</b></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+    <div class="pcard"><div style="display:flex;justify-content:space-between"><span class="bPrem">PREMIUM</span><span style="width:16px;height:16px;border:1.5px solid #C6C2B6;border-radius:4px"></span></div><div style="font:400 11px 'Fira Sans';color:#565B63;margin-top:6px">Ana səhifədə görünmə · 1/3/7 gün · qiymət backend (demo)</div></div>
+    <div class="pcard"><div style="display:flex;justify-content:space-between"><span class="bBoost">BOOST</span><span style="width:16px;height:16px;border:1.5px solid #C6C2B6;border-radius:4px"></span></div><div style="font:400 11px 'Fira Sans';color:#565B63;margin-top:6px">Axtarışda yuxarı · 1/3/7 gün · qiymət backend (demo)</div></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+    <span style="font:600 12.5px 'Fira Sans';color:#8A8F98">Keç</span>
+    <div style="display:flex;gap:8px"><span class="btnS">← Redaktəyə qayıt</span><span class="btnP">Elanı dərc et</span></div>
+  </div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="background:#141A22;color:#fff;padding:10px 16px;display:flex;justify-content:space-between"><span style="font:500 12px 'Fira Sans';color:#A7ADB8">✕</span><span style="font:600 13px 'Fira Sans'">Yeni elan</span><span class="save" style="color:#7E8794">✓</span></div>
+  <div style="display:flex;gap:6px;padding:10px 14px;overflow:hidden;border-bottom:1px solid #E3E0D8;background:#fff">
+    <span style="background:#E7F2EC;color:#0F6440;font:600 11px 'Fira Sans';padding:6px 10px;border-radius:999px;flex:none">✓ Nəqliyyat</span>
+    <span style="background:#141A22;color:#fff;font:600 11px 'Fira Sans';padding:6px 10px;border-radius:999px;flex:none">Detallar</span>
+    <span style="border:1px solid #C6C2B6;font:500 11px 'Fira Sans';padding:6px 10px;border-radius:999px;flex:none;color:#565B63">Şəkillər</span>
+    <span style="border:1px solid #C6C2B6;font:500 11px 'Fira Sans';padding:6px 10px;border-radius:999px;flex:none;color:#565B63">Əlavə</span>
+  </div>
+  <div style="padding:12px 16px;display:grid;gap:11px">
+    <div><span class="lb">Yanacaq növü</span><div class="ct" style="height:44px"><span class="vv">Hibrid</span><span class="chev">▾</span></div></div>
+    <div><span class="lb">Yürüş, km</span><div class="ct" style="height:44px"><span class="vv">21 000</span></div><div style="font:400 10px 'Fira Sans';color:#8A8F98;margin-top:3px">rəqəm klaviaturası (inputmode="numeric")</div></div>
+    <div><span class="lb">Qiymət, AZN</span><div class="ct" style="height:44px"><span class="vv" style="font-family:'Fira Sans Condensed';font-weight:600;font-size:15px">64 500</span></div></div>
+  </div>
+  <div style="background:#fff;border-top:1px solid #E3E0D8;padding:10px 14px"><span class="btnP" style="display:block;padding:13px">Baxışa keç</span></div>
+  <div style="font:400 9.5px 'Fira Sans';color:#8A8F98;padding:6px 16px 10px;background:#fff">Jump-chips bölmələrə sürüşdürür; xətalı bölmə qırmızı nöqtə ilə işarələnir.</div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="padding:12px 16px 12px">
+    <div style="font:700 14px 'Fira Sans';margin-bottom:10px">Baxış</div>
+    <div style="display:grid;gap:5px;font:400 12px 'Fira Sans'">
+      <div style="display:flex;justify-content:space-between;border-bottom:1px solid #EDEBE4;padding:5px 0"><span class="mut">Nəqliyyat</span><b>BMW 530e, 2023</b></div>
+      <div style="display:flex;justify-content:space-between;border-bottom:1px solid #EDEBE4;padding:5px 0"><span class="mut">Qiymət</span><b>64 500 AZN</b></div>
+      <div style="display:flex;justify-content:space-between;border-bottom:1px solid #EDEBE4;padding:5px 0"><span class="mut">Şəkillər</span><b>5 ✓</b></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;background:#E7F2EC;border-radius:8px;padding:9px 11px;margin-top:10px"><span style="font:600 12px 'Fira Sans';color:#0F6440">Yerləşdirmə: Pulsuz</span><span style="font:400 10px 'Fira Sans';color:#0F6440">2-ci pulsuz elan</span></div>
+    <div class="pcard" style="margin-top:10px"><div style="display:flex;justify-content:space-between"><span><span class="bPrem">PREMIUM</span> <span class="bBoost" style="margin-left:4px">BOOST</span></span><span style="font:600 11px 'Fira Sans';color:#147A4E">Bax ▾</span></div><div style="font:400 10.5px 'Fira Sans';color:#565B63;margin-top:6px">Təşviq seçimi — istəyə bağlı, elan AKTİV olandan sonra ödənilir</div></div>
+  </div>
+  <div style="background:#fff;border-top:1px solid #E3E0D8;padding:10px 14px;display:grid;gap:7px"><span class="btnP" style="padding:13px">Elanı dərc et</span><span style="font:600 12px 'Fira Sans';color:#8A8F98;text-align:center">Təşviqsiz davam et</span></div>
+</div>
+</div>
+<div class="note" style="margin-top:14px">
+  <div><b style="color:#141A22">Responsive.</b> 1024: rail 260px stays. 768: rail becomes a top summary strip (fee + status + "Baxışa keç"); form single column. 390: jump-chip nav + sticky action.</div>
+  <div><b style="color:#141A22">Promotion position.</b> In the review panel, immediately before submit — one glance from the publish button, skippable in place ("Keç").</div>
+  <div><b style="color:#141A22">Speed assessment.</b> 1 page + review · fastest for repeat sellers (keyboard flow, zero step taps) · first-time clarity lower: ~14 decisions visible at once on desktop.</div>
+  <div><b style="color:#141A22">Risks.</b> Long mobile page (~3–4 screens); error discovery leans on rail/chips; photos mid-page can be missed — checklist mitigates. Largest structural change from the current wizard.</div>
+</div>
+</div>
+<div class="opt" id="1c">
+<div class="olabel"><a class="oid" href="#1c">1c</a><b style="color:#111">AXIN — Hybrid Smart Flow</b> · identity quick-start on navy, then one page of unlocking section cards with progressive disclosure; sticky progress + actions</div>
+<div class="cap" style="margin-top:0">1440 — quick start (navy) · mid-flow: section cards with progressive disclosure</div>
+<div class="row">
+<div class="frame" style="width:620px">
+  <div style="background:#141A22;color:#fff;padding:22px 28px 26px">
+    <div style="display:flex;align-items:center;gap:7px;margin-bottom:14px"><span style="width:9px;height:18px;background:#2FAE74;transform:skewX(-12deg)"></span><span style="font:800 16px 'Fira Sans'">AVTOSH<span style="font:700 10px 'Fira Sans';color:#2FAE74">.AZ</span></span></div>
+    <div style="font:800 22px/1.15 'Fira Sans'">Nə satırsınız?</div>
+    <div style="font:400 12px 'Fira Sans';color:#A7ADB8;margin:6px 0 14px">4 seçim — qalan hər şey buna uyğunlaşır</div>
+    <div style="background:#1D2733;border:1px solid #2B3644;border-radius:12px;padding:16px;display:grid;gap:11px">
+      <div style="display:flex;gap:8px"><span class="tg tgon" style="height:40px;flex:1;justify-content:center">✓ Avtomobil</span><span class="tg" style="height:40px;flex:1;justify-content:center;background:#1D2733;border-color:#2B3644;color:#A7ADB8">Motosiklet</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+        <div class="ct"><span class="vv">BMW</span><span class="chev">▾</span></div>
+        <div class="ct"><span class="vv">530e</span><span class="chev">▾</span></div>
+        <div class="ct"><span class="vv">2023</span><span class="chev">▾</span></div>
+        <div class="ct"><span class="vv">Bakı</span><span class="chev">▾</span></div>
+      </div>
+      <span class="btnP" style="text-align:center">Başla →</span>
+    </div>
+    <div style="font:400 10.5px 'Fira Sans';color:#7E8794;margin-top:10px">Motosiklet seçilərsə növbəti bölmələr avtomatik uyğunlaşır (Motosiklet növü; Ban/Ötürücü/vəziyyət yoxdur).</div>
+  </div>
+</div>
+<div class="frame" style="width:620px">
+  <div style="padding:18px 24px 20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span style="font:700 14px 'Fira Sans'">BMW 530e, 2023 · Bakı</span>
+      <span class="save">✓ Saxlanıldı · 3/6 tamam</span>
+    </div>
+    <div style="display:grid;gap:8px">
+      <div class="sec2"><span><span class="ok">✓</span> Nəqliyyat</span><span style="font:600 12px 'Fira Sans';color:#147A4E">Dəyiş</span></div>
+      <div class="sec2"><span><span class="ok">✓</span> Detallar <span class="mut" style="font:400 11px 'Fira Sans'">Sedan · 2.0 · Hibrid · AT</span></span><span style="font:600 12px 'Fira Sans';color:#147A4E">Dəyiş</span></div>
+      <div class="wcard" style="padding:14px 16px;border:2px solid #147A4E">
+        <div style="font:700 13.5px 'Fira Sans';margin-bottom:10px">Satış məlumatı <span class="mut" style="font:400 11px 'Fira Sans'">· indiki bölmə</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 12px">
+          <div><span class="lb">Yürüş, km</span><div class="ct"><span class="vv">21 000</span></div></div>
+          <div><span class="lb">Qiymət, AZN</span><div class="ct"><span class="vv" style="font-family:'Fira Sans Condensed';font-weight:600;font-size:14px">64 500</span></div></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><span class="tg" style="height:32px;font-size:12px">Kredit mümkündür</span><span class="tg tgon" style="height:32px;font-size:12px">✓ Barter</span><span class="tg tgon" style="height:32px;font-size:12px">✓ Vuruğu yoxdur</span><span class="tg" style="height:32px;font-size:12px">Rənglənməyib</span></div>
+        <span class="btnP" style="display:inline-block;margin-top:12px;padding:9px 20px;font-size:12.5px">Bölməni tamamla</span>
+      </div>
+      <div class="sec2" style="opacity:.55"><span>○ Şəkillər <span class="mut" style="font:400 11px 'Fira Sans'">min 3</span></span><span class="mut" style="font:500 11px 'Fira Sans'">növbəti</span></div>
+      <div class="sec2" style="opacity:.55"><span>○ Əlavə məlumat <span class="mut" style="font:400 11px 'Fira Sans'">istəyə bağlı</span></span><span></span></div>
+      <div class="sec2" style="opacity:.55"><span>○ Baxış və dərc</span><span></span></div>
+    </div>
+    <div style="font:400 10.5px/1.5 'Fira Sans';color:#8A8F98;margin-top:10px">Tamamlanan bölmə bir sətirlik xülasəyə yığılır; yalnız aktiv bölmə açıqdır — bir səhifə, addım hissi olmadan. İstənilən xülasəyə klik → yerində açılır.</div>
+  </div>
+</div>
+</div>
+<div class="cap">1440 — şəkillər (aktiv bölmə) · baxış + fee (2 AZN) + Premium+Boost seçili</div>
+<div class="row">
+<div class="wcard" style="width:560px;padding:16px 18px">
+  <div style="font:700 13.5px 'Fira Sans';margin-bottom:10px">Şəkillər <span class="mut" style="font:400 11px 'Fira Sans'">· min 3, maks 20 · birinci = əsas şəkil</span></div>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:7px">
+    <div class="ptile" style="border:2px solid #147A4E"><span style="position:absolute;left:4px;top:4px;background:#147A4E;color:#fff;font:600 7.5px 'Fira Sans';padding:2px 5px;border-radius:3px">ƏSAS</span><span style="position:absolute;left:5px;bottom:4px;font:500 8px 'Fira Sans';color:#8A8F98">⠿ sürüklə</span></div>
+    <div class="ptile"><span style="position:absolute;right:4px;top:4px;width:18px;height:18px;background:rgba(255,255,255,.9);border-radius:4px;display:flex;align-items:center;justify-content:center;font:600 10px 'Fira Sans';color:#B3261E">✕</span></div>
+    <div class="ptile"></div>
+    <div class="ptile" style="background:linear-gradient(100deg,#EDEBE4 40%,#F5F3EC 50%,#EDEBE4 60%)"><span style="position:absolute;left:5px;bottom:4px;font:500 8px 'Fira Sans';color:#8A8F98">72%</span></div>
+    <div class="ptile" style="border:1.5px dashed #C6C2B6;background:#fff;display:flex;align-items:center;justify-content:center"><span style="font:600 14px 'Fira Sans';color:#147A4E">+</span></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-top:8px;font:400 10.5px 'Fira Sans'"><span style="color:#0F6440;font-weight:600">✓ 4/3 minimum tamam</span><span class="mut">İpucu: ön, arxa, salon, torpedo bucaqları</span></div>
+</div>
+<div class="wcard" style="width:640px;padding:16px 18px">
+  <div style="font:700 13.5px 'Fira Sans';margin-bottom:10px">Baxış və dərc</div>
+  <div style="display:flex;gap:12px;border:1px solid #E3E0D8;border-radius:10px;padding:9px 11px;align-items:center">
+    <div style="width:84px;aspect-ratio:4/3;background:#EDEBE4;border-radius:6px;flex:none"></div>
+    <div style="flex:1"><div style="font:700 14px 'Fira Sans Condensed'">64 500 <span style="font:600 9px 'Fira Sans';color:#565B63">AZN</span></div><div style="font:600 12px 'Fira Sans'">BMW 530e, 2023 · Bakı · 5 şəkil</div></div>
+    <span style="font:600 11.5px 'Fira Sans';color:#147A4E">Dəyiş</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;background:#FBEED8;border-radius:8px;padding:9px 11px;margin-top:9px"><span style="font:600 12px 'Fira Sans';color:#9A5B06">Elan yerləşdirmə haqqı: 2 AZN</span><span style="font:400 10.5px 'Fira Sans';color:#9A5B06">4-cü və sonrakı elanlar · təşviqdən ayrıdır</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px">
+    <div class="pcard pcOn"><div style="display:flex;justify-content:space-between"><span class="bPrem">PREMIUM</span><span style="width:16px;height:16px;background:#147A4E;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font:700 11px 'Fira Sans'">✓</span></div><div style="display:flex;gap:5px;margin-top:9px"><span class="dchip">1 gün</span><span class="dchip dchipOn">3 gün · 4 AZN*</span><span class="dchip">7 gün</span></div></div>
+    <div class="pcard pcOn"><div style="display:flex;justify-content:space-between"><span class="bBoost">BOOST</span><span style="width:16px;height:16px;background:#147A4E;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font:700 11px 'Fira Sans'">✓</span></div><div style="display:flex;gap:5px;margin-top:9px"><span class="dchip">1 gün</span><span class="dchip">3 gün</span><span class="dchip dchipOn">7 gün · 9 AZN*</span></div></div>
+  </div>
+  <div style="font:400 10px/1.5 'Fira Sans';color:#8A8F98;margin-top:8px">*demo qiymətlər — real dəyərlər backend paketlərindən. Hər ikisi ayrı məhsuldur, birlikdə işləyə bilir. Seçim indi saxlanılır; ödəniş və başlama yalnız elan AKTİV olandan sonra.</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:11px">
+    <span style="font:600 12px 'Fira Sans';color:#8A8F98">Təşviqsiz davam et</span>
+    <span class="btnP">Dərc et — yerləşdirmə 2 AZN</span>
+  </div>
+</div>
+</div>
+<div class="cap">390 — quick start · mid (bölmə kartları) · şəkillər · baxış + təşviq</div>
+<div class="row">
+<div class="frame" style="width:390px">
+  <div style="background:#141A22;color:#fff;padding:14px 16px 18px">
+    <div style="font:800 18px 'Fira Sans';margin-bottom:4px">Nə satırsınız?</div>
+    <div style="font:400 11px 'Fira Sans';color:#A7ADB8;margin-bottom:10px">4 seçim — 30 saniyə</div>
+    <div style="display:grid;gap:8px">
+      <div style="display:flex;gap:8px"><span class="tg tgon" style="height:44px;flex:1;justify-content:center">✓ Avtomobil</span><span class="tg" style="height:44px;flex:1;justify-content:center;background:#1D2733;border-color:#2B3644;color:#A7ADB8">Motosiklet</span></div>
+      <div class="ct" style="height:44px"><span class="vv">BMW</span><span class="chev">▾</span></div>
+      <div class="ct" style="height:44px"><span class="mut">Model seçin</span><span class="chev">▾</span></div>
+    </div>
+  </div>
+  <div style="background:#fff;border-top:1px solid #E3E0D8;padding:10px 14px"><span class="btnP" style="display:block;padding:13px">Başla →</span></div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="padding:12px 16px 12px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:10px"><span style="font:600 13px 'Fira Sans'">BMW 530e, 2023</span><span class="save">✓ 3/6</span></div>
+    <div style="display:grid;gap:7px">
+      <div class="sec2" style="font-size:12px"><span><span class="ok">✓</span> Nəqliyyat</span><span style="font:600 11px 'Fira Sans';color:#147A4E">Dəyiş</span></div>
+      <div class="sec2" style="font-size:12px"><span><span class="ok">✓</span> Detallar</span><span style="font:600 11px 'Fira Sans';color:#147A4E">Dəyiş</span></div>
+      <div class="wcard" style="padding:12px 14px;border:2px solid #147A4E">
+        <div style="font:700 12.5px 'Fira Sans';margin-bottom:8px">Satış məlumatı</div>
+        <div style="display:grid;gap:9px">
+          <div><span class="lb">Qiymət, AZN</span><div class="ct" style="height:44px"><span class="vv" style="font-family:'Fira Sans Condensed';font-weight:600;font-size:15px">64 500</span></div></div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap"><span class="tg" style="height:40px;font-size:12px">Kredit</span><span class="tg tgon" style="height:40px;font-size:12px">✓ Barter</span></div>
+        </div>
+      </div>
+      <div class="sec2" style="font-size:12px;opacity:.55"><span>○ Şəkillər</span><span></span></div>
+    </div>
+  </div>
+  <div style="background:#fff;border-top:1px solid #E3E0D8;padding:10px 14px"><span class="btnP" style="display:block;padding:13px">Bölməni tamamla</span></div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="padding:12px 16px 12px">
+    <div style="font:600 13px 'Fira Sans';margin-bottom:8px">Şəkillər <span class="mut" style="font:400 10.5px 'Fira Sans'">· 2/3 min</span></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">
+      <div class="ptile" style="border:2px solid #147A4E"><span style="position:absolute;left:4px;top:4px;background:#147A4E;color:#fff;font:600 7.5px 'Fira Sans';padding:2px 5px;border-radius:3px">ƏSAS</span></div>
+      <div class="ptile"></div>
+      <div class="ptile" style="border:1.5px dashed #C6C2B6;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"><span style="font:600 15px 'Fira Sans';color:#147A4E">+</span><span style="font:500 9px 'Fira Sans';color:#8A8F98">kamera / qalereya</span></div>
+    </div>
+    <div style="font:400 10px 'Fira Sans';color:#9A5B06;margin-top:7px">Daha 1 şəkil lazımdır (min 3). Basılı tut → sürüklə → sıra dəyişir.</div>
+  </div>
+  <div style="background:#fff;border-top:1px solid #E3E0D8;padding:10px 14px"><span class="btnP" style="display:block;padding:13px;opacity:.5">Bölməni tamamla</span></div>
+</div>
+<div class="frame" style="width:390px">
+  <div style="padding:12px 16px 12px">
+    <div style="font:600 13px 'Fira Sans';margin-bottom:8px">Baxış və dərc</div>
+    <div style="display:flex;gap:9px;border:1px solid #E3E0D8;border-radius:10px;padding:8px 10px;background:#fff;align-items:center">
+      <div style="width:64px;aspect-ratio:4/3;background:#EDEBE4;border-radius:5px;flex:none"></div>
+      <div style="flex:1"><div style="font:700 13px 'Fira Sans Condensed'">64 500 AZN</div><div style="font:600 11px 'Fira Sans'">BMW 530e, 2023</div></div>
+      <span style="font:600 10.5px 'Fira Sans';color:#147A4E">Dəyiş</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;background:#E7F2EC;border-radius:8px;padding:8px 10px;margin-top:8px"><span style="font:600 11.5px 'Fira Sans';color:#0F6440">Yerləşdirmə: Pulsuz</span><span style="font:400 9.5px 'Fira Sans';color:#0F6440">3-cü pulsuz elan</span></div>
+    <div class="pcard" style="margin-top:9px"><div style="display:flex;justify-content:space-between;align-items:center"><span class="bPrem">PREMIUM</span><span style="width:18px;height:18px;border:1.5px solid #C6C2B6;border-radius:4px"></span></div><div style="display:flex;gap:5px;margin-top:8px"><span class="dchip" style="font-size:10.5px">1 gün</span><span class="dchip" style="font-size:10.5px">3 gün</span><span class="dchip" style="font-size:10.5px">7 gün</span></div></div>
+    <div class="pcard" style="margin-top:7px"><div style="display:flex;justify-content:space-between;align-items:center"><span class="bBoost">BOOST</span><span style="width:18px;height:18px;border:1.5px solid #C6C2B6;border-radius:4px"></span></div><div style="display:flex;gap:5px;margin-top:8px"><span class="dchip" style="font-size:10.5px">1 gün</span><span class="dchip" style="font-size:10.5px">3 gün</span><span class="dchip" style="font-size:10.5px">7 gün</span></div></div>
+    <div style="font:400 9.5px/1.5 'Fira Sans';color:#8A8F98;margin-top:7px">Qiymətlər backend-dən · təşviq AKTİV olandan sonra ödənilir</div>
+  </div>
+  <div style="background:#fff;border-top:1px solid #E3E0D8;padding:10px 14px;display:grid;gap:7px"><span class="btnP" style="padding:13px">Elanı dərc et</span><span style="font:600 12px 'Fira Sans';color:#8A8F98;text-align:center">Təşviqsiz davam et</span></div>
+</div>
+</div>
+<div class="note" style="margin-top:14px">
+  <div><b style="color:#141A22">Responsive.</b> 1024: content max 640 centered; summary chips top. 768/390: identical section-card flow (already single-column by design) + sticky action — the only direction with one architecture across all widths.</div>
+  <div><b style="color:#141A22">Promotion position.</b> Review section (last card) — after data completion, before submit; fee line always above promo so 2 AZN never mixes with package prices.</div>
+  <div><b style="color:#141A22">Speed assessment.</b> ~4 effective sections after quick start · decisions per open card: 2–6 · near-B speed with A-level guidance; strongest mobile fit.</div>
+  <div><b style="color:#141A22">Risks.</b> Collapse/expand logic adds implementation complexity (accordion state + validation gating); "Bölməni tamamla" must not block free editing of earlier sections (it doesn't — Dəyiş reopens in place).</div>
+</div>
+</div>
+<div id="cmp" style="max-width:1180px;background:#fff;border:1px solid rgba(0,0,0,.1);padding:20px 24px;scroll-margin-top:16px">
+  <div style="font:700 15px system-ui;color:#111;margin-bottom:10px">Comparison &amp; recommendation</div>
+  <div style="display:grid;grid-template-columns:200px 1fr 1fr 1fr;font:400 12.5px/1.5 system-ui;gap:0">
+    <div style="border-bottom:2px solid #222;padding:6px 0"></div>
+    <div style="border-bottom:2px solid #222;padding:6px 0;font-weight:700"><a class="oid" href="#1a">1a</a> ADDIM</div>
+    <div style="border-bottom:2px solid #222;padding:6px 0;font-weight:700"><a class="oid" href="#1b">1b</a> CƏLD</div>
+    <div style="border-bottom:2px solid #222;padding:6px 0;font-weight:700"><a class="oid" href="#1c">1c</a> AXIN</div>
+    <div style="padding:6px 0;border-bottom:1px solid #eee;color:#444">Speed</div><div style="padding:6px 0;border-bottom:1px solid #eee">slowest (6 steps)</div><div style="padding:6px 0;border-bottom:1px solid #eee"><b>fastest</b> (repeat sellers)</div><div style="padding:6px 0;border-bottom:1px solid #eee">fast (quick start + 4 sections)</div>
+    <div style="padding:6px 0;border-bottom:1px solid #eee;color:#444">Clarity / cognitive load</div><div style="padding:6px 0;border-bottom:1px solid #eee"><b>best</b> · lowest load</div><div style="padding:6px 0;border-bottom:1px solid #eee">weakest for first-timers</div><div style="padding:6px 0;border-bottom:1px solid #eee">high · one open card at a time</div>
+    <div style="padding:6px 0;border-bottom:1px solid #eee;color:#444">Mobile usability</div><div style="padding:6px 0;border-bottom:1px solid #eee">high (short screens)</div><div style="padding:6px 0;border-bottom:1px solid #eee">medium (long page)</div><div style="padding:6px 0;border-bottom:1px solid #eee"><b>best</b> · same flow as desktop</div>
+    <div style="padding:6px 0;border-bottom:1px solid #eee;color:#444">Error prevention</div><div style="padding:6px 0;border-bottom:1px solid #eee">per-step gating</div><div style="padding:6px 0;border-bottom:1px solid #eee">rail/chips signals</div><div style="padding:6px 0;border-bottom:1px solid #eee"><b>section gating + inline</b></div>
+    <div style="padding:6px 0;border-bottom:1px solid #eee;color:#444">Photo experience</div><div style="padding:6px 0;border-bottom:1px solid #eee">dedicated step</div><div style="padding:6px 0;border-bottom:1px solid #eee">inline, can be missed</div><div style="padding:6px 0;border-bottom:1px solid #eee">dedicated card + tips</div>
+    <div style="padding:6px 0;border-bottom:1px solid #eee;color:#444">Promo upsell clarity</div><div style="padding:6px 0;border-bottom:1px solid #eee">review step, calm</div><div style="padding:6px 0;border-bottom:1px solid #eee">pre-submit strip</div><div style="padding:6px 0;border-bottom:1px solid #eee"><b>review card, fee separated</b></div>
+    <div style="padding:6px 0;border-bottom:1px solid #eee;color:#444">Implementation vs current wizard</div><div style="padding:6px 0;border-bottom:1px solid #eee"><b>lowest risk</b> (same shape)</div><div style="padding:6px 0;border-bottom:1px solid #eee">highest change</div><div style="padding:6px 0;border-bottom:1px solid #eee">medium (accordion over existing steps)</div>
+  </div>
+  <div style="display:grid;grid-template-columns:200px 1fr;gap:20px;margin-top:14px;border-top:2px solid #222;padding-top:12px">
+    <div style="font:700 13px system-ui;color:#111">Recommendation</div>
+    <div style="font:400 13px/1.6 system-ui;color:#333"><b><a class="oid" href="#1c">1c</a> AXIN</b> — it captures most of 1b's speed while keeping 1a's guidance, is the only direction whose architecture is identical at 390 and 1440, gives conditional CAR/MOTO fields a natural home (sections adapt after quick start), and places the promotion where it converts without dark patterns: after completion, beside a clearly separated fee line. If the owner prioritizes minimal engineering change, 1a is the safe upgrade; 1b suits a power-seller-heavy audience.</div>
+  </div>
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      photos: [
+        {n:"1",main:true},{n:"2"},{n:"3"},{n:"4"},{n:"5"}
+      ],
+      featGroups: [
+        {g:"Komfort",items:["Dəri salon","Ventilyasiyalı oturacaqlar","Keyless"]},
+        {g:"Təhlükəsizlik",items:["360° kamera","Adaptiv kruiz","Sürücü asistenti"]}
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
