@@ -21,8 +21,9 @@ import { PayButton } from "@/components/seller/pay-button";
 import type { SellerModerationFeedbackDto } from "@/services/my-listings";
 import { useListingEditor, type ListingEditor } from "@/components/seller/use-listing-editor";
 import { useWizardCatalog, OPTION_GROUPS, type WizardCatalog } from "@/components/seller/use-wizard-catalog";
+import { Loader2 } from "lucide-react";
 import { SellerListboxField } from "@/components/seller/listbox-field";
-import { CheckboxField, DeferredCheckbox, DeferredInput, SelectField } from "@/components/seller/wizard-fields";
+import { ChipToggle, DeferredChipToggle, DeferredInput, SelectField } from "@/components/seller/wizard-fields";
 import { PhotosStep } from "@/components/seller/photos-step";
 import { PreviewStep } from "@/components/seller/preview-step";
 import { SectionCard } from "@/components/seller/axin/section-card";
@@ -158,6 +159,12 @@ export function AxinFlow({
     return <SubmitResultScreen result={result} />;
   }
 
+  // Card-footer autosave chip (o9 components.md): server-confirmed
+  // states only — "Saxlanıldı" carries the SERVER updated_at time.
+  const autosaveChip = (
+    <AutosaveChip state={editor.saveState} updatedAtIso={dto.updatedAt} onRetry={() => void editor.flush()} />
+  );
+
   return (
     <div data-testid="axin-flow">
       {/* Navy flow header — title, autosave promise, deterministic n/7. */}
@@ -232,6 +239,7 @@ export function AxinFlow({
             onOpen={() => setOpenSection("quickstart")}
             onComplete={() => completeSection("quickstart")}
             completeDisabled={!complete.quickstart}
+            footerStart={autosaveChip}
           >
             <QuickStartSection editor={editor} catalog={catalog} />
           </SectionCard>
@@ -246,6 +254,7 @@ export function AxinFlow({
             summary={detailsSummary(dto, catalog)}
             onOpen={() => setOpenSection("details")}
             onComplete={() => completeSection("details")}
+            footerStart={autosaveChip}
           >
             <DetailsSection editor={editor} catalog={catalog} />
           </SectionCard>
@@ -261,6 +270,7 @@ export function AxinFlow({
             onOpen={() => setOpenSection("sale")}
             onComplete={() => completeSection("sale")}
             completeDisabled={!complete.sale}
+            footerStart={autosaveChip}
           >
             <SaleSection editor={editor} catalog={catalog} />
           </SectionCard>
@@ -276,6 +286,7 @@ export function AxinFlow({
             onOpen={() => setOpenSection("photos")}
             onComplete={() => completeSection("photos")}
             completeDisabled={!complete.photos}
+            footerStart={autosaveChip}
           >
             <PhotosStep editor={editor} />
           </SectionCard>
@@ -290,6 +301,7 @@ export function AxinFlow({
             summary={extrasSummary(dto)}
             onOpen={() => setOpenSection("extras")}
             onComplete={() => completeSection("extras")}
+            footerStart={autosaveChip}
           >
             <ExtrasSection editor={editor} catalog={catalog} />
           </SectionCard>
@@ -305,6 +317,7 @@ export function AxinFlow({
             onOpen={() => setOpenSection("contact")}
             onComplete={() => completeSection("contact")}
             completeDisabled={!complete.contact}
+            footerStart={autosaveChip}
           >
             <ContactSection editor={editor} />
           </SectionCard>
@@ -414,9 +427,17 @@ function QuickStartSection({ editor, catalog }: { editor: ListingEditor; catalog
         items={catalog.categories}
         valueField="code"
         onChange={(code) => {
-          if (code !== null && code !== dto.category) {
-            editor.patch({ category: code }, { immediate: true });
-          }
+          if (code === null || code === dto.category) return;
+          // Approved interaction (interactions.md): confirm ONLY when
+          // meaningful category-specific data would be lost — the
+          // server then clears dependents authoritatively.
+          const wouldLose =
+            dto.brandId !== null ||
+            dto.modelId !== null ||
+            dto.bodyTypeId !== null ||
+            dto.motorcycleTypeId !== null;
+          if (wouldLose && !window.confirm(SELLER.categorySwitchConfirm)) return;
+          editor.patch({ category: code }, { immediate: true });
         }}
       />
       <TypeaheadField
@@ -490,7 +511,16 @@ function DetailsSection({ editor, catalog }: { editor: ListingEditor; catalog: W
         options={engineOptions}
         onChange={(value) => editor.patch({ engine_cc: value === null ? null : Number(value) }, { immediate: true })}
       />
-      {OPTION_GROUPS.filter((g) => g.group !== "COLOR" && (catalog.options[g.group] ?? []).length > 0).map((g) => (
+      {OPTION_GROUPS.filter(
+        (g) =>
+          g.group !== "COLOR" &&
+          // Category relevance (o9 layout): the catalog already scopes
+          // BODY_TYPE/MOTORCYCLE_TYPE per category; Ötürücü is a
+          // CAR-only concept on the public detail contract, so the
+          // MOTORCYCLE form never renders it (not even disabled).
+          !(dto.category === "MOTORCYCLE" && g.group === "DRIVE_TYPE") &&
+          (catalog.options[g.group] ?? []).length > 0,
+      ).map((g) => (
         <SelectField
           key={g.group}
           id={`wizard-${g.field}`}
@@ -516,17 +546,19 @@ function DetailsSection({ editor, catalog }: { editor: ListingEditor; catalog: W
   );
 }
 
-/** Satış məlumatı — price, mileage, city, booleans, condition claims. */
+/** Satış məlumatı — price, mileage, city, lightweight boolean chips,
+    category-relevant condition claims (seller declarations only). */
 function SaleSection({ editor, catalog }: { editor: ListingEditor; catalog: WizardCatalog }) {
   const { dto } = editor;
   return (
     <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-x-3.5 gap-y-3 sm:grid-cols-2">
         <DeferredInput
           id="wizard-price"
           label={SELLER.price}
           inputMode="numeric"
           placeholder="15000"
+          inputClassName="font-condensed text-[15px] font-semibold"
           initialValue={dto.priceMinor === null ? "" : minorToAznInput(String(dto.priceMinor))}
           onValue={(value) => {
             if (value.trim() === "") {
@@ -544,6 +576,7 @@ function SaleSection({ editor, catalog }: { editor: ListingEditor; catalog: Wiza
           label={SELLER.mileage}
           inputMode="numeric"
           placeholder="120000"
+          inputClassName="font-condensed text-[15px] font-semibold"
           initialValue={dto.mileage === null ? "" : String(dto.mileage)}
           onValue={(value) => {
             const digits = value.trim().replace(/\s+/g, "");
@@ -559,14 +592,16 @@ function SaleSection({ editor, catalog }: { editor: ListingEditor; catalog: Wiza
           onChange={(id) => editor.patch({ city_id: id }, { immediate: true })}
         />
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <CheckboxField
+      {/* Booleans stay visually light (o9 components.md): chips, not
+          cards — they never compete with price/photos. */}
+      <div className="flex flex-wrap gap-2">
+        <ChipToggle
           id="wizard-credit"
           label={SELLER.credit}
           checked={dto.creditAvailable}
           onChange={(checked) => editor.patch({ credit_available: checked }, { immediate: true })}
         />
-        <CheckboxField
+        <ChipToggle
           id="wizard-barter"
           label={SELLER.barter}
           checked={dto.barterAvailable}
@@ -575,15 +610,18 @@ function SaleSection({ editor, catalog }: { editor: ListingEditor; catalog: Wiza
       </div>
       {dto.category === "CAR" ? (
         <fieldset>
-          <legend className="mb-2 text-xs font-medium text-slate-strong">{SELLER.conditionTitle}</legend>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <DeferredCheckbox
+          <legend className="mb-1.5 text-xs font-medium text-slate-strong">
+            {SELLER.conditionTitle}
+            <span className="ml-1.5 font-normal text-muted">· {SELLER.claimsDeclarationHint}</span>
+          </legend>
+          <div className="flex flex-wrap gap-2">
+            <DeferredChipToggle
               id="wizard-no-accident"
               label={SELLER.noAccident}
               initialChecked={dto.noAccident === true}
               onValue={(checked) => editor.patch({ no_accident: checked ? true : null }, { immediate: true })}
             />
-            <DeferredCheckbox
+            <DeferredChipToggle
               id="wizard-not-repainted"
               label={SELLER.notRepainted}
               initialChecked={dto.notRepainted === true}
@@ -596,34 +634,65 @@ function SaleSection({ editor, catalog }: { editor: ListingEditor; catalog: Wiza
   );
 }
 
-/** Əlavə məlumat — features + optional description. */
+/** Əlavə məlumat — grouped feature expander + optional description
+    (real 5000 max; no invented limits). */
 function ExtrasSection({ editor, catalog }: { editor: ListingEditor; catalog: WizardCatalog }) {
   const { dto } = editor;
   const [description, setDescription] = useState(dto.description ?? "");
+  const [featuresOpen, setFeaturesOpen] = useState(false);
   return (
     <div className="space-y-5">
       {catalog.features.length > 0 ? (
         <fieldset>
-          <legend className="mb-2 text-xs font-medium text-slate-strong">{SELLER.features}</legend>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" data-testid="wizard-features">
-            {catalog.features.map((feature) => {
-              const checked = dto.featureIds.includes(feature.id);
-              return (
-                <CheckboxField
-                  key={feature.id}
-                  id={`wizard-feature-${feature.id}`}
-                  label={feature.name}
-                  checked={checked}
-                  onChange={(next) => {
-                    const ids = next
-                      ? [...dto.featureIds, feature.id]
-                      : dto.featureIds.filter((id) => id !== feature.id);
-                    editor.patch({ feature_ids: ids }, { immediate: true });
-                  }}
-                />
-              );
-            })}
-          </div>
+          <button
+            type="button"
+            aria-expanded={featuresOpen}
+            onClick={() => setFeaturesOpen((v) => !v)}
+            data-testid="wizard-features-toggle"
+            className="flex h-10 w-full items-center justify-between rounded-control border border-line-strong bg-raised px-3.5 text-[13px] font-medium text-ink transition-colors duration-150 hover:border-muted"
+          >
+            <span>
+              {SELLER.featuresSelect}
+              {dto.featureIds.length > 0 ? (
+                <span className="ml-1.5 font-semibold text-primary">({dto.featureIds.length})</span>
+              ) : null}
+            </span>
+            <span aria-hidden="true" className="text-muted">
+              {featuresOpen ? "▴" : "▾"}
+            </span>
+          </button>
+          {featuresOpen ? (
+            <div
+              className="mt-2 grid max-h-72 grid-cols-1 gap-1 overflow-y-auto rounded-control border border-line p-2 sm:grid-cols-2"
+              data-testid="wizard-features"
+            >
+              {catalog.features.map((feature) => {
+                const checked = dto.featureIds.includes(feature.id);
+                return (
+                  <label
+                    key={feature.id}
+                    htmlFor={`wizard-feature-${feature.id}`}
+                    className="flex h-9 cursor-pointer items-center gap-2.5 rounded-[6px] px-2 text-[12.5px] text-ink transition-colors duration-150 hover:bg-row-hover"
+                  >
+                    <input
+                      id={`wizard-feature-${feature.id}`}
+                      data-testid={`wizard-feature-${feature.id}`}
+                      type="checkbox"
+                      className="h-4 w-4 accent-primary"
+                      checked={checked}
+                      onChange={(e) => {
+                        const ids = e.target.checked
+                          ? [...dto.featureIds, feature.id]
+                          : dto.featureIds.filter((id) => id !== feature.id);
+                        editor.patch({ feature_ids: ids }, { immediate: true });
+                      }}
+                    />
+                    {feature.name}
+                  </label>
+                );
+              })}
+            </div>
+          ) : null}
         </fieldset>
       ) : null}
       <div>
@@ -633,7 +702,8 @@ function ExtrasSection({ editor, catalog }: { editor: ListingEditor; catalog: Wi
         <textarea
           id="wizard-description"
           data-testid="wizard-description"
-          className="min-h-28 w-full rounded-control border border-line-strong bg-raised px-3 py-3 text-[13px] text-ink outline-none transition-colors duration-150 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
+          rows={4}
+          className="min-h-24 w-full rounded-control border border-line-strong bg-raised px-3 py-2.5 text-[13px] leading-relaxed text-ink outline-none transition-colors duration-150 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
           maxLength={5000}
           value={description}
           onChange={(e) => {
@@ -641,7 +711,12 @@ function ExtrasSection({ editor, catalog }: { editor: ListingEditor; catalog: Wi
             editor.patch({ description: e.target.value.trim() === "" ? null : e.target.value });
           }}
         />
-        <p className="mt-1 text-xs text-muted">{SELLER.descriptionHint}</p>
+        <div className="mt-1 flex items-baseline justify-between gap-3">
+          <p className="text-xs text-muted">{SELLER.descriptionHint}</p>
+          <p className="shrink-0 text-[11px] tabular-nums text-muted" data-testid="wizard-description-count">
+            {description.length}/5000
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -672,6 +747,63 @@ function ContactSection({ editor }: { editor: ListingEditor }) {
         onValue={(value) => editor.patch({ contact_phone: value.trim() === "" ? null : value.trim() })}
       />
     </div>
+  );
+}
+
+/**
+ * O.9 autosave chip (components.md): "Saxlanılır…" (spinner) /
+ * "✓ Saxlanıldı hh:mm" / "Xəta baş verdi ↻". Never optimistic — the
+ * saved time is the server-confirmed updated_at, and the error state
+ * offers an explicit retry of the pending patch.
+ */
+function AutosaveChip({
+  state,
+  updatedAtIso,
+  onRetry,
+}: {
+  state: string;
+  updatedAtIso: string;
+  onRetry: () => void;
+}) {
+  if (state === "error") {
+    return (
+      <button
+        type="button"
+        onClick={onRetry}
+        data-testid="axin-autosave"
+        data-state="error"
+        className="inline-flex h-8 items-center rounded-pill bg-danger-soft px-2.5 text-[11px] font-medium text-danger transition-colors duration-150 hover:bg-danger-soft/80"
+      >
+        {SELLER.saveError} ↻
+      </button>
+    );
+  }
+  if (state === "saving" || state === "dirty") {
+    return (
+      <span
+        data-testid="axin-autosave"
+        data-state="saving"
+        className="inline-flex h-8 items-center gap-1.5 px-1 text-[11px] font-medium text-muted"
+      >
+        <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+        {SELLER.saving}
+      </span>
+    );
+  }
+  const time = new Date(updatedAtIso).toLocaleTimeString("az-AZ", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Baku",
+  });
+  return (
+    <span
+      data-testid="axin-autosave"
+      data-state="saved"
+      className="inline-flex h-8 items-center gap-1 px-1 text-[11px] font-medium text-muted"
+    >
+      <span className="text-primary" aria-hidden="true">✓</span>
+      {SELLER.saved} {time}
+    </span>
   );
 }
 

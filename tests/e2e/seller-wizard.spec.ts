@@ -116,8 +116,10 @@ test("condition claims: check → autosave → reload → uncheck → null (4.17
   const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 0 });
   await page.goto(`/elan-yerlesdir/${fixture.id}`);
   await openSection(page, "sale");
-  await page.getByTestId("wizard-no-accident").check();
-  await page.getByTestId("wizard-not-repainted").check();
+  // O.9 chips: the visible chip is the click target; the underlying
+  // REAL checkbox keeps the state contract for assertions.
+  await page.getByTestId("wizard-no-accident-chip").click();
+  await page.getByTestId("wizard-not-repainted-chip").click();
   await saveSettled(page);
   // claims survive a full reload (stored as TRUE)
   await page.reload();
@@ -125,7 +127,7 @@ test("condition claims: check → autosave → reload → uncheck → null (4.17
   await expect(page.getByTestId("wizard-no-accident")).toBeChecked();
   await expect(page.getByTestId("wizard-not-repainted")).toBeChecked();
   // removing a claim returns it to NULL (no negative claim stored)
-  await page.getByTestId("wizard-not-repainted").uncheck();
+  await page.getByTestId("wizard-not-repainted-chip").click();
   await saveSettled(page);
   await page.reload();
   await openSection(page, "sale");
@@ -178,8 +180,10 @@ test("full seller journey: quick start → sections → photos → review → FR
   await expect(page.getByTestId("wizard-submit-error")).toContainText("Şəkil sayı kifayət deyil");
   await expect(page.getByTestId("axin-section-photos")).toHaveAttribute("data-state", "attention");
 
-  // Şəkillər — unsupported file rejected client-side with a clear message
+  // Şəkillər — amber minimum guidance before any upload
   await openSection(page, "photos");
+  await expect(page.getByTestId("wizard-photo-count")).toContainText("0/3 minimum");
+  await expect(page.getByTestId("wizard-photo-add")).toBeVisible();
   await page.getByTestId("wizard-photos-input").setInputFiles({
     name: "document.pdf",
     mimeType: "application/pdf",
@@ -203,6 +207,22 @@ test("full seller journey: quick start → sections → photos → review → FR
   await expect(grid.locator('[data-testid="wizard-image"]')).toHaveCount(2, { timeout: 15_000 });
   await uploadJpegs(page, 1, 200);
   await expect(grid.locator('[data-testid="wizard-image"]')).toHaveCount(3, { timeout: 60_000 });
+  await expect(page.getByTestId("wizard-photo-count")).toContainText("3 / 20"); // minimum satisfied
+
+  // Əlavə — grouped feature expander with selected count + description counter
+  await openSection(page, "extras");
+  const featuresToggle = page.getByTestId("wizard-features-toggle");
+  await expect(featuresToggle).toHaveAttribute("aria-expanded", "false");
+  await featuresToggle.click();
+  await expect(page.getByTestId("wizard-features")).toBeVisible();
+  // the checkbox is CONTROLLED by the server DTO — click, then await
+  // the round-trip state (check() would assert synchronously)
+  const firstFeature = page.getByTestId("wizard-features").locator('input[type="checkbox"]').first();
+  await firstFeature.click();
+  await expect(firstFeature).toBeChecked();
+  await saveSettled(page);
+  await expect(featuresToggle).toContainText("(1)");
+  await expect(page.getByTestId("wizard-description-count")).toContainText("/5000");
 
   // Baxış — preview shows entered data + advisory quota; FREE submit
   await openSection(page, "review");
@@ -219,12 +239,38 @@ test("full seller journey: quick start → sections → photos → review → FR
   await expect(page.locator('[data-testid="owner-listing-card"][data-status="PENDING_MODERATION"]').first()).toBeVisible();
 });
 
+test("failed upload is a real retryable state, never a phantom photo", async ({ page, context }, { project }) => {
+  const { userId } = await loginAs(context, testPhone(project.name, 44));
+  const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 0 });
+  await page.goto(`/elan-yerlesdir/${fixture.id}`);
+  await openSection(page, "photos");
+  // the first signed-URL PUT is aborted (network failure); the retry
+  // goes through the real pipeline unchanged
+  let failedOnce = false;
+  await page.route("**/api/dev-storage/**", (route) => {
+    if (route.request().method() === "PUT" && !failedOnce) {
+      failedOnce = true;
+      return route.abort();
+    }
+    return route.continue();
+  });
+  await uploadJpegs(page, 1);
+  const errorTile = page.getByTestId("wizard-upload-queue").locator('[data-state="error"]');
+  await expect(errorTile).toBeVisible();
+  await expect(page.locator('[data-testid="wizard-image"]')).toHaveCount(0); // no phantom confirmed photo
+  await page.getByTestId("image-retry").click();
+  await expect(page.locator('[data-testid="wizard-image"]')).toHaveCount(1, { timeout: 60_000 });
+  await expect(errorTile).toHaveCount(0);
+});
+
 test("category change clears dependent brand/model via the server", async ({ page, context }, { project }) => {
   const { userId } = await loginAs(context, testPhone(project.name, 32));
   const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 0 });
   await page.goto(`/elan-yerlesdir/${fixture.id}`);
   await openSection(page, "quickstart");
   await expect(page.getByTestId("wizard-brand")).toHaveValue("Toyota");
+  // data would be lost → the approved confirmation appears
+  page.on("dialog", (dialog) => void dialog.accept());
   await page.getByTestId("wizard-category").selectOption("MOTORCYCLE");
   // server clears brand/model; the UI adopts the response DTO
   await expect(page.getByTestId("wizard-brand")).toHaveValue("", { timeout: 15_000 });
@@ -463,6 +509,9 @@ test("motorcycle quick start uses the same year/engine/color controls (4.17O.3)"
   await expect(page.getByTestId("wizard-year")).toContainText("2022");
 
   await openSection(page, "details");
+  // MOTORCYCLE relevance: no CAR-only controls, not even disabled
+  await expect(page.getByTestId("wizard-drive_type_id")).toHaveCount(0);
+  await expect(page.getByTestId("wizard-body_type_id")).toHaveCount(0);
   await page.getByTestId("wizard-engine").click();
   await page.getByTestId("wizard-engine-opt-600").click();
   await saveSettled(page);
@@ -565,6 +614,7 @@ test("category switch clears persisted CAR body type; category stays code-backed
   // category PATCH still sends the CODE ("MOTORCYCLE") — the switch
   // succeeding at the server proves the code contract survives
   await openSection(page, "quickstart");
+  page.on("dialog", (dialog) => void dialog.accept());
   await page.getByTestId("wizard-category").selectOption("MOTORCYCLE");
   await expect(page.getByTestId("wizard-brand")).toHaveValue("", { timeout: 15_000 });
   await expect(page.getByTestId("wizard-category")).toHaveValue("MOTORCYCLE");
