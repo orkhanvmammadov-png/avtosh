@@ -3,7 +3,7 @@ import { Container } from "@/components/ui/container";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
-import { ListingWizard } from "@/components/seller/listing-wizard";
+import { AxinFlow } from "@/components/seller/axin/axin-flow";
 import { PayButton } from "@/components/seller/pay-button";
 import { formatPriceMinor } from "@/lib/format";
 import { isApiError } from "@/lib/api/errors";
@@ -105,7 +105,7 @@ export default async function WizardPage({
   }
 
   const feedback = await sellerFeedbackFor(listing.id, listing.status);
-  return <ListingWizard initial={listing} feedback={feedback} />;
+  return <AxinFlow initial={listing} feedback={feedback} />;
 }
 
 function BackToMyListings() {

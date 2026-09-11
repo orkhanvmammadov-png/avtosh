@@ -3,7 +3,7 @@ import { Container } from "@/components/ui/container";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
-import { CreateListing } from "@/components/seller/create-listing";
+import { QuickStartCreate } from "@/components/seller/axin/quick-start-create";
 import { vehicleTitle } from "@/lib/format";
 import { SELLER, UI } from "@/lib/marketplace/labels";
 import { statusPresentation } from "@/lib/seller/status";
@@ -71,7 +71,7 @@ export default async function SellerEntryPage() {
         </section>
       ) : null}
       <div className="mt-6">
-        <CreateListing categories={categories} />
+        <QuickStartCreate categories={categories} />
       </div>
     </div>
   </Container>

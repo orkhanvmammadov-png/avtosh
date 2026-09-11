@@ -14,13 +14,50 @@ import {
 } from "./seller-helpers";
 
 /**
- * Seller wizard flows through the real owner APIs. Image uploads run
- * the genuine signed-URL → direct PUT → confirm pipeline against the
- * local dev storage driver.
+ * O.9 AXIN seller flow through the real owner APIs (Quick Start →
+ * one-page section cards). Image uploads run the genuine signed-URL →
+ * direct PUT → confirm pipeline against the local dev storage driver.
+ * Sealed O.3/O.4 attribute-control contracts are re-asserted inside
+ * the new sections.
  */
 
 async function saveSettled(page: Page) {
   await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+}
+
+/** Opens an AXIN section card (no-op when it is already open). */
+async function openSection(page: Page, key: string) {
+  const section = page.getByTestId(`axin-section-${key}`);
+  if ((await section.getAttribute("data-state")) !== "open") {
+    await section.click();
+  }
+  await expect(section).toHaveAttribute("data-state", "open");
+}
+
+/** Types into a typeahead and picks the named option. */
+async function pickTypeahead(page: Page, id: string, query: string, optionName: string) {
+  const input = page.getByTestId(id);
+  await input.click();
+  await input.fill(query);
+  await page.getByTestId(`${id}-listbox`).getByText(optionName, { exact: true }).click();
+  await expect(input).toHaveValue(optionName);
+}
+
+/** Runs the navy Quick Start end-to-end and lands in the AXIN flow. */
+async function quickStartCreate(
+  page: Page,
+  input: { category: "CAR" | "MOTORCYCLE"; brand: string; model: string; year: number },
+) {
+  await page.goto("/elan-yerlesdir");
+  await expect(page.getByTestId("quick-start")).toBeVisible();
+  await page.getByTestId(`quick-start-category-${input.category}`).click();
+  await pickTypeahead(page, "quick-start-brand", input.brand.slice(0, 3), input.brand);
+  await pickTypeahead(page, "quick-start-model", input.model.slice(0, 2), input.model);
+  await page.getByTestId("quick-start-year").click();
+  await page.getByTestId(`quick-start-year-opt-${input.year}`).click();
+  await page.getByTestId("quick-start-begin").click();
+  await page.waitForURL(/\/elan-yerlesdir\/[0-9a-f-]{36}$/);
+  await expect(page.getByTestId("axin-flow")).toBeVisible();
 }
 
 async function uploadJpegs(page: Page, count: number, startColor = 40) {
@@ -40,83 +77,109 @@ test("anonymous seller entry routes through login intent", async ({ page }) => {
   await expect(page).toHaveURL(/\/giris\?return_to=%2Felan-yerlesdir$/);
 });
 
-test("blocked seller sees a safe status message, no wizard", async ({ page, context }, { project }) => {
+test("blocked seller sees a safe status message, no quick start", async ({ page, context }, { project }) => {
   await loginAs(context, testPhone(project.name, 30), { blocked: true });
   await page.goto("/elan-yerlesdir");
   await expect(page.getByTestId("seller-blocked")).toBeVisible();
-  await expect(page.getByTestId("create-listing")).toHaveCount(0);
+  await expect(page.getByTestId("quick-start")).toHaveCount(0);
+});
+
+test("quick start: dependency, no-results, keyboard; nothing persists before Başla", async ({ page, context }, { project }) => {
+  await loginAs(context, testPhone(project.name, 38));
+  await page.goto("/elan-yerlesdir");
+  const qs = page.getByTestId("quick-start");
+  await expect(qs).toBeVisible();
+  // model gated on brand with the approved hint
+  await expect(page.getByTestId("quick-start-model")).toBeDisabled();
+  await expect(page.getByTestId("quick-start-model")).toHaveAttribute("placeholder", "Marka seçin");
+  // begin is disabled until all four selections exist
+  await expect(page.getByTestId("quick-start-begin")).toBeDisabled();
+  // typeahead: filter, no-results row, keyboard selection
+  const brand = page.getByTestId("quick-start-brand");
+  await brand.click();
+  await brand.fill("zzz-yoxdur");
+  await expect(page.getByTestId("quick-start-brand-empty")).toHaveText("Nəticə tapılmadı");
+  await brand.fill("Toy");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(brand).toHaveValue(/Toyota/);
+  // brand change clears the chosen model
+  await pickTypeahead(page, "quick-start-model", "Co", "Corolla");
+  await brand.click();
+  await brand.fill("Toy");
+  await page.getByTestId("quick-start-brand-listbox").getByText("Toyota", { exact: true }).click();
+  await expect(page.getByTestId("quick-start-model")).toHaveValue("");
 });
 
 test("condition claims: check → autosave → reload → uncheck → null (4.17O.2)", async ({ page, context }, { project }) => {
-  await loginAs(context, testPhone(project.name, 38));
-  await page.goto("/elan-yerlesdir");
-  await page.getByTestId("create-category-CAR").check();
-  await page.getByTestId("create-listing-button").click();
-  await page.waitForURL(/\/elan-yerlesdir\/[0-9a-f-]{36}$/);
-  await page.getByTestId("wizard-step-2").click();
+  const { userId } = await loginAs(context, testPhone(project.name, 38));
+  const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 0 });
+  await page.goto(`/elan-yerlesdir/${fixture.id}`);
+  await openSection(page, "sale");
   await page.getByTestId("wizard-no-accident").check();
   await page.getByTestId("wizard-not-repainted").check();
-  await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+  await saveSettled(page);
   // claims survive a full reload (stored as TRUE)
   await page.reload();
-  await page.getByTestId("wizard-step-2").click();
+  await openSection(page, "sale");
   await expect(page.getByTestId("wizard-no-accident")).toBeChecked();
   await expect(page.getByTestId("wizard-not-repainted")).toBeChecked();
   // removing a claim returns it to NULL (no negative claim stored)
   await page.getByTestId("wizard-not-repainted").uncheck();
-  await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+  await saveSettled(page);
   await page.reload();
-  await page.getByTestId("wizard-step-2").click();
+  await openSection(page, "sale");
   await expect(page.getByTestId("wizard-no-accident")).toBeChecked();
   await expect(page.getByTestId("wizard-not-repainted")).not.toBeChecked();
 });
 
-test("full seller journey: create → fill → photos → preview → FREE submit", async ({ page, context }, { project }) => {
+test("full seller journey: quick start → sections → photos → review → FREE submit", async ({ page, context }, { project }) => {
   test.setTimeout(180_000);
-  const s = seed();
   await loginAs(context, testPhone(project.name, 31));
 
-  // explicit creation — never on page load
+  // explicit creation through the navy Quick Start — never on page load
   await page.goto("/elan-yerlesdir");
   await expect(page.getByTestId("seller-entry")).toBeVisible();
   await expectNoHorizontalOverflow(page);
-  await page.getByTestId("create-category-CAR").check();
-  await page.getByTestId("create-listing-button").click();
-  await expect(page).toHaveURL(/\/elan-yerlesdir\/[0-9a-f-]{36}$/);
+  await quickStartCreate(page, { category: "CAR", brand: "Toyota", model: "Corolla", year: 2021 });
 
-  // step 1 — vehicle (selects save immediately)
-  await page.getByTestId("wizard-brand").selectOption(s.toyotaBrandId);
-  await page.getByTestId("wizard-model").selectOption(s.corollaModelId);
-  await page.getByTestId("wizard-year").click();
-  await page.getByTestId("wizard-year-opt-2021").click();
-  await saveSettled(page);
+  // quick start data persisted — its collapsed summary proves the PATCH
+  await expect(page.getByTestId("axin-summary-quickstart")).toContainText("Toyota");
+  await expect(page.getByTestId("axin-summary-quickstart")).toContainText("2021");
+  await expect(page.getByTestId("axin-progress")).toContainText("/7");
 
   // refresh retains draft state (server persistence, not local state)
   await page.reload();
-  await expect(page.getByTestId("wizard-year")).toContainText("2021");
-  await expect(page.getByTestId("wizard-model")).toHaveValue(s.corollaModelId);
+  await expect(page.getByTestId("axin-summary-quickstart")).toContainText("Toyota");
 
-  // step 2 — details (price entered in AZN)
-  await page.getByTestId("wizard-step-2").click();
+  // Satış məlumatı — price entered in AZN, mileage, city
+  await openSection(page, "sale");
   await page.getByTestId("wizard-price").fill("25000");
   await page.getByTestId("wizard-mileage").fill("64000");
-  await page.getByTestId("wizard-city").selectOption(s.bakuCityId);
+  await page.getByTestId("wizard-city").selectOption(seed().bakuCityId);
   await saveSettled(page);
+  await page.getByTestId("axin-complete-sale").click();
 
-  // step 4 first — description & contact (so the only submit blocker
-  // left is the image minimum, exercised below)
-  await page.getByTestId("wizard-step-4").click();
-  await page.getByTestId("wizard-description").fill("Əla vəziyyətdə Toyota Corolla. E2E test elanı.");
+  // ƏLAQƏ — name + phone (so the only submit blocker left is images)
+  await openSection(page, "contact");
+  await page.getByTestId("wizard-seller-name").fill("E2E Satıcı");
   await page.getByTestId("wizard-contact-phone").fill("+994501234567");
   await saveSettled(page);
 
-  // premature submit (0 photos) must fail safely via the backend
-  await page.getByTestId("wizard-step-5").click();
+  // Əlavə — description
+  await openSection(page, "extras");
+  await page.getByTestId("wizard-description").fill("Əla vəziyyətdə Toyota Corolla. E2E test elanı.");
+  await saveSettled(page);
+
+  // premature submit (0 photos) must fail safely via the backend and
+  // flag the photos card as needing attention
+  await openSection(page, "review");
   await page.getByTestId("wizard-submit").click();
   await expect(page.getByTestId("wizard-submit-error")).toContainText("Şəkil sayı kifayət deyil");
+  await expect(page.getByTestId("axin-section-photos")).toHaveAttribute("data-state", "attention");
 
-  // step 3 — photos: unsupported file rejected client-side with a clear message
-  await page.getByTestId("wizard-step-3").click();
+  // Şəkillər — unsupported file rejected client-side with a clear message
+  await openSection(page, "photos");
   await page.getByTestId("wizard-photos-input").setInputFiles({
     name: "document.pdf",
     mimeType: "application/pdf",
@@ -141,8 +204,8 @@ test("full seller journey: create → fill → photos → preview → FREE submi
   await uploadJpegs(page, 1, 200);
   await expect(grid.locator('[data-testid="wizard-image"]')).toHaveCount(3, { timeout: 60_000 });
 
-  // step 5 — preview shows entered data + advisory quota; FREE submit
-  await page.getByTestId("wizard-step-5").click();
+  // Baxış — preview shows entered data + advisory quota; FREE submit
+  await openSection(page, "review");
   await expect(page.getByTestId("wizard-completeness")).toContainText("hazırdır");
   await expect(page.getByTestId("wizard-preview")).toContainText("Toyota Corolla 2021");
   await expect(page.getByTestId("wizard-preview")).toContainText("25 000 AZN");
@@ -157,11 +220,11 @@ test("full seller journey: create → fill → photos → preview → FREE submi
 });
 
 test("category change clears dependent brand/model via the server", async ({ page, context }, { project }) => {
-  const s = seed();
   const { userId } = await loginAs(context, testPhone(project.name, 32));
   const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 0 });
   await page.goto(`/elan-yerlesdir/${fixture.id}`);
-  await expect(page.getByTestId("wizard-brand")).toHaveValue(s.toyotaBrandId);
+  await openSection(page, "quickstart");
+  await expect(page.getByTestId("wizard-brand")).toHaveValue("Toyota");
   await page.getByTestId("wizard-category").selectOption("MOTORCYCLE");
   // server clears brand/model; the UI adopts the response DTO
   await expect(page.getByTestId("wizard-brand")).toHaveValue("", { timeout: 15_000 });
@@ -173,10 +236,8 @@ test("stale revision conflict freezes editing until explicit reload", async ({ p
   const { userId } = await loginAs(context, testPhone(project.name, 33));
   const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 0 });
   await page.goto(`/elan-yerlesdir/${fixture.id}`);
+  await openSection(page, "quickstart");
   await expect(page.getByTestId("wizard-year")).toContainText("2021");
-  // Interactivity gate: the brand select is server-rendered DISABLED
-  // and enables only after hydration + the catalog fetch effect —
-  // interact only once the editor is provably live.
   await expect(page.getByTestId("wizard-brand")).toBeEnabled();
 
   await bumpListingRevision(fixture.id); // "another window" edits → server at N+1
@@ -199,10 +260,11 @@ test("stale revision conflict freezes editing until explicit reload", async ({ p
   // explicit reload adopts the server version and reactivates editing
   await page.getByTestId("wizard-conflict-reload").click();
   await expect(conflict).toHaveCount(0);
+  await openSection(page, "quickstart");
   await expect(page.getByTestId("wizard-year")).toContainText("2021"); // local 2019 dropped
   await page.getByTestId("wizard-year").click();
   await page.getByTestId("wizard-year-opt-2018").click();
-  await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+  await saveSettled(page);
   expect(await getListingYear(fixture.id)).toBe(2018); // editing works again, on the fresh revision
 });
 
@@ -210,7 +272,8 @@ test("paid boundary: 4th publication submits into PAYMENT_REQUIRED with the serv
   const { userId } = await loginAs(context, testPhone(project.name, 34));
   await consumeFreePublications(userId, 3);
   const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 3 });
-  await page.goto(`/elan-yerlesdir/${fixture.id}?addim=5`);
+  await page.goto(`/elan-yerlesdir/${fixture.id}`);
+  await openSection(page, "review");
   await expect(page.getByTestId("wizard-quota")).toContainText("2 AZN");
   const before = await listingCounts(userId);
   await page.getByTestId("wizard-submit").click();
@@ -255,7 +318,8 @@ test("vehicle attribute dropdowns: year policy, engine sequence, color palette (
   const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 0 });
   await page.goto(`/elan-yerlesdir/${fixture.id}`);
 
-  // YEAR — single-select dropdown, not a manual text input
+  // YEAR — single-select dropdown in Quick Start, not a manual input
+  await openSection(page, "quickstart");
   const year = page.getByTestId("wizard-year");
   await expect(year).toContainText("2021"); // fixture restore
   expect(await year.evaluate((el) => el.tagName)).toBe("BUTTON");
@@ -275,7 +339,7 @@ test("vehicle attribute dropdowns: year policy, engine sequence, color palette (
   expect(await getListingYear(fixture.id)).toBe(2024);
 
   // ENGINE — single-select dropdown backed by engineCcOptions()
-  await page.getByTestId("wizard-step-2").click();
+  await openSection(page, "details");
   const engine = page.getByTestId("wizard-engine");
   expect(await engine.evaluate((el) => el.tagName)).toBe("BUTTON");
   await engine.click();
@@ -329,30 +393,19 @@ test("vehicle attribute dropdowns: year policy, engine sequence, color palette (
   await page.keyboard.press("Escape");
   await expect(colorPanel).toBeHidden();
 
-  // Next / Back keeps all three. Each navigation commits its addim
-  // URL update asynchronously — wait for the URL AND the settled
-  // network before the next click (a click during the in-flight
-  // router.replace stream aborts it; the dev server then surfaces an
-  // error overlay that intercepts pointer events).
-  await page.getByTestId("wizard-next").click();
-  await page.waitForURL(/addim=3/);
-  await page.waitForLoadState("networkidle");
-  await page.getByTestId("wizard-back").click();
-  await page.waitForURL(/addim=2/);
-  await page.waitForLoadState("networkidle");
+  // switching between sections keeps all three (one-page flow)
+  await openSection(page, "sale");
+  await openSection(page, "details");
   await expect(engine).toContainText("2 000");
   await expect(color).toContainText("Ağ");
-  await page.getByTestId("wizard-step-1").click();
-  await page.waitForURL(/addim=1/);
-  await page.waitForLoadState("networkidle");
+  await openSection(page, "quickstart");
   await expect(year).toContainText("2024");
 
   // reload / reopen restores all three from the server
   await page.reload();
+  await openSection(page, "quickstart");
   await expect(year).toContainText("2024");
-  await page.getByTestId("wizard-step-2").click();
-  await page.waitForURL(/addim=2/);
-  await page.waitForLoadState("networkidle");
+  await openSection(page, "details");
   await expect(engine).toContainText("2 000");
   await expect(color).toContainText("Ağ");
 
@@ -361,13 +414,15 @@ test("vehicle attribute dropdowns: year policy, engine sequence, color palette (
   await saveSettled(page);
   await expect(color).toContainText("Rəng seçin");
   await page.reload();
+  await openSection(page, "details");
   await expect(color).toContainText("Rəng seçin");
 });
 
 test("legacy engine_cc outside the sequence is preserved, never normalized (4.17O.3)", async ({ page, context }, { project }) => {
   const { userId } = await loginAs(context, testPhone(project.name, 39));
   const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, engineCc: 1998 });
-  await page.goto(`/elan-yerlesdir/${fixture.id}?addim=2`);
+  await page.goto(`/elan-yerlesdir/${fixture.id}`);
+  await openSection(page, "details");
 
   // the historical value is visibly selected, injected into the list
   const engine = page.getByTestId("wizard-engine");
@@ -378,22 +433,16 @@ test("legacy engine_cc outside the sequence is preserved, never normalized (4.17
   await page.keyboard.press("Escape");
 
   // an unrelated edit + autosave must not rewrite it
+  await openSection(page, "sale");
   await page.getByTestId("wizard-mileage").fill("65000");
   await saveSettled(page);
   expect(await getListingEngineCc(fixture.id)).toBe(1998);
 
-  // Next / Back / reload all keep the literal value (wait for the
-  // committed addim URL and the settled network after each navigation
-  // so the reload deterministically lands back on step 2 and no
-  // aborted router stream raises the dev error overlay)
-  await page.getByTestId("wizard-next").click();
-  await page.waitForURL(/addim=3/);
-  await page.waitForLoadState("networkidle");
-  await page.getByTestId("wizard-back").click();
-  await page.waitForURL(/addim=2/);
-  await page.waitForLoadState("networkidle");
+  // section switches and reload all keep the literal value
+  await openSection(page, "details");
   await expect(engine).toContainText("1 998");
   await page.reload();
+  await openSection(page, "details");
   await expect(engine).toContainText("1 998");
 
   // only a DELIBERATE standard selection replaces it — and the
@@ -406,21 +455,14 @@ test("legacy engine_cc outside the sequence is preserved, never normalized (4.17
   await expect(page.getByTestId("wizard-engine-opt-1998")).toHaveCount(0);
 });
 
-test("motorcycle drafts use the same year/engine/color controls (4.17O.3)", async ({ page, context }, { project }) => {
+test("motorcycle quick start uses the same year/engine/color controls (4.17O.3)", async ({ page, context }, { project }) => {
   await loginAs(context, testPhone(project.name, 40));
-  await page.goto("/elan-yerlesdir");
-  await page.getByTestId("create-category-MOTORCYCLE").check();
-  await page.getByTestId("create-listing-button").click();
-  await page.waitForURL(/\/elan-yerlesdir\/[0-9a-f-]{36}$/);
+  await quickStartCreate(page, { category: "MOTORCYCLE", brand: "Yamaha", model: "MT-07", year: 2022 });
 
-  await page.getByTestId("wizard-year").click();
-  await page.getByTestId("wizard-year-opt-2022").click();
-  await saveSettled(page);
+  await openSection(page, "quickstart");
   await expect(page.getByTestId("wizard-year")).toContainText("2022");
 
-  await page.getByTestId("wizard-step-2").click();
-  await page.waitForURL(/addim=2/);
-  await page.waitForLoadState("networkidle");
+  await openSection(page, "details");
   await page.getByTestId("wizard-engine").click();
   await page.getByTestId("wizard-engine-opt-600").click();
   await saveSettled(page);
@@ -432,12 +474,12 @@ test("motorcycle drafts use the same year/engine/color controls (4.17O.3)", asyn
   await saveSettled(page);
   await expect(page.getByTestId("wizard-color_id")).toContainText("Qırmızı");
 
-  // values survive a reload for the motorcycle draft too (reload
-  // lands on step 2 per the committed addim URL)
+  // values survive a reload for the motorcycle draft too
   await page.reload();
+  await openSection(page, "details");
   await expect(page.getByTestId("wizard-engine")).toContainText("600");
   await expect(page.getByTestId("wizard-color_id")).toContainText("Qırmızı");
-  await page.getByTestId("wizard-step-1").click();
+  await openSection(page, "quickstart");
   await expect(page.getByTestId("wizard-year")).toContainText("2022");
 });
 
@@ -452,7 +494,8 @@ test("catalog option selects persist UUIDs, not codes — CAR (4.17O.4)", async 
       badPatches.push(r.url());
     }
   });
-  await page.goto(`/elan-yerlesdir/${fixture.id}?addim=2`);
+  await page.goto(`/elan-yerlesdir/${fixture.id}`);
+  await openSection(page, "details");
 
   await page.getByTestId("wizard-body_type_id").selectOption({ label: "Sedan" });
   await saveSettled(page);
@@ -476,6 +519,7 @@ test("catalog option selects persist UUIDs, not codes — CAR (4.17O.4)", async 
 
   // reload restore: persisted UUID → matching option renders selected
   await page.reload();
+  await openSection(page, "details");
   await expect(page.getByTestId("wizard-body_type_id")).toHaveValue(ids.body_type_id!);
   await expect(page.getByTestId("wizard-fuel_type_id")).toHaveValue(ids.fuel_type_id!);
   await expect(page.getByTestId("wizard-transmission_id")).toHaveValue(ids.transmission_id!);
@@ -485,14 +529,10 @@ test("catalog option selects persist UUIDs, not codes — CAR (4.17O.4)", async 
 test("catalog option selects persist UUIDs — MOTORCYCLE (4.17O.4)", async ({ page, context }, { project }) => {
   const uuid = /^[0-9a-f]{8}-[0-9a-f-]{27}$/;
   await loginAs(context, testPhone(project.name, 42));
-  await page.goto("/elan-yerlesdir");
-  await page.getByTestId("create-category-MOTORCYCLE").check();
-  await page.getByTestId("create-listing-button").click();
-  await page.waitForURL(/\/elan-yerlesdir\/[0-9a-f-]{36}$/);
+  await quickStartCreate(page, { category: "MOTORCYCLE", brand: "Yamaha", model: "MT-07", year: 2020 });
   const listingId = page.url().match(/([0-9a-f-]{36})$/)![1];
 
-  await page.getByTestId("wizard-step-2").click();
-  await page.waitForURL(/addim=2/);
+  await openSection(page, "details");
   await page.getByTestId("wizard-motorcycle_type_id").selectOption({ label: "Sport" });
   await saveSettled(page);
   await page.getByTestId("wizard-fuel_type_id").selectOption({ label: "Benzin" });
@@ -506,6 +546,7 @@ test("catalog option selects persist UUIDs — MOTORCYCLE (4.17O.4)", async ({ p
   expect(ids.transmission_id).toMatch(uuid);
 
   await page.reload();
+  await openSection(page, "details");
   await expect(page.getByTestId("wizard-motorcycle_type_id")).toHaveValue(ids.motorcycle_type_id!);
   await expect(page.getByTestId("wizard-fuel_type_id")).toHaveValue(ids.fuel_type_id!);
   await expect(page.getByTestId("wizard-transmission_id")).toHaveValue(ids.transmission_id!);
@@ -515,15 +556,15 @@ test("category switch clears persisted CAR body type; category stays code-backed
   const uuid = /^[0-9a-f]{8}-[0-9a-f-]{27}$/;
   const { userId } = await loginAs(context, testPhone(project.name, 43));
   const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 0 });
-  await page.goto(`/elan-yerlesdir/${fixture.id}?addim=2`);
+  await page.goto(`/elan-yerlesdir/${fixture.id}`);
+  await openSection(page, "details");
   await page.getByTestId("wizard-body_type_id").selectOption({ label: "Sedan" });
   await saveSettled(page);
   expect((await getListingCatalogIds(fixture.id)).body_type_id).toMatch(uuid);
 
   // category PATCH still sends the CODE ("MOTORCYCLE") — the switch
-  // succeeding at the server proves the code contract survives the
-  // default-id SelectField change
-  await page.goto(`/elan-yerlesdir/${fixture.id}?addim=1`);
+  // succeeding at the server proves the code contract survives
+  await openSection(page, "quickstart");
   await page.getByTestId("wizard-category").selectOption("MOTORCYCLE");
   await expect(page.getByTestId("wizard-brand")).toHaveValue("", { timeout: 15_000 });
   await expect(page.getByTestId("wizard-category")).toHaveValue("MOTORCYCLE");
@@ -532,7 +573,7 @@ test("category switch clears persisted CAR body type; category stays code-backed
   expect((await getListingCatalogIds(fixture.id)).body_type_id).toBeNull();
 
   // the CAR-only control is gone; the MOTORCYCLE control is available
-  await page.goto(`/elan-yerlesdir/${fixture.id}?addim=2`);
+  await openSection(page, "details");
   await expect(page.getByTestId("wizard-motorcycle_type_id")).toBeVisible();
   await expect(page.getByTestId("wizard-body_type_id")).toHaveCount(0);
 });

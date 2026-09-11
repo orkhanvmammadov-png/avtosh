@@ -6,7 +6,8 @@ import { insertListingFixture, makeTestJpeg } from "./seller-helpers";
 /**
  * Seller-experience screenshots for human design review (artifacts
  * only — test-results/visual-review/ is gitignored). Serial: earlier
- * steps prepare the listing later shots reuse.
+ * steps prepare the listing later shots reuse. O.9: the shots walk
+ * the AXIN section cards instead of wizard steps.
  */
 const OUT = "test-results/visual-review";
 const PHONE = "+994508890001";
@@ -15,6 +16,14 @@ let wizardListingId = "";
 let correctionListingId = "";
 
 test.describe.configure({ mode: "serial" });
+
+async function openSection(page: Page, key: string) {
+  const section = page.getByTestId(`axin-section-${key}`);
+  if ((await section.getAttribute("data-state")) !== "open") {
+    await section.click();
+  }
+  await expect(section).toHaveAttribute("data-state", "open");
+}
 
 test.describe("seller visual review artifacts", () => {
   test.beforeEach(async ({ context }, testInfo) => {
@@ -42,7 +51,8 @@ test.describe("seller visual review artifacts", () => {
         review: { decision: "CORRECTION_REQUESTED", reasonCode: "INVALID_PHOTOS", note: "Şəkillər aydın deyil, yenidən çəkin." },
       })
     ).id;
-    await page.goto(`/elan-yerlesdir/${wizardListingId}?addim=3`);
+    await page.goto(`/elan-yerlesdir/${wizardListingId}`);
+    await openSection(page, "photos");
     await page.getByTestId("wizard-photos-input").setInputFiles([
       { name: "a.jpg", mimeType: "image/jpeg", buffer: await makeTestJpeg(800, 600, 40) },
       { name: "b.jpg", mimeType: "image/jpeg", buffer: await makeTestJpeg(800, 600, 120) },
@@ -51,23 +61,24 @@ test.describe("seller visual review artifacts", () => {
     await expect(page.locator('[data-testid="wizard-image"]')).toHaveCount(3, { timeout: 60_000 });
   });
 
-  const wizardShots: { name: string; width: number; height: number; step: number }[] = [
-    { name: "wizard-vehicle-desktop-1440", width: 1440, height: 900, step: 1 },
-    { name: "wizard-vehicle-mobile-390", width: 390, height: 844, step: 1 },
-    { name: "wizard-details-desktop-1440", width: 1440, height: 900, step: 2 },
-    { name: "wizard-details-mobile-390", width: 390, height: 844, step: 2 },
-    { name: "wizard-photos-desktop-1440", width: 1440, height: 900, step: 3 },
-    { name: "wizard-photos-mobile-390", width: 390, height: 844, step: 3 },
-    { name: "wizard-preview-desktop-1440", width: 1440, height: 900, step: 5 },
-    { name: "wizard-preview-mobile-390", width: 390, height: 844, step: 5 },
+  const wizardShots: { name: string; width: number; height: number; section: string }[] = [
+    { name: "wizard-vehicle-desktop-1440", width: 1440, height: 900, section: "quickstart" },
+    { name: "wizard-vehicle-mobile-390", width: 390, height: 844, section: "quickstart" },
+    { name: "wizard-details-desktop-1440", width: 1440, height: 900, section: "details" },
+    { name: "wizard-details-mobile-390", width: 390, height: 844, section: "details" },
+    { name: "wizard-photos-desktop-1440", width: 1440, height: 900, section: "photos" },
+    { name: "wizard-photos-mobile-390", width: 390, height: 844, section: "photos" },
+    { name: "wizard-preview-desktop-1440", width: 1440, height: 900, section: "review" },
+    { name: "wizard-preview-mobile-390", width: 390, height: 844, section: "review" },
   ];
   for (const shot of wizardShots) {
     test(shot.name, async ({ page }) => {
-      await shoot(page, shot.name, shot.width, shot.height, `/elan-yerlesdir/${wizardListingId}?addim=${shot.step}`, async (p) => {
-        if (shot.step === 3) {
+      await shoot(page, shot.name, shot.width, shot.height, `/elan-yerlesdir/${wizardListingId}`, async (p) => {
+        await openSection(p, shot.section);
+        if (shot.section === "photos") {
           await expect(p.locator('[data-testid="wizard-image"]')).toHaveCount(3);
         }
-        if (shot.step === 5) {
+        if (shot.section === "review") {
           await expect(p.getByTestId("wizard-quota")).toBeVisible();
         }
       });
@@ -84,9 +95,10 @@ test.describe("seller visual review artifacts", () => {
     const saved = () =>
       expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
 
-    // 1440 — Step 1 Year open
+    // 1440 — Quick Start Year open
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(`/elan-yerlesdir/${draft.id}?addim=1`);
+    await page.goto(`/elan-yerlesdir/${draft.id}`);
+    await openSection(page, "quickstart");
     await expect(page.getByTestId("wizard-brand")).toBeEnabled();
     await page.getByTestId("wizard-year").click();
     await expect(page.getByTestId("wizard-year-panel")).toBeVisible();
@@ -94,14 +106,14 @@ test.describe("seller visual review artifacts", () => {
     await page.screenshot({ path: `${OUT}/o3-year-open-1440.png` });
     await page.keyboard.press("Escape");
 
-    // 1440 — Step 2 Engine open
-    await page.getByTestId("wizard-step-2").click();
+    // 1440 — Detallar Engine open
+    await openSection(page, "details");
     await page.getByTestId("wizard-engine").click();
     await expect(page.getByTestId("wizard-engine-panel")).toBeVisible();
     await page.screenshot({ path: `${OUT}/o3-engine-open-1440.png` });
     await page.keyboard.press("Escape");
 
-    // 1440 — Step 2 Color open, then selected
+    // 1440 — Detallar Color open, then selected
     await page.getByTestId("wizard-color_id").scrollIntoViewIfNeeded();
     await page.getByTestId("wizard-color_id").click();
     await expect(page.getByTestId("wizard-color_id-panel")).toBeVisible();
@@ -112,7 +124,7 @@ test.describe("seller visual review artifacts", () => {
     await expect(page.getByTestId("wizard-color_id")).toContainText("Qara");
     await page.screenshot({ path: `${OUT}/o3-color-selected-1440.png` });
 
-    // 768 — Step 2 Color open
+    // 768 — Detallar Color open
     await page.setViewportSize({ width: 768, height: 1024 });
     await page.getByTestId("wizard-color_id").scrollIntoViewIfNeeded();
     await page.getByTestId("wizard-color_id").click();
@@ -123,7 +135,7 @@ test.describe("seller visual review artifacts", () => {
 
     // 390 — Year open, Engine open, Color open + selected
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.getByTestId("wizard-step-1").click();
+    await openSection(page, "quickstart");
     await page.getByTestId("wizard-year").scrollIntoViewIfNeeded();
     await page.getByTestId("wizard-year").click();
     await expect(page.getByTestId("wizard-year-panel")).toBeVisible();
@@ -131,7 +143,7 @@ test.describe("seller visual review artifacts", () => {
     await page.screenshot({ path: `${OUT}/o3-year-open-390.png` });
     await page.keyboard.press("Escape");
 
-    await page.getByTestId("wizard-step-2").click();
+    await openSection(page, "details");
     await page.getByTestId("wizard-engine").scrollIntoViewIfNeeded();
     await page.getByTestId("wizard-engine").click();
     await expect(page.getByTestId("wizard-engine-panel")).toBeVisible();
@@ -162,7 +174,8 @@ test.describe("seller visual review artifacts", () => {
 
   test("wizard-free-success-desktop-1440", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(`/elan-yerlesdir/${wizardListingId}?addim=5`);
+    await page.goto(`/elan-yerlesdir/${wizardListingId}`);
+    await openSection(page, "review");
     await page.getByTestId("wizard-submit").click();
     await expect(page.getByTestId("wizard-result")).toHaveAttribute("data-outcome", "MODERATION", { timeout: 20_000 });
     await page.screenshot({ path: `${OUT}/wizard-free-success-desktop-1440.png`, fullPage: true });

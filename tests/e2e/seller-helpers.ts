@@ -54,7 +54,7 @@ export async function insertListingFixture(
     const published = ["ACTIVE", "SOLD", "EXPIRED", "SUSPENDED"].includes(status);
     const [row] = await sql`
       insert into listings (owner_id, category_id, brand_id, model_id, city_id, year, engine_cc,
-        price_minor, mileage, no_accident, not_repainted, description, contact_phone_e164, status,
+        price_minor, mileage, no_accident, not_repainted, description, contact_phone_e164, seller_name, status,
         submitted_at, published_at, current_expires_at, sold_at)
       values (${ownerId},
         (select id from categories where code = 'CAR'),
@@ -63,6 +63,7 @@ export async function insertListingFixture(
         ${complete ? 2021 : null}, ${options.engineCc ?? null}, ${complete ? 2500000 : null}, ${complete ? 64000 : null},
         ${options.noAccident ?? null}, ${options.notRepainted ?? null},
         ${complete ? "E2E fixture təsviri" : null}, ${complete ? "+994501234567" : null},
+        ${complete ? "E2E Satıcı" : null},
         ${status}::listing_status,
         ${submitted ? sql`now()` : null},
         ${published ? sql`now() - interval '1 day'` : null},
