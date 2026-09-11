@@ -348,7 +348,8 @@ export async function getPublicDetail(
            ft.name_az as fuel_type, tr.name_az as transmission, bt.name_az as body_type,
            dt.name_az as drive_type, mt.name_az as motorcycle_type, co.name_az as color,
            ci.name_az as city, l.credit_available, l.barter_available, l.description,
-           l.contact_phone_e164, u.display_name as seller_display_name,
+           l.contact_phone_e164,
+           coalesce(l.seller_name, u.display_name) as seller_display_name,
            l.published_at, l.sold_at,
            (select min(p.ends_at) from listing_promotions p
               where p.listing_id = l.id and ${promotionValid(sql)}) as promo_ends_at,

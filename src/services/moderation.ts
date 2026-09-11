@@ -224,6 +224,7 @@ export async function getModerationDetail(listingId: string): Promise<Record<str
     barterAvailable: row.barter_available,
     description: row.description,
     contactPhone: row.contact_phone_e164,
+    sellerName: row.seller_name,
     submittedAt: row.submitted_at?.toISOString() ?? null,
     publishedAt: row.published_at?.toISOString() ?? null,
     currentExpiresAt: row.current_expires_at?.toISOString() ?? null,

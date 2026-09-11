@@ -53,4 +53,5 @@ export const MISSING_FIELD_LABELS: Record<string, string> = {
   mileage: "Yürüş",
   city: "Şəhər",
   contact_phone: "Əlaqə nömrəsi",
+  seller_name: "Satıcının adı",
 };

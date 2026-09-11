@@ -22,6 +22,7 @@ import {
   updateDraftListing,
   type ListingRow,
 } from "@/repositories/listings";
+import { findPackageOfType } from "@/repositories/promotions";
 import { toOwnerListingDto, type OwnerListingDto } from "@/services/listing-dto";
 import { isSellerEditable } from "@/services/listing-states";
 import type { DraftPatchInput } from "@/validators/listings";
@@ -254,6 +255,37 @@ export async function updateDraft(
         });
       }
       set.contact_phone_e164 = normalized;
+    }
+  }
+  if (patch.seller_name !== undefined) {
+    // Listing-level public seller name only — users.display_name is
+    // never mutated from the seller flow.
+    const trimmed = patch.seller_name?.trim() ?? "";
+    set.seller_name = trimmed === "" ? null : trimmed;
+  }
+  // Promotion intent preferences: package must exist and match the
+  // field's type. is_active is NOT required here (see repository doc);
+  // checkout re-resolves an active package server-side regardless.
+  if (patch.premium_intent_package_id !== undefined) {
+    if (patch.premium_intent_package_id === null) {
+      set.premium_intent_package_id = null;
+    } else {
+      const pkg = await findPackageOfType(getSql(), patch.premium_intent_package_id, "PREMIUM");
+      if (pkg === undefined) {
+        throw invalidSelection("Unknown PREMIUM promotion package.");
+      }
+      set.premium_intent_package_id = patch.premium_intent_package_id;
+    }
+  }
+  if (patch.boost_intent_package_id !== undefined) {
+    if (patch.boost_intent_package_id === null) {
+      set.boost_intent_package_id = null;
+    } else {
+      const pkg = await findPackageOfType(getSql(), patch.boost_intent_package_id, "BOOST");
+      if (pkg === undefined) {
+        throw invalidSelection("Unknown BOOST promotion package.");
+      }
+      set.boost_intent_package_id = patch.boost_intent_package_id;
     }
   }
 

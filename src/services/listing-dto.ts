@@ -47,6 +47,10 @@ export interface OwnerListingDto {
   barterAvailable: boolean;
   description: string | null;
   contactPhone: string | null;
+  sellerName: string | null;
+  /** O.9 promotion intent PREFERENCES — never payment truth. */
+  premiumIntentPackageId: string | null;
+  boostIntentPackageId: string | null;
   featureIds: string[];
   images: ListingImageDto[];
   createdAt: string;
@@ -110,6 +114,9 @@ export async function toOwnerListingDto(
     notRepainted: row.not_repainted,
     description: row.description,
     contactPhone: row.contact_phone_e164,
+    sellerName: row.seller_name,
+    premiumIntentPackageId: row.premium_intent_package_id,
+    boostIntentPackageId: row.boost_intent_package_id,
     featureIds,
     images,
     createdAt: row.created_at.toISOString(),

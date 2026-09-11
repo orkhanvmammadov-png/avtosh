@@ -32,6 +32,9 @@ export interface PatchBody {
   barter_available?: boolean;
   description?: string | null;
   contact_phone?: string | null;
+  seller_name?: string | null;
+  premium_intent_package_id?: string | null;
+  boost_intent_package_id?: string | null;
   feature_ids?: string[];
 }
 

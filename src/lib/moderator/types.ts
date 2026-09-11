@@ -25,6 +25,7 @@ export interface ModerationDetailView {
   barterAvailable: boolean;
   description: string | null;
   contactPhone: string | null;
+  sellerName: string | null;
   submittedAt: string | null;
   publishedAt: string | null;
   currentExpiresAt: string | null;

@@ -85,6 +85,9 @@ const REQUIRED_FIELDS: { key: keyof ListingRow; code: string }[] = [
   { key: "mileage", code: "mileage" },
   { key: "city_id", code: "city" },
   { key: "contact_phone_e164", code: "contact_phone" },
+  // O.9 Owner decision: the listing-level seller name is required for
+  // submission AND resubmission (both funnel through assertComplete).
+  { key: "seller_name", code: "seller_name" },
 ];
 
 const REFERENCE_COLUMNS: { key: keyof ListingRow; group: string }[] = [

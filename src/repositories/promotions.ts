@@ -42,6 +42,24 @@ export async function findActivePackage(
   return rows[0];
 }
 
+/**
+ * Package lookup for O.9 intent PREFERENCES: existence + type only,
+ * deliberately WITHOUT the is_active filter — a later deactivation
+ * turns a saved intent into valid historical preference, while
+ * checkout keeps re-resolving through findActivePackage.
+ */
+export async function findPackageOfType(
+  sql: Sql,
+  packageId: string,
+  type: string,
+): Promise<{ id: string } | undefined> {
+  const rows = await sql<{ id: string }[]>`
+    select id from promotion_packages
+    where id = ${packageId} and type = ${type}::promotion_type
+  `;
+  return rows[0];
+}
+
 export interface PromotionIntentRow {
   id: string;
   status: string;

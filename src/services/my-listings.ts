@@ -57,6 +57,12 @@ export interface OwnerCardDto {
   currentExpiresAt: string | null;
   premiumUntil: string | null;
   boostUntil: string | null;
+  /** O.9 creation-time promotion intent per type: null when none. */
+  premiumIntent: { packageId: string; packageActive: boolean } | null;
+  boostIntent: { packageId: string; packageActive: boolean } | null;
+  /** Satisfied = a SUCCESS payment of that type exists (any package). */
+  premiumSatisfied: boolean;
+  boostSatisfied: boolean;
   moderationFeedback: SellerModerationFeedbackDto | null;
 }
 
@@ -106,6 +112,22 @@ async function toCardDto(row: OwnerCardRow): Promise<OwnerCardDto> {
     currentExpiresAt: row.current_expires_at?.toISOString() ?? null,
     premiumUntil: row.premium_until?.toISOString() ?? null,
     boostUntil: row.boost_until?.toISOString() ?? null,
+    premiumIntent:
+      row.premium_intent_package_id === null
+        ? null
+        : {
+            packageId: row.premium_intent_package_id,
+            packageActive: row.premium_intent_package_active === true,
+          },
+    boostIntent:
+      row.boost_intent_package_id === null
+        ? null
+        : {
+            packageId: row.boost_intent_package_id,
+            packageActive: row.boost_intent_package_active === true,
+          },
+    premiumSatisfied: row.premium_satisfied,
+    boostSatisfied: row.boost_satisfied,
     moderationFeedback: feedback,
   };
 }
