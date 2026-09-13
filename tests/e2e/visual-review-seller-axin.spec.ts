@@ -25,7 +25,7 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
 
   test("o9-stageb-captures", async ({ page, context }) => {
     test.setTimeout(180_000);
-    await loginAs(context, "+994508890002");
+    await loginAs(context, "+994508890021");
     await page.setViewportSize({ width: 1440, height: 900 });
 
     // Quick Start — empty
@@ -70,7 +70,7 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
   /** Stage D — progressive sections, photos and extras states. */
   test("o9-staged-captures", async ({ page, context }) => {
     test.setTimeout(240_000);
-    const { userId } = await loginAs(context, "+994508890003");
+    const { userId } = await loginAs(context, "+994508890022");
     const car = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 0 });
     await page.setViewportSize({ width: 1440, height: 900 });
 
@@ -165,7 +165,7 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
     const sql = postgres(seed().databaseUrl, { prepare: false, max: 1 });
     let cleanup: (() => Promise<void>) | null = null;
     try {
-      const { userId } = await loginAs(context, "+994508890004");
+      const { userId } = await loginAs(context, "+994508890023");
       await page.setViewportSize({ width: 1440, height: 900 });
 
       // contact — empty / error / filled
@@ -222,7 +222,7 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
       await page.screenshot({ path: `${OUT}/o9-stagef-1440-promotion-boost.png`, fullPage: true });
 
       // review PAID (4th publication) — 2 AZN fee line, separate from promo
-      const payer = await loginAs(context, "+994508890005");
+      const payer = await loginAs(context, "+994508890024");
       await consumeFreePublications(payer.userId, 3);
       const paidDraft = await insertListingFixture(payer.userId, { status: "DRAFT", complete: true, images: 3 });
       await page.goto(`/elan-yerlesdir/${paidDraft.id}`);
@@ -241,7 +241,7 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
     test.setTimeout(300_000);
     const sql = postgres(seed().databaseUrl, { prepare: false, max: 1 });
     try {
-      const { userId } = await loginAs(context, "+994508890006");
+      const { userId } = await loginAs(context, "+994508890025");
       const rich = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 3 });
 
       // 1024 + 768: main / contact / review / promotion
@@ -316,7 +316,7 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
       await page.screenshot({ path: `${OUT}/o9-stageg-390-listing-free.png`, fullPage: true });
 
       // 390 — PAID result screen (4th publication)
-      const payer = await loginAs(context, "+994508890007");
+      const payer = await loginAs(context, "+994508890026");
       await consumeFreePublications(payer.userId, 3);
       const paid = await insertListingFixture(payer.userId, { status: "DRAFT", complete: true, images: 3 });
       await page.goto(`/elan-yerlesdir/${paid.id}`);
