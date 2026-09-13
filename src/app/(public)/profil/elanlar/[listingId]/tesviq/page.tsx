@@ -103,8 +103,10 @@ export default async function PromotionPage({
   const title = listing !== undefined ? vehicleTitle(listing) : "Elan";
   // O.9 preselection: a PENDING creation-time intent (no same-type
   // SUCCESS payment yet) whose intended package is still active
-  // preselects type+package. The seller still initiates checkout
-  // explicitly — nothing auto-launches.
+  // preselects type+package. DUAL-PENDING PRIORITY IS DETERMINISTIC:
+  // PREMIUM first; once Premium is satisfied by any same-type
+  // SUCCESS, BOOST becomes the remaining continuation. The seller
+  // still initiates checkout explicitly — nothing auto-launches.
   const preselect =
     listing === undefined
       ? null

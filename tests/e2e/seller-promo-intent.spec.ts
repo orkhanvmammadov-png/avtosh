@@ -215,6 +215,18 @@ test("post-ACTIVE handoff: continuation CTA, preselection, per-type satisfaction
     } finally {
       await sql`update promotion_packages set is_active = true where id = ${packages.boost1}`;
     }
+
+    // 6) Boost SUCCESS too → BOTH creation-time intents satisfied; the
+    //    continuation CTA is gone for good (normal promote remains)
+    await sql`
+      insert into payments (user_id, listing_id, type, amount_minor, currency, status, provider,
+                            fulfillment_status, idempotency_key, promotion_package_id)
+      values (${userId}, ${listing.id}, 'BOOST', 200, 'AZN', 'SUCCESS', 'KAPITAL',
+              'FULFILLED', ${"o9f:boost-success:" + listing.id}, ${packages.boost1})
+    `;
+    await page.goto("/profil/elanlar");
+    await expect(promote).toHaveAttribute("data-intent", "none");
+    await expect(promote).toHaveText("İrəli çək");
   } finally {
     await packages.cleanup();
     await sql.end();

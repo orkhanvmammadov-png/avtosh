@@ -6,6 +6,8 @@ import {
   consumeFreePublications,
   getContactIsolation,
   getListingCatalogIds,
+  getUserDisplayName,
+  setUserDisplayName,
   getListingEngineCc,
   getListingYear,
   insertListingFixture,
@@ -296,6 +298,36 @@ test("contact section: O.1 local phone UX, login-phone suggestion, inline valida
   await expect(page.getByTestId("wizard-seller-name")).toHaveValue("Orxan M.");
   const display = await page.getByTestId("wizard-contact-phone").inputValue();
   expect(display.replace(/\s/g, "")).toBe(`0${authPhone.slice(4)}`); // 0XX XXX XX XX of the same number
+});
+
+test("profile display name is an explicit suggestion, never phantom-completed listing data (O.9E)", async ({ page, context }, { project }) => {
+  const { userId } = await loginAs(context, testPhone(project.name, 50));
+  await setUserDisplayName(userId, "Seller A");
+  try {
+    const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: false });
+    await page.goto(`/elan-yerlesdir/${fixture.id}`);
+    await openSection(page, "contact");
+    // the field is NOT falsely prefilled while listings.seller_name is
+    // NULL — persisted state and UI can never disagree
+    await expect(page.getByTestId("wizard-seller-name")).toHaveValue("");
+    await expect(page.getByTestId("axin-section-contact")).not.toHaveAttribute("data-state", "complete");
+    const chip = page.getByTestId("contact-use-profile-name");
+    await expect(chip).toContainText("Seller A");
+    // explicit acceptance persists through the normal PATCH
+    await chip.click();
+    await expect(page.getByTestId("wizard-seller-name")).toHaveValue("Seller A");
+    await saveSettled(page);
+    expect((await getContactIsolation(fixture.id, userId)).sellerName).toBe("Seller A");
+    // reload restores from the LISTING, chip no longer offered
+    await page.reload();
+    await openSection(page, "contact");
+    await expect(page.getByTestId("wizard-seller-name")).toHaveValue("Seller A");
+    await expect(page.getByTestId("contact-use-profile-name")).toHaveCount(0);
+    // the account-level name was only read, never written
+    expect(await getUserDisplayName(userId)).toBe("Seller A");
+  } finally {
+    await setUserDisplayName(userId, null);
+  }
 });
 
 test("failed upload is a real retryable state, never a phantom photo", async ({ page, context }, { project }) => {

@@ -195,6 +195,26 @@ export async function setListingFeeMinor(minor: number): Promise<void> {
   }
 }
 
+/** O.9: account-level display name control for prefill tests. */
+export async function setUserDisplayName(userId: string, name: string | null): Promise<void> {
+  const sql = db();
+  try {
+    await sql`update users set display_name = ${name} where id = ${userId}`;
+  } finally {
+    await sql.end();
+  }
+}
+
+export async function getUserDisplayName(userId: string): Promise<string | null> {
+  const sql = db();
+  try {
+    return (await sql`select display_name from users where id = ${userId}`)[0]
+      .display_name as string | null;
+  } finally {
+    await sql.end();
+  }
+}
+
 /** O.9 auth-isolation proof: login phone vs listing contact. */
 export async function getContactIsolation(
   listingId: string,

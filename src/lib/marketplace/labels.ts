@@ -129,7 +129,7 @@ export const SELLER = {
   contactPhoneLocalHint: "yerli formatda yazın — 010 218 41 91",
   contactPhoneIncomplete: "Nömrə natamamdır — Azərbaycan nömrəsi 9 rəqəmdir",
   sellerNameRequired: "Ad mütləqdir",
-  sellerNameFromProfile: "profilinizdən gətirilib — dəyişə bilərsiniz",
+  useProfileName: "Profil adımı istifadə et:",
   useLoginPhone: "Giriş nömrəmi istifadə et:",
   reviewFeeTitle: "Elanın yerləşdirilməsi",
   reviewFeeFree: "Pulsuz",

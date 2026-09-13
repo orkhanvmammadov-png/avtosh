@@ -32,11 +32,12 @@ export function ContactSection({
   authDisplayName: string | null;
 }) {
   const { dto } = editor;
-  // Name may prefill from a REAL account display name only; the value
-  // persists to the LISTING via patch on change (rendering alone
-  // never writes anything).
-  const namePrefilled = dto.sellerName === null && authDisplayName !== null;
-  const [name, setName] = useState(dto.sellerName ?? authDisplayName ?? "");
+  // The name NEVER passively prefills: a displayed value must never
+  // look like completed listing data while listings.seller_name is
+  // still NULL. A real account display name is offered as an EXPLICIT
+  // one-tap suggestion (like the login-phone chip) whose acceptance
+  // persists through the normal revision-guarded PATCH.
+  const [name, setName] = useState(dto.sellerName ?? "");
   const [nameError, setNameError] = useState<string | null>(null);
   const [phone, setPhone] = useState(
     dto.contactPhone === null ? "" : formatAzPhoneForDisplay(dto.contactPhone),
@@ -76,8 +77,6 @@ export function ContactSection({
             onBlur={() => {
               if (name.trim() === "") {
                 setNameError(SELLER.sellerNameRequired);
-              } else if (namePrefilled && dto.sellerName === null) {
-                commitName(name); // adopt the untouched prefill explicitly
               }
             }}
           />
@@ -85,8 +84,22 @@ export function ContactSection({
             <p role="alert" id="wizard-seller-name-error" className="mt-1 text-xs text-danger">
               {nameError}
             </p>
-          ) : namePrefilled ? (
-            <p className="mt-1 text-xs text-muted">{SELLER.sellerNameFromProfile}</p>
+          ) : null}
+          {dto.sellerName === null && authDisplayName !== null && name.trim() === "" ? (
+            <button
+              type="button"
+              data-testid="contact-use-profile-name"
+              className="mt-2 inline-flex h-9 items-center rounded-control border border-dashed border-line-strong px-3 text-[12px] font-medium text-ink transition-colors duration-150 hover:border-primary hover:text-primary"
+              onClick={() => {
+                // Explicit acceptance — the ONLY path from the account
+                // name into listings.seller_name (normal PATCH).
+                setName(authDisplayName);
+                setNameError(null);
+                editor.patch({ seller_name: authDisplayName }, { immediate: true });
+              }}
+            >
+              {SELLER.useProfileName} {authDisplayName}
+            </button>
           ) : null}
         </div>
         <div>
