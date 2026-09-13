@@ -138,7 +138,7 @@ export function QuickStartCreate({
           })}
         </div>
       </fieldset>
-      <div className="mt-3 grid gap-x-3 gap-y-3 sm:grid-cols-2 [&_label]:!text-white/70">
+      <div className="mt-3 grid gap-x-3 gap-y-3 desk:grid-cols-2 [&_label]:!text-white/70">
         <TypeaheadField
           id="quick-start-brand"
           label={SELLER.brand}
@@ -160,7 +160,7 @@ export function QuickStartCreate({
           loading={modelsLoading}
           onChange={setModelId}
         />
-        <div className="sm:col-span-2 [&_button]:bg-raised">
+        <div className="desk:col-span-2 [&_button]:bg-raised">
           <SellerListboxField
             id="quick-start-year"
             label={SELLER.year}

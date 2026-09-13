@@ -136,7 +136,7 @@ export function TypeaheadField({
           placeholder={showHint ? disabledHint : (placeholder ?? SELLER.searchTypeahead)}
           value={display}
           data-testid={id}
-          className={`h-10 w-full rounded-control border bg-raised pl-3 pr-8 text-[13px] text-ink outline-none transition-colors duration-150 placeholder:text-muted focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 disabled:cursor-not-allowed disabled:bg-sunken disabled:text-muted md:h-10 ${
+          className={`h-11 w-full rounded-control desk:h-10 border bg-raised pl-3 pr-8 text-[13px] text-ink outline-none transition-colors duration-150 placeholder:text-muted focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 disabled:cursor-not-allowed disabled:bg-sunken disabled:text-muted ${
             error !== null ? "border-danger" : "border-line-strong"
           }`}
           onFocus={() => {
@@ -167,10 +167,10 @@ export function TypeaheadField({
           role="listbox"
           aria-label={label}
           data-testid={`${id}-listbox`}
-          className="absolute z-30 mt-1 max-h-80 w-full overflow-y-auto rounded-control border border-line bg-raised py-1 shadow-lg"
+          className="absolute z-30 mt-1 max-h-[45vh] w-full overflow-y-auto rounded-control border border-line bg-raised py-1 shadow-lg desk:max-h-80"
         >
           {filtered.length === 0 ? (
-            <li className="flex h-9 items-center px-3 text-[13px] text-muted" data-testid={`${id}-empty`}>
+            <li className="flex h-11 items-center px-3 text-[13px] text-muted desk:h-9" data-testid={`${id}-empty`}>
               {SELLER.noResults}
             </li>
           ) : (
@@ -183,7 +183,7 @@ export function TypeaheadField({
                   role="option"
                   aria-selected={isSelected}
                   data-testid={`${id}-option`}
-                  className={`flex h-9 cursor-pointer items-center justify-between gap-2 px-3 text-[13px] text-ink ${
+                  className={`flex h-11 cursor-pointer items-center justify-between gap-2 px-3 text-[13px] text-ink desk:h-9 ${
                     index === activeIndex ? "bg-row-hover" : ""
                   }`}
                   onPointerEnter={() => setActiveIndex(index)}

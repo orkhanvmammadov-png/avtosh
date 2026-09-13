@@ -223,7 +223,7 @@ function PromotionIntentModule({
         <h3 className="text-[13px] font-bold text-ink">{SELLER.promoModuleTitle}</h3>
         <span className="text-[11px] text-muted">{SELLER.promoOptionalHint}</span>
       </div>
-      <div className="grid gap-[9px] sm:grid-cols-2">
+      <div className="grid gap-[9px] desk:grid-cols-2">
         <IntentCard
           type="PREMIUM"
           packages={packages.filter((p) => p.type === "PREMIUM")}

@@ -54,7 +54,7 @@ export function ContactSection({
   return (
     <div className="space-y-4">
       <p className="text-[12.5px] leading-relaxed text-slate-strong">{SELLER.contactIntro}</p>
-      <div className="grid gap-x-3.5 gap-y-3 sm:grid-cols-2">
+      <div className="grid gap-x-3.5 gap-y-3 desk:grid-cols-2">
         <div>
           <label htmlFor="wizard-seller-name" className="mb-1 block text-xs font-medium text-slate-strong">
             {SELLER.sellerName}

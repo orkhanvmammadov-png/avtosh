@@ -90,15 +90,20 @@ export function SectionCard({
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-3">
           <div className="min-w-0">{footerStart}</div>
           {onComplete !== undefined ? (
-            <button
-              type="button"
-              onClick={onComplete}
-              disabled={completeDisabled}
-              data-testid={`axin-complete-${sectionKey}`}
-              className="inline-flex h-10 items-center justify-center rounded-control bg-primary px-5 text-[13px] font-bold text-white transition-colors duration-150 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {SELLER.sectionComplete}
-            </button>
+            // ONE instance for every tier: the approved sticky h48
+            // safe-area bar below desk (only one card is ever open, so
+            // exactly one bar exists), the in-card button at desk+.
+            <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-raised px-3.5 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] desk:static desk:border-0 desk:bg-transparent desk:p-0">
+              <button
+                type="button"
+                onClick={onComplete}
+                disabled={completeDisabled}
+                data-testid={`axin-complete-${sectionKey}`}
+                className="inline-flex h-12 w-full items-center justify-center rounded-control bg-primary px-5 text-[13px] font-bold text-white transition-colors duration-150 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50 desk:h-10 desk:w-auto"
+              >
+                {SELLER.sectionComplete}
+              </button>
+            </div>
           ) : null}
         </div>
       ) : null}

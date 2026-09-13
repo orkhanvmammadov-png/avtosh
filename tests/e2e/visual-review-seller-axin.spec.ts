@@ -235,4 +235,99 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
       await sql.end();
     }
   });
+
+  /** Stage G — 1024 / 768 / 390 responsive states. */
+  test("o9-stageg-captures", async ({ page, context }) => {
+    test.setTimeout(300_000);
+    const sql = postgres(seed().databaseUrl, { prepare: false, max: 1 });
+    try {
+      const { userId } = await loginAs(context, "+994508890006");
+      const rich = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 3 });
+
+      // 1024 + 768: main / contact / review / promotion
+      for (const [w, h, tag] of [[1024, 800, "1024"], [768, 1024, "768"]] as const) {
+        await page.setViewportSize({ width: w, height: h });
+        await page.goto(`/elan-yerlesdir/${rich.id}`);
+        await expect(page.getByTestId("axin-flow")).toBeVisible();
+        await page.waitForLoadState("networkidle");
+        await expectNoHorizontalOverflow(page);
+        await page.screenshot({ path: `${OUT}/o9-stageg-${tag}-main.png`, fullPage: true });
+        await openSection(page, "contact");
+        await page.screenshot({ path: `${OUT}/o9-stageg-${tag}-contact.png`, fullPage: true });
+        await openSection(page, "review");
+        await expect(page.getByTestId("promo-intent")).toBeVisible();
+        await page.screenshot({ path: `${OUT}/o9-stageg-${tag}-review.png`, fullPage: true });
+        await page.getByTestId("promo-intent").scrollIntoViewIfNeeded();
+        await page.screenshot({ path: `${OUT}/o9-stageg-${tag}-promotion.png` });
+      }
+
+      // 390 — quick start + brand/model overlay
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto("/elan-yerlesdir");
+      await expect(page.getByTestId("quick-start")).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      await page.screenshot({ path: `${OUT}/o9-stageg-390-quick-start.png`, fullPage: true });
+      const brand = page.getByTestId("quick-start-brand");
+      await brand.click();
+      await brand.fill("To");
+      await expect(page.getByTestId("quick-start-brand-listbox")).toBeVisible();
+      await page.screenshot({ path: `${OUT}/o9-stageg-390-brand-model.png` });
+      await page.keyboard.press("Escape");
+
+      // 390 — main / photos / contact / validation / review / promotion states
+      await page.goto(`/elan-yerlesdir/${rich.id}`);
+      await expect(page.getByTestId("axin-flow")).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      await page.screenshot({ path: `${OUT}/o9-stageg-390-main.png`, fullPage: true });
+      await openSection(page, "photos");
+      await expect(page.locator('[data-testid="wizard-image"]')).toHaveCount(3);
+      await page.screenshot({ path: `${OUT}/o9-stageg-390-photos.png`, fullPage: true });
+      await openSection(page, "contact");
+      await page.screenshot({ path: `${OUT}/o9-stageg-390-contact.png`, fullPage: true });
+      // inline validation with the sticky bar visible
+      await page.getByTestId("wizard-contact-phone").fill("010 21");
+      await page.getByTestId("wizard-seller-name").click();
+      await expect(page.getByText("Nömrə natamamdır", { exact: false })).toBeVisible();
+      await page.screenshot({ path: `${OUT}/o9-stageg-390-validation.png`, fullPage: true });
+      await page.getByTestId("wizard-contact-phone").fill("010 218 41 91");
+      await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+      // keyboard proxies: focused numeric/phone field above the bar
+      await openSection(page, "sale");
+      await page.getByTestId("wizard-price").click();
+      await page.screenshot({ path: `${OUT}/o9-stageg-390-keyboard-price.png` });
+      await openSection(page, "contact");
+      await page.getByTestId("wizard-contact-phone").click();
+      await page.screenshot({ path: `${OUT}/o9-stageg-390-keyboard-phone.png` });
+      // review + promotion states
+      await openSection(page, "review");
+      await expect(page.getByTestId("review-fee-value")).toHaveText("Pulsuz");
+      await page.waitForLoadState("networkidle");
+      await page.screenshot({ path: `${OUT}/o9-stageg-390-review.png`, fullPage: true });
+      await page.getByTestId("promo-intent").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: `${OUT}/o9-stageg-390-promotion.png` });
+      await page.getByTestId("promo-intent-PREMIUM-3").click();
+      await page.getByTestId("promo-intent-BOOST-1").click();
+      await expect(page.getByTestId("promo-intent-BOOST")).toHaveAttribute("data-selected", "true");
+      await page.screenshot({ path: `${OUT}/o9-stageg-390-promotion-dual.png` });
+
+      // 390 — FREE result screen
+      await page.getByTestId("wizard-submit-skip-promo").click();
+      await expect(page.getByTestId("wizard-result")).toHaveAttribute("data-outcome", "MODERATION", { timeout: 20_000 });
+      await page.screenshot({ path: `${OUT}/o9-stageg-390-listing-free.png`, fullPage: true });
+
+      // 390 — PAID result screen (4th publication)
+      const payer = await loginAs(context, "+994508890007");
+      await consumeFreePublications(payer.userId, 3);
+      const paid = await insertListingFixture(payer.userId, { status: "DRAFT", complete: true, images: 3 });
+      await page.goto(`/elan-yerlesdir/${paid.id}`);
+      await openSection(page, "review");
+      await expect(page.getByTestId("review-fee-value")).toHaveText("2 AZN");
+      await page.getByTestId("wizard-submit").click();
+      await expect(page.getByTestId("wizard-result")).toHaveAttribute("data-outcome", "PAYMENT", { timeout: 20_000 });
+      await page.screenshot({ path: `${OUT}/o9-stageg-390-listing-paid.png`, fullPage: true });
+    } finally {
+      await sql`delete from payments where idempotency_key like 'o9g:%'`;
+      await sql.end();
+    }
+  });
 });

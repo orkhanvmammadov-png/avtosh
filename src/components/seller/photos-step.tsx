@@ -184,7 +184,7 @@ export function PhotosStep({ editor }: { editor: ListingEditor }) {
       }}
     >
       {/* Count feedback: amber minimum guidance until met, then n/max. */}
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
         <p
           className={`text-xs font-medium ${missing > 0 ? "text-[#9A5B06]" : "text-muted"}`}
           data-testid="wizard-photo-count"
@@ -207,7 +207,7 @@ export function PhotosStep({ editor }: { editor: ListingEditor }) {
         onChange={(e) => void onFilesSelected(e.target.files)}
       />
 
-      <div className="grid grid-cols-3 gap-[7px] sm:grid-cols-4 xl:grid-cols-5" data-testid="wizard-image-grid">
+      <div className="grid grid-cols-3 gap-[7px] desk:grid-cols-4 xl:grid-cols-5" data-testid="wizard-image-grid">
         {dto.images.map((image, index) => (
           <div
             key={image.id}

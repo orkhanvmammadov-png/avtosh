@@ -191,10 +191,11 @@ export function AxinFlow({
     <div data-testid="axin-flow">
       {/* Navy flow header — title, autosave promise, deterministic n/7. */}
       <div className="bg-navy text-white">
-        <div className="mx-auto flex h-12 max-w-[680px] items-center justify-between gap-3 px-4 xl:px-0">
+        <div className="mx-auto flex h-12 max-w-full items-center justify-between gap-3 px-4 md:max-w-[540px] md:px-6 desk:max-w-[640px] desk:px-0 xl:max-w-[680px]">
           <p className="min-w-0 truncate text-[13px]">
             <span className="font-bold">{SELLER.newListing}</span>
-            <span className="text-white/60"> · {SELLER.autosaveHint}</span>
+            <span className="text-white/60 md:hidden"> · {doneCount}/7</span>
+            <span className="hidden text-white/60 md:inline"> · {SELLER.autosaveHint}</span>
           </p>
           <div className="flex shrink-0 items-center gap-2">
             <p
@@ -215,7 +216,7 @@ export function AxinFlow({
               {editor.saveState === "error" ? SELLER.saveError : null}
             </p>
             <p
-              className="rounded-pill bg-[#1D2733] px-2.5 py-1 text-[11px] font-semibold text-white/85"
+              className="hidden rounded-pill bg-[#1D2733] px-2.5 py-1 text-[11px] font-semibold text-white/85 md:block"
               data-testid="axin-progress"
             >
               {doneCount}/7 {SELLER.progressDone}
@@ -224,7 +225,7 @@ export function AxinFlow({
         </div>
       </div>
 
-      <div className="mx-auto max-w-[680px] px-4 pb-24 pt-5 md:pb-8 xl:px-0">
+      <div className="mx-auto max-w-full px-4 pb-24 pt-5 md:max-w-[540px] md:px-6 desk:max-w-[640px] desk:px-0 desk:pb-8 xl:max-w-[680px]">
         {editor.conflict ? (
           <div
             role="alert"
@@ -372,21 +373,29 @@ export function AxinFlow({
                 ) : null}
               </div>
             ) : null}
-            <div className="mt-4 flex flex-wrap items-center justify-end gap-3 border-t border-line pt-3">
+            {/* ONE instance serving every tier: fixed safe-area bar
+                below desk (approved 390/768 sticky action), inline
+                right-aligned row at desk+. */}
+            <div className="fixed inset-x-0 bottom-0 z-40 flex flex-col items-stretch gap-1.5 border-t border-line bg-raised px-3.5 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] desk:static desk:mt-4 desk:flex-row desk:flex-wrap desk:items-center desk:justify-end desk:gap-3 desk:border-x-0 desk:border-b-0 desk:bg-transparent desk:px-0 desk:pb-0 desk:pt-3">
+              <Button
+                className="order-1 h-12 w-full desk:order-2 desk:h-auto desk:w-auto"
+                onClick={() => void submit()}
+                disabled={submitting || editor.conflict}
+                data-testid="wizard-submit"
+              >
+                {submitting ? SELLER.submitting : isResubmission ? SELLER.resubmit : SELLER.submit}
+              </Button>
               {!isResubmission ? (
                 <button
                   type="button"
                   onClick={() => void skipPromoAndSubmit()}
                   disabled={submitting || editor.conflict}
                   data-testid="wizard-submit-skip-promo"
-                  className="inline-flex min-h-11 items-center rounded-control px-4 text-[13px] font-medium text-slate-strong transition-colors duration-150 hover:text-ink disabled:opacity-50"
+                  className="order-2 inline-flex min-h-10 items-center justify-center rounded-control px-4 text-[13px] font-medium text-slate-strong transition-colors duration-150 hover:text-ink disabled:opacity-50 desk:order-1 desk:min-h-11 desk:justify-start"
                 >
                   {SELLER.promoSkip}
                 </button>
               ) : null}
-              <Button onClick={() => void submit()} disabled={submitting || editor.conflict} data-testid="wizard-submit">
-                {submitting ? SELLER.submitting : isResubmission ? SELLER.resubmit : SELLER.submit}
-              </Button>
             </div>
           </SectionCard>
         </div>
@@ -449,7 +458,7 @@ function QuickStartSection({ editor, catalog }: { editor: ListingEditor; catalog
     });
   }, []);
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="grid gap-x-3.5 gap-y-3 desk:grid-cols-2">
       <SelectField
         id="wizard-category"
         label={SELLER.category}
@@ -533,7 +542,7 @@ function DetailsSection({ editor, catalog }: { editor: ListingEditor; catalog: W
     [catalog.options],
   );
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="grid gap-x-3.5 gap-y-3 desk:grid-cols-2">
       <SellerListboxField
         id="wizard-engine"
         label={SELLER.engineCc}
@@ -583,7 +592,7 @@ function SaleSection({ editor, catalog }: { editor: ListingEditor; catalog: Wiza
   const { dto } = editor;
   return (
     <div className="space-y-5">
-      <div className="grid gap-x-3.5 gap-y-3 sm:grid-cols-2">
+      <div className="grid gap-x-3.5 gap-y-3 desk:grid-cols-2">
         <DeferredInput
           id="wizard-price"
           label={SELLER.price}
