@@ -195,6 +195,45 @@ export async function setListingFeeMinor(minor: number): Promise<void> {
   }
 }
 
+/** O.9 auth-isolation proof: login phone vs listing contact. */
+export async function getContactIsolation(
+  listingId: string,
+  userId: string,
+): Promise<{ userPhone: string; listingContact: string | null; sellerName: string | null }> {
+  const sql = db();
+  try {
+    const [u] = await sql`select phone_e164 from users where id = ${userId}`;
+    const [l] = await sql`select contact_phone_e164, seller_name from listings where id = ${listingId}`;
+    return {
+      userPhone: u.phone_e164 as string,
+      listingContact: l.contact_phone_e164 as string | null,
+      sellerName: l.seller_name as string | null,
+    };
+  } finally {
+    await sql.end();
+  }
+}
+
+/** O.9 promotion intent columns + payment types for a listing. */
+export async function getListingIntents(
+  listingId: string,
+): Promise<{ premium: string | null; boost: string | null; paymentTypes: string[] }> {
+  const sql = db();
+  try {
+    const [row] = await sql`
+      select premium_intent_package_id, boost_intent_package_id from listings where id = ${listingId}
+    `;
+    const payments = await sql`select type::text as type from payments where listing_id = ${listingId}`;
+    return {
+      premium: row.premium_intent_package_id as string | null,
+      boost: row.boost_intent_package_id as string | null,
+      paymentTypes: payments.map((p) => p.type as string),
+    };
+  } finally {
+    await sql.end();
+  }
+}
+
 export async function getListingYear(listingId: string): Promise<number | null> {
   const sql = db();
   try {

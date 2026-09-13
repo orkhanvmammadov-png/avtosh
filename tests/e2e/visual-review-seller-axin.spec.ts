@@ -1,7 +1,8 @@
+import postgres from "postgres";
 import { expect, test, type Page } from "@playwright/test";
 import { loginAs } from "./auth-helpers";
-import { expectNoHorizontalOverflow } from "./helpers";
-import { insertListingFixture, makeTestJpeg } from "./seller-helpers";
+import { expectNoHorizontalOverflow, seed } from "./helpers";
+import { consumeFreePublications, insertListingFixture, makeTestJpeg } from "./seller-helpers";
 
 async function openSection(page: Page, key: string) {
   const section = page.getByTestId(`axin-section-${key}`);
@@ -156,5 +157,82 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
     await expect(page.getByTestId("wizard-motorcycle_type_id")).toBeVisible();
     await expect(page.getByTestId("wizard-drive_type_id")).toHaveCount(0);
     await page.screenshot({ path: `${OUT}/o9-staged-1440-details-moto.png`, fullPage: true });
+  });
+
+  /** Stage F — contact, review, fee and promotion-intent states. */
+  test("o9-stagef-captures", async ({ page, context }) => {
+    test.setTimeout(240_000);
+    const sql = postgres(seed().databaseUrl, { prepare: false, max: 1 });
+    let cleanup: (() => Promise<void>) | null = null;
+    try {
+      const { userId } = await loginAs(context, "+994508890004");
+      await page.setViewportSize({ width: 1440, height: 900 });
+
+      // contact — empty / error / filled
+      const contactDraft = await insertListingFixture(userId, { status: "DRAFT", complete: false });
+      await page.goto(`/elan-yerlesdir/${contactDraft.id}`);
+      await openSection(page, "contact");
+      await page.waitForLoadState("networkidle");
+      await page.screenshot({ path: `${OUT}/o9-stagef-1440-contact-empty.png`, fullPage: true });
+      await page.getByTestId("wizard-seller-name").click();
+      await page.getByTestId("wizard-contact-phone").fill("010 21");
+      await page.getByTestId("wizard-seller-name").click();
+      await page.getByTestId("axin-section-contact").click(); // blur phone
+      await expect(page.getByText("Nömrə natamamdır", { exact: false })).toBeVisible();
+      await page.screenshot({ path: `${OUT}/o9-stagef-1440-contact-error.png`, fullPage: true });
+      await page.getByTestId("wizard-seller-name").fill("Orxan M.");
+      await page.getByTestId("wizard-contact-phone").fill("010 218 41 91");
+      await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+      await page.screenshot({ path: `${OUT}/o9-stagef-1440-contact-filled.png`, fullPage: true });
+
+      // review — promotion unavailable (packages deactivated briefly)
+      const freeDraft = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 3 });
+      await sql`update promotion_packages set is_active = false where is_active`;
+      cleanup = async () => {
+        await sql`update promotion_packages set is_active = true`;
+      };
+      await page.goto(`/elan-yerlesdir/${freeDraft.id}`);
+      await openSection(page, "review");
+      await expect(page.getByTestId("promo-intent-unavailable")).toBeVisible();
+      await page.screenshot({ path: `${OUT}/o9-stagef-1440-promotion-unavailable.png`, fullPage: true });
+      await cleanup(); // seeded ACTIVE packages back for the remaining states
+      cleanup = null;
+
+      // review FREE + promotion none
+      await page.reload();
+      await openSection(page, "review");
+      await expect(page.getByTestId("promo-intent")).toBeVisible();
+      await expect(page.getByTestId("review-fee-value")).toHaveText("Pulsuz");
+      await page.waitForLoadState("networkidle");
+      await page.screenshot({ path: `${OUT}/o9-stagef-1440-review-free.png`, fullPage: true });
+      await page.screenshot({ path: `${OUT}/o9-stagef-1440-promotion-none.png`, fullPage: true });
+      await page.getByTestId("review-contact").screenshot({ path: `${OUT}/o9-stagef-1440-review-contact.png` });
+
+      // Premium selected
+      await page.getByTestId("promo-intent-PREMIUM-3").click();
+      await expect(page.getByTestId("promo-intent-PREMIUM")).toHaveAttribute("data-selected", "true");
+      await page.screenshot({ path: `${OUT}/o9-stagef-1440-promotion-premium.png`, fullPage: true });
+      // Dual
+      await page.getByTestId("promo-intent-BOOST-1").click();
+      await expect(page.getByTestId("promo-intent-BOOST")).toHaveAttribute("data-selected", "true");
+      await page.screenshot({ path: `${OUT}/o9-stagef-1440-promotion-dual.png`, fullPage: true });
+      // Boost only
+      await page.getByTestId("promo-intent-PREMIUM-3").click();
+      await expect(page.getByTestId("promo-intent-PREMIUM")).toHaveAttribute("data-selected", "false");
+      await page.screenshot({ path: `${OUT}/o9-stagef-1440-promotion-boost.png`, fullPage: true });
+
+      // review PAID (4th publication) — 2 AZN fee line, separate from promo
+      const payer = await loginAs(context, "+994508890005");
+      await consumeFreePublications(payer.userId, 3);
+      const paidDraft = await insertListingFixture(payer.userId, { status: "DRAFT", complete: true, images: 3 });
+      await page.goto(`/elan-yerlesdir/${paidDraft.id}`);
+      await openSection(page, "review");
+      await expect(page.getByTestId("review-fee-value")).toHaveText("2 AZN");
+      await page.waitForLoadState("networkidle");
+      await page.screenshot({ path: `${OUT}/o9-stagef-1440-review-paid.png`, fullPage: true });
+    } finally {
+      if (cleanup !== null) await cleanup();
+      await sql.end();
+    }
   });
 });

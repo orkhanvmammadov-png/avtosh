@@ -25,7 +25,8 @@ import { Loader2 } from "lucide-react";
 import { SellerListboxField } from "@/components/seller/listbox-field";
 import { ChipToggle, DeferredChipToggle, DeferredInput, SelectField } from "@/components/seller/wizard-fields";
 import { PhotosStep } from "@/components/seller/photos-step";
-import { PreviewStep } from "@/components/seller/preview-step";
+import { ContactSection } from "@/components/seller/axin/contact-section";
+import { ReviewSection } from "@/components/seller/axin/review-section";
 import { SectionCard } from "@/components/seller/axin/section-card";
 import { TypeaheadField } from "@/components/seller/axin/typeahead-field";
 
@@ -93,9 +94,16 @@ function submitErrorView(error: unknown): SubmitErrorView {
 export function AxinFlow({
   initial,
   feedback,
+  authPhoneE164,
+  authDisplayName,
 }: {
   initial: OwnerListingDto;
   feedback: SellerModerationFeedbackDto | null;
+  /** Login phone — offered as a one-tap listing-contact suggestion
+      only; NEVER written anywhere except listings.contact_phone_e164
+      through the normal PATCH. */
+  authPhoneE164: string;
+  authDisplayName: string | null;
 }) {
   const editor = useListingEditor(initial);
   const catalog = useWizardCatalog(editor.dto.category, editor.dto.brandId);
@@ -138,11 +146,14 @@ export function AxinFlow({
     try {
       const flushed = await editor.flush();
       if (!flushed) return;
-      const revision = editor.dto.revision;
       const submitFn = isResubmission ? resubmitListing : submitListing;
-      const submitted = await editor.runExclusive(() => submitFn(editor.dto.id, revision), {
-        refetch: false,
-      });
+      // revision is read AT SEND TIME inside the serialized queue —
+      // a just-queued immediate patch (skip-promo clearing) must not
+      // leave this closure with a stale expected_revision
+      const submitted = await editor.runExclusive(
+        () => submitFn(editor.dto.id, editor.currentRevision()),
+        { refetch: false },
+      );
       if (submitted !== null) {
         setResult(submitted);
       }
@@ -153,6 +164,17 @@ export function AxinFlow({
     } finally {
       setSubmitting(false);
     }
+  }
+
+  /** Neutral no-promotion path: clears any intent, then submits. */
+  async function skipPromoAndSubmit() {
+    const clears: { premium_intent_package_id?: null; boost_intent_package_id?: null } = {};
+    if (dto.premiumIntentPackageId !== null) clears.premium_intent_package_id = null;
+    if (dto.boostIntentPackageId !== null) clears.boost_intent_package_id = null;
+    if (Object.keys(clears).length > 0) {
+      editor.patch(clears, { immediate: true });
+    }
+    await submit();
   }
 
   if (result !== null) {
@@ -319,7 +341,7 @@ export function AxinFlow({
             completeDisabled={!complete.contact}
             footerStart={autosaveChip}
           >
-            <ContactSection editor={editor} />
+            <ContactSection editor={editor} authPhoneE164={authPhoneE164} authDisplayName={authDisplayName} />
           </SectionCard>
 
           <SectionCard
@@ -332,13 +354,11 @@ export function AxinFlow({
             summary={null}
             onOpen={() => setOpenSection("review")}
           >
-            <PreviewStep
+            <ReviewSection
               editor={editor}
               catalog={catalog}
-              onGoToStep={(step) => {
-                const map: Record<number, SectionKey> = { 1: "quickstart", 2: "sale", 3: "photos", 4: "contact", 5: "review" };
-                setOpenSection(map[step] ?? "review");
-              }}
+              isResubmission={isResubmission}
+              onEdit={(section) => setOpenSection(section)}
             />
             {submitError !== null ? (
               <div role="alert" className="mt-4 rounded-control border-l-4 border-danger bg-danger-soft p-4" data-testid="wizard-submit-error">
@@ -352,7 +372,18 @@ export function AxinFlow({
                 ) : null}
               </div>
             ) : null}
-            <div className="mt-4 flex justify-end border-t border-line pt-3">
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-3 border-t border-line pt-3">
+              {!isResubmission ? (
+                <button
+                  type="button"
+                  onClick={() => void skipPromoAndSubmit()}
+                  disabled={submitting || editor.conflict}
+                  data-testid="wizard-submit-skip-promo"
+                  className="inline-flex min-h-11 items-center rounded-control px-4 text-[13px] font-medium text-slate-strong transition-colors duration-150 hover:text-ink disabled:opacity-50"
+                >
+                  {SELLER.promoSkip}
+                </button>
+              ) : null}
               <Button onClick={() => void submit()} disabled={submitting || editor.conflict} data-testid="wizard-submit">
                 {submitting ? SELLER.submitting : isResubmission ? SELLER.resubmit : SELLER.submit}
               </Button>
@@ -718,34 +749,6 @@ function ExtrasSection({ editor, catalog }: { editor: ListingEditor; catalog: Wi
           </p>
         </div>
       </div>
-    </div>
-  );
-}
-
-/** ƏLAQƏ MƏLUMATLARI — Stage B functional baseline (Stage E styles). */
-function ContactSection({ editor }: { editor: ListingEditor }) {
-  const { dto } = editor;
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <DeferredInput
-        id="wizard-seller-name"
-        label={SELLER.sellerName}
-        hint={SELLER.sellerNameHint}
-        placeholder={SELLER.sellerNamePlaceholder}
-        maxLength={100}
-        initialValue={dto.sellerName ?? ""}
-        onValue={(value) => editor.patch({ seller_name: value.trim() === "" ? null : value })}
-      />
-      <DeferredInput
-        id="wizard-contact-phone"
-        label={SELLER.contactPhone}
-        hint={SELLER.contactPhoneHint}
-        inputMode="tel"
-        placeholder="+994501234567"
-        maxLength={32}
-        initialValue={dto.contactPhone ?? ""}
-        onValue={(value) => editor.patch({ contact_phone: value.trim() === "" ? null : value.trim() })}
-      />
     </div>
   );
 }

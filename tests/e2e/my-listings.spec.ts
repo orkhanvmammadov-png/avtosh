@@ -123,6 +123,8 @@ test("correction round trip: feedback → edit → resubmit → PENDING_MODERATI
     await reviewCard.click();
   }
   await expect(page.getByTestId("wizard-submit")).toHaveText("Yenidən göndər");
+  // resubmission reuses the existing publication: no fee line at all
+  await expect(page.getByTestId("wizard-quota")).toHaveCount(0);
   await page.getByTestId("wizard-submit").click();
   await expect(page.getByTestId("wizard-result")).toHaveAttribute("data-outcome", "MODERATION", { timeout: 20_000 });
 

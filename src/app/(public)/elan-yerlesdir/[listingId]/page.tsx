@@ -105,7 +105,14 @@ export default async function WizardPage({
   }
 
   const feedback = await sellerFeedbackFor(listing.id, listing.status);
-  return <AxinFlow initial={listing} feedback={feedback} />;
+  return (
+    <AxinFlow
+      initial={listing}
+      feedback={feedback}
+      authPhoneE164={auth.user.phone_e164}
+      authDisplayName={auth.user.display_name}
+    />
+  );
 }
 
 function BackToMyListings() {

@@ -4,6 +4,7 @@ import { loginAs, testPhone } from "./auth-helpers";
 import {
   bumpListingRevision,
   consumeFreePublications,
+  getContactIsolation,
   getListingCatalogIds,
   getListingEngineCc,
   getListingYear,
@@ -167,6 +168,15 @@ test("full seller journey: quick start → sections → photos → review → FR
   await page.getByTestId("wizard-seller-name").fill("E2E Satıcı");
   await page.getByTestId("wizard-contact-phone").fill("+994501234567");
   await saveSettled(page);
+  // AUTH ISOLATION (mandatory): the LISTING contact differs from the
+  // login phone; users.phone_e164 is never touched by the seller flow.
+  const listingId = page.url().match(/([0-9a-f-]{36})$/)![1];
+  {
+    const iso = await getContactIsolation(listingId, (await loginAs(context, testPhone(project.name, 31))).userId);
+    expect(iso.userPhone).toBe(testPhone(project.name, 31)); // login identity untouched
+    expect(iso.listingContact).toBe("+994501234567"); // listing-level contact
+    expect(iso.sellerName).toBe("E2E Satıcı"); // listing-level name only
+  }
 
   // Əlavə — description
   await openSection(page, "extras");
@@ -230,6 +240,14 @@ test("full seller journey: quick start → sections → photos → review → FR
   await expect(page.getByTestId("wizard-preview")).toContainText("Toyota Corolla 2021");
   await expect(page.getByTestId("wizard-preview")).toContainText("25 000 AZN");
   await expect(page.getByTestId("wizard-quota")).toContainText("pulsuz");
+  await expect(page.getByTestId("review-fee-value")).toHaveText("Pulsuz");
+  // the ƏLAQƏ review block catches wrong name/phone before submit
+  await expect(page.getByTestId("review-contact-name")).toHaveText("E2E Satıcı");
+  await expect(page.getByTestId("review-contact-phone")).toHaveText("050 123 45 67"); // friendly local format
+  // Dəyiş jumps straight to the owning section and back
+  await page.getByTestId("review-edit-contact").click();
+  await expect(page.getByTestId("axin-section-contact")).toHaveAttribute("data-state", "open");
+  await openSection(page, "review");
   await expectNoHorizontalOverflow(page);
   await page.getByTestId("wizard-submit").click();
   await expect(page.getByTestId("wizard-result")).toHaveAttribute("data-outcome", "MODERATION", { timeout: 20_000 });
@@ -237,6 +255,47 @@ test("full seller journey: quick start → sections → photos → review → FR
   // the new state is visible in My Listings
   await page.goto("/profil/elanlar");
   await expect(page.locator('[data-testid="owner-listing-card"][data-status="PENDING_MODERATION"]').first()).toBeVisible();
+});
+
+test("contact section: O.1 local phone UX, login-phone suggestion, inline validation (O.9E)", async ({ page, context }, { project }) => {
+  const authPhone = testPhone(project.name, 45);
+  const { userId } = await loginAs(context, authPhone);
+  const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: false });
+  await page.goto(`/elan-yerlesdir/${fixture.id}`);
+  await openSection(page, "contact");
+  await expect(page.getByTestId("axin-section-contact")).toContainText("yalnız bu elan üçün");
+  // name required — inline, on blur, no modal
+  await page.getByTestId("wizard-seller-name").click();
+  await page.getByTestId("wizard-contact-phone").click(); // blur name
+  await expect(page.getByText("Ad mütləqdir")).toBeVisible();
+  await page.getByTestId("wizard-seller-name").fill("  Orxan M.  ");
+  await saveSettled(page);
+  // phone: live O.1 local grouping while typing
+  const phone = page.getByTestId("wizard-contact-phone");
+  await phone.fill("0102184191");
+  await expect(phone).toHaveValue("010 218 41 91");
+  await saveSettled(page);
+  // incomplete number → the approved inline message
+  await phone.fill("010 21");
+  await page.getByTestId("wizard-seller-name").click(); // blur phone
+  await expect(page.getByText("Nömrə natamamdır", { exact: false })).toBeVisible();
+  // one-tap login-phone suggestion appears only for an EMPTY unsaved field
+  await phone.fill("");
+  await saveSettled(page); // contact cleared server-side
+  const chip = page.getByTestId("contact-use-login-phone");
+  await expect(chip).toBeVisible();
+  await chip.click();
+  await saveSettled(page);
+  const iso = await getContactIsolation(fixture.id, userId);
+  expect(iso.listingContact).toBe(authPhone); // explicit action persisted it
+  expect(iso.userPhone).toBe(authPhone); // auth identity merely read, never written
+  expect(iso.sellerName).toBe("Orxan M."); // trimmed listing-level name
+  // reload restores the friendly display from the server value
+  await page.reload();
+  await openSection(page, "contact");
+  await expect(page.getByTestId("wizard-seller-name")).toHaveValue("Orxan M.");
+  const display = await page.getByTestId("wizard-contact-phone").inputValue();
+  expect(display.replace(/\s/g, "")).toBe(`0${authPhone.slice(4)}`); // 0XX XXX XX XX of the same number
 });
 
 test("failed upload is a real retryable state, never a phantom photo", async ({ page, context }, { project }) => {

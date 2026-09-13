@@ -184,6 +184,13 @@ export function useListingEditor(initial: OwnerListingDto) {
     setResetKey((k) => k + 1); // remounts field components onto fresh values
   }, [adoptDto]);
 
+  /**
+   * Freshest revision at call time (dtoRef, not render state) — for
+   * ops queued via runExclusive whose closure may predate an
+   * immediate patch (e.g. clear-intents-then-submit). O.9 additive.
+   */
+  const currentRevision = useCallback((): number => dtoRef.current.revision, []);
+
   const dirty = saveState === "dirty" || saveState === "saving";
 
   useEffect(() => {
@@ -205,8 +212,9 @@ export function useListingEditor(initial: OwnerListingDto) {
       runExclusive,
       reloadFromServer,
       adoptDto,
+      currentRevision,
     }),
-    [dto, saveState, dirty, conflict, saveError, resetKey, patch, flush, runExclusive, reloadFromServer, adoptDto],
+    [dto, saveState, dirty, conflict, saveError, resetKey, patch, flush, runExclusive, reloadFromServer, adoptDto, currentRevision],
   );
 }
 
