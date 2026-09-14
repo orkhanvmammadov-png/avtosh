@@ -1,0 +1,5 @@
+# TECHNICAL AUDIT REQUIRED (Claude Code — before implementation)
+1. **Visited-state persistence across reloads** — design defines upcoming/current/visited/needs-attention visuals only. Determine whether visited can be derived from existing persisted field data, held as session/local UI state, or (only if proven necessary) needs new persistence. Do NOT add a DB field preemptively.
+2. **Draft resume algorithm** — intent: returning seller lands on the first unvisited or needs-attention stage, derived frontend-side from persisted data (e.g. photos present → past Şəkillər). No current_stage/visited_stages column, no new API, unless the audit proves otherwise.
+3. **Correction/resubmit entry** — intent: moderator feedback deep-links to the relevant section when possible. Exact orchestration (mapping feedback → section, entry routing) must be audited; no persisted routing metadata invented.
+No other backend assumptions are introduced by O.10.

@@ -1,0 +1,3 @@
+# Business contract freeze — NO CHANGE
+catalog · O.3/O.4 vehicle fields · seller_name (listing-level) · contact_phone_e164 (listing-level, auth phone separate, no secondary phone) · photo min 3 / max 20 + image backend · autosave (persistence unchanged; Davam et is navigation only — data is NOT saved only on Continue) · revision guard · first 3 NEW free / 4th+ 2 AZN · quota · moderation · correction/resubmit business behavior · Premium · Boost · promotion intent · ACTIVE-only promotion purchase · payment/Kapital · public marketplace behavior.
+Deviation policy: preserve function, closest faithful visual, report deviations, never silently redesign.
