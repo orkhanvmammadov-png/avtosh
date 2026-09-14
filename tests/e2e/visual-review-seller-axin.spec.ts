@@ -2,7 +2,7 @@ import postgres from "postgres";
 import { expect, test, type Page } from "@playwright/test";
 import { loginAs } from "./auth-helpers";
 import { expectNoHorizontalOverflow, seed } from "./helpers";
-import { consumeFreePublications, insertListingFixture, makeTestJpeg } from "./seller-helpers";
+import { clearListingContact, consumeFreePublications, insertListingFixture, makeTestJpeg } from "./seller-helpers";
 
 async function openSection(page: Page, key: string) {
   const section = page.getByTestId(`axin-section-${key}`);
@@ -122,8 +122,10 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
       path: `${OUT}/o9-staged-1440-photo-primary.png`,
     });
 
+    // advance the journey past photos (furthest gates the combined stage)
+    await page.getByTestId("axin-continue-photos").click();
     // Əlavə — features expander open + description with counter
-    await openSection(page, "extras");
+    await openSection(page, "info-contact");
     await page.getByTestId("wizard-features-toggle").click();
     await expect(page.getByTestId("wizard-features")).toBeVisible();
     await page.screenshot({ path: `${OUT}/o9-staged-1440-features.png`, fullPage: true });
@@ -169,15 +171,16 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
       await page.setViewportSize({ width: 1440, height: 900 });
 
       // contact — empty / error / filled
-      const contactDraft = await insertListingFixture(userId, { status: "DRAFT", complete: false });
+      const contactDraft = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 3 });
+      await clearListingContact(contactDraft.id); // resume lands on the combined stage
       await page.goto(`/elan-yerlesdir/${contactDraft.id}`);
-      await openSection(page, "contact");
+      await openSection(page, "info-contact");
       await page.waitForLoadState("networkidle");
       await page.screenshot({ path: `${OUT}/o9-stagef-1440-contact-empty.png`, fullPage: true });
       await page.getByTestId("wizard-seller-name").click();
       await page.getByTestId("wizard-contact-phone").fill("010 21");
       await page.getByTestId("wizard-seller-name").click();
-      await page.getByTestId("axin-section-contact").click(); // blur phone
+      await page.getByTestId("axin-section-info-contact").click(); // blur phone
       await expect(page.getByText("Nömrə natamamdır", { exact: false })).toBeVisible();
       await page.screenshot({ path: `${OUT}/o9-stagef-1440-contact-error.png`, fullPage: true });
       await page.getByTestId("wizard-seller-name").fill("Orxan M.");
@@ -252,7 +255,7 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
         await page.waitForLoadState("networkidle");
         await expectNoHorizontalOverflow(page);
         await page.screenshot({ path: `${OUT}/o9-stageg-${tag}-main.png`, fullPage: true });
-        await openSection(page, "contact");
+        await openSection(page, "info-contact");
         await page.screenshot({ path: `${OUT}/o9-stageg-${tag}-contact.png`, fullPage: true });
         await openSection(page, "review");
         await expect(page.getByTestId("promo-intent")).toBeVisible();
@@ -282,7 +285,7 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
       await openSection(page, "photos");
       await expect(page.locator('[data-testid="wizard-image"]')).toHaveCount(3);
       await page.screenshot({ path: `${OUT}/o9-stageg-390-photos.png`, fullPage: true });
-      await openSection(page, "contact");
+      await openSection(page, "info-contact");
       await page.screenshot({ path: `${OUT}/o9-stageg-390-contact.png`, fullPage: true });
       // inline validation with the sticky bar visible
       await page.getByTestId("wizard-contact-phone").fill("010 21");
@@ -295,7 +298,7 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
       await openSection(page, "sale");
       await page.getByTestId("wizard-price").click();
       await page.screenshot({ path: `${OUT}/o9-stageg-390-keyboard-price.png` });
-      await openSection(page, "contact");
+      await openSection(page, "info-contact");
       await page.getByTestId("wizard-contact-phone").click();
       await page.screenshot({ path: `${OUT}/o9-stageg-390-keyboard-phone.png` });
       // review + promotion states
@@ -329,5 +332,59 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
       await sql`delete from payments where idempotency_key like 'o9g:%'`;
       await sql.end();
     }
+  });
+
+  /** O.10 Stage A — sequential journey, Mərhələ X/6, state set. */
+  test("o10-stagea-captures", async ({ page, context }) => {
+    test.setTimeout(240_000);
+    await loginAs(context, "+994508890027");
+
+    const quickStart = async () => {
+      await page.goto("/elan-yerlesdir");
+      const brand = page.getByTestId("quick-start-brand");
+      await brand.click();
+      await brand.fill("Toy");
+      await page.getByTestId("quick-start-brand-listbox").getByText("Toyota", { exact: true }).click();
+      const model = page.getByTestId("quick-start-model");
+      await model.click();
+      await model.fill("Co");
+      await page.getByTestId("quick-start-model-listbox").getByText("Corolla", { exact: true }).click();
+      await page.getByTestId("quick-start-year").click();
+      await page.getByTestId("quick-start-year-opt-2021").click();
+      await page.getByTestId("quick-start-begin").click();
+      await page.waitForURL(/\/elan-yerlesdir\/[0-9a-f-]{36}$/);
+      await expect(page.getByTestId("axin-section-details")).toHaveAttribute("data-state", "open");
+    };
+
+    // 1440 — fresh Detallar CURRENT with visited/upcoming set + Mərhələ 2/6
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await quickStart();
+    await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 2 / 6");
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({ path: `${OUT}/o10-stagea-1440-details-current.png`, fullPage: true });
+
+    // advance empty → Satış; then backward edit keeps Mərhələ 3/6
+    await page.getByTestId("axin-continue-details").click();
+    await expect(page.getByTestId("axin-section-sale")).toHaveAttribute("data-state", "open");
+    await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 3 / 6");
+    await page.screenshot({ path: `${OUT}/o10-stagea-1440-sale-after-empty-details.png`, fullPage: true });
+    await page.getByTestId("axin-section-details").click();
+    await expect(page.getByTestId("axin-section-details")).toHaveAttribute("data-state", "open");
+    await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 3 / 6"); // monotonic
+    await page.screenshot({ path: `${OUT}/o10-stagea-1440-backward-edit-monotonic.png`, fullPage: true });
+
+    // 390 — fresh journey states
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loginAs(context, "+994508890028");
+    await quickStart();
+    await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 2 / 6");
+    await page.waitForLoadState("networkidle");
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o10-stagea-390-details-current.png`, fullPage: true });
+    await page.getByTestId("axin-continue-details").click();
+    await expect(page.getByTestId("axin-section-sale")).toHaveAttribute("data-state", "open");
+    await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 3 / 6");
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o10-stagea-390-sale-after-continue.png`, fullPage: true });
   });
 });

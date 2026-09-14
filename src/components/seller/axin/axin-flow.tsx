@@ -27,7 +27,7 @@ import { ChipToggle, DeferredChipToggle, DeferredInput, SelectField } from "@/co
 import { PhotosStep } from "@/components/seller/photos-step";
 import { ContactSection } from "@/components/seller/axin/contact-section";
 import { ReviewSection } from "@/components/seller/axin/review-section";
-import { SectionCard } from "@/components/seller/axin/section-card";
+import { SectionCard, type StageState } from "@/components/seller/axin/section-card";
 import { TypeaheadField } from "@/components/seller/axin/typeahead-field";
 
 /**
@@ -39,35 +39,67 @@ import { TypeaheadField } from "@/components/seller/axin/typeahead-field";
  * resubmit are untouched).
  */
 
-const SECTION_KEYS = ["quickstart", "details", "sale", "photos", "extras", "contact", "review"] as const;
-type SectionKey = (typeof SECTION_KEYS)[number];
+/**
+ * O.10 journey (flow.md — SEALED, exactly 6 stages). This array is the
+ * single ordering source; infoContact is ONE journey stage (Stage B
+ * seals its combined visual composition — Stage A renders the two O.9
+ * subcomponents inside its single card as a temporary adapter).
+ */
+const STAGES = ["quickstart", "details", "sale", "photos", "infoContact", "review"] as const;
+type StageKey = (typeof STAGES)[number];
+const STAGE_COUNT = STAGES.length;
 
-const SECTION_TITLES: Record<SectionKey, string> = {
+const STAGE_TITLES: Record<StageKey, string> = {
   quickstart: SELLER.quickStartTitle,
   details: SELLER.sectionDetails,
   sale: SELLER.sectionSale,
   photos: SELLER.sectionPhotos,
-  extras: SELLER.sectionExtras,
-  contact: SELLER.sectionContact,
+  infoContact: SELLER.sectionInfoContact,
   review: SELLER.sectionReview,
 };
 
-/** Submission missing-codes → the AXIN section that owns the field. */
-const MISSING_CODE_SECTION: Record<string, SectionKey> = {
+/** Submission missing-codes → the journey stage that owns the field. */
+const MISSING_CODE_SECTION: Record<string, StageKey> = {
   brand: "quickstart",
   model: "quickstart",
   year: "quickstart",
   price: "sale",
   mileage: "sale",
   city: "sale",
-  contact_phone: "contact",
-  seller_name: "contact",
+  contact_phone: "infoContact",
+  seller_name: "infoContact",
 };
+
+/**
+ * Pure resume derivation (audit-dependent.md item 2, Stage A form):
+ * frontend-only, from persisted draft data. Rules — invalid Quick
+ * Start → stage 1; a fresh Quick-Start draft (nothing beyond
+ * identity) → Detallar; otherwise the first required-unmet stage
+ * (Satış → Şəkillər → Əlaqə); everything met → Review. Under strict
+ * sequential flow, data at stage N proves stages < N were visited;
+ * a trailing EMPTY optional visit is not recoverable from data (the
+ * documented, accepted limitation — Stage C adds nothing persisted).
+ */
+function deriveResumeStage(dto: OwnerListingDto): StageKey {
+  const identity = dto.brandId !== null && dto.modelId !== null && dto.year !== null;
+  if (!identity) return "quickstart";
+  const saleData = dto.priceMinor !== null || dto.mileage !== null || dto.cityId !== null;
+  const saleValid = dto.priceMinor !== null && dto.mileage !== null && dto.cityId !== null;
+  const photosData = dto.images.length > 0;
+  const extrasData = dto.featureIds.length > 0 || dto.description !== null;
+  const contactData = dto.sellerName !== null || dto.contactPhone !== null;
+  const contactValid = dto.sellerName !== null && dto.contactPhone !== null;
+  if (!saleData && !photosData && !extrasData && !contactData) return "details"; // fresh draft
+  if (!saleValid) return "sale";
+  if (dto.images.length < 3) return "photos";
+  if (!contactValid) return "infoContact";
+  return "review";
+}
 
 interface SubmitErrorView {
   title: string;
   items: string[];
-  sections: SectionKey[];
+  sections: StageKey[];
 }
 
 function submitErrorView(error: unknown): SubmitErrorView {
@@ -78,7 +110,7 @@ function submitErrorView(error: unknown): SubmitErrorView {
       return {
         title: SELLER.incompleteTitle,
         items: codes.map((code) => MISSING_FIELD_LABELS[code] ?? code),
-        sections: [...new Set(codes.map((code) => MISSING_CODE_SECTION[code]).filter((s): s is SectionKey => s !== undefined))],
+        sections: [...new Set(codes.map((code) => MISSING_CODE_SECTION[code]).filter((s): s is StageKey => s !== undefined))],
       };
     }
     if (error.code === "LISTING_INSUFFICIENT_IMAGES") {
@@ -113,30 +145,60 @@ export function AxinFlow({
   const isResubmission = initial.status !== "DRAFT";
   const dto = editor.dto;
 
-  // Deterministic completeness — derived from persisted data only, so
-  // it survives reload. Sections without required fields count as
-  // complete (they are genuinely optional per the server contract).
-  const complete: Record<SectionKey, boolean> = {
+  // STAGE VALIDITY — required data of each stage (validation.md).
+  // This is NOT visited state and NOT completion display: it only
+  // gates the current stage's own Davam et and feeds needs-attention.
+  const stageValid: Record<StageKey, boolean> = {
     quickstart: dto.brandId !== null && dto.modelId !== null && dto.year !== null,
-    details: true,
+    details: true, // ALWAYS continuable — including fully empty
     sale: dto.priceMinor !== null && dto.mileage !== null && dto.cityId !== null,
     photos: dto.images.length >= 3,
-    extras: true,
-    contact: dto.sellerName !== null && dto.contactPhone !== null,
+    infoContact: dto.sellerName !== null && dto.contactPhone !== null,
     review: false,
   };
-  const doneCount = SECTION_KEYS.filter((k) => complete[k]).length;
 
-  const firstIncomplete = SECTION_KEYS.find((k) => !complete[k]) ?? "review";
-  const [openSection, setOpenSection] = useState<SectionKey>(firstIncomplete);
+  // O.10 JOURNEY STATE — ephemeral frontend only (audit-dependent.md:
+  // no DB field, no API). Under the strict sequential NEW journey,
+  // visited ≡ index <= furthestIndex. Resume derivation is the pure
+  // audited hierarchy; Stage C finalizes correction deep-linking.
+  const [openStage, setOpenStage] = useState<StageKey>(() =>
+    isResubmission ? "review" : deriveResumeStage(initial),
+  );
+  const [furthestIndex, setFurthestIndex] = useState<number>(() =>
+    isResubmission ? STAGES.indexOf("review") : STAGES.indexOf(deriveResumeStage(initial)),
+  );
+  const openIndex = STAGES.indexOf(openStage);
 
-  const attention = new Set(submitError?.sections ?? []);
+  const submitAttention = new Set(submitError?.sections ?? []);
+  function stageStateOf(key: StageKey): StageState {
+    const index = STAGES.indexOf(key);
+    if (key === openStage) return "current";
+    if (index > furthestIndex) return "upcoming";
+    // visited: needs-attention only for required-bearing stages
+    if (!stageValid[key] && key !== "review" && key !== "details") return "attention";
+    if (submitAttention.has(key)) return "attention";
+    return "visited";
+  }
 
-  function completeSection(key: SectionKey) {
-    void editor.flush();
-    const after = SECTION_KEYS.slice(SECTION_KEYS.indexOf(key) + 1);
-    const next = after.find((k) => !complete[k]) ?? "review";
-    setOpenSection(next);
+  /** Reopen a VISITED stage (backward/Dəyiş — never a forward shortcut). */
+  function openVisited(key: StageKey) {
+    if (STAGES.indexOf(key) <= furthestIndex) setOpenStage(key);
+  }
+
+  /**
+   * Sequential primary Continue (navigation.md): at the frontier the
+   * next stage is ALWAYS index+1 — never "next incomplete"; from a
+   * reopened earlier stage it returns forward to the furthest journey
+   * position without re-traversing. Awaits the existing flush so
+   * advancing never implies unsaved data was stored; on flush failure
+   * or conflict the existing error/conflict UI holds and we stay.
+   */
+  async function advance() {
+    const ok = await editor.flush();
+    if (!ok || editor.conflict) return;
+    const target = openIndex < furthestIndex ? furthestIndex : Math.min(openIndex + 1, STAGE_COUNT - 1);
+    setFurthestIndex((f) => Math.max(f, target));
+    setOpenStage(STAGES[target]);
   }
 
   async function submit() {
@@ -189,12 +251,12 @@ export function AxinFlow({
 
   return (
     <div data-testid="axin-flow">
-      {/* Navy flow header — title, autosave promise, deterministic n/7. */}
+      {/* Navy flow header — title, autosave promise, Mərhələ X / 6
+          (journey POSITION — never a completion count). */}
       <div className="bg-navy text-white">
         <div className="mx-auto flex h-12 max-w-full items-center justify-between gap-3 px-4 md:max-w-[540px] md:px-6 desk:max-w-[640px] desk:px-0 xl:max-w-[680px]">
           <p className="min-w-0 truncate text-[13px]">
             <span className="font-bold">{SELLER.newListing}</span>
-            <span className="text-white/60 md:hidden"> · {doneCount}/7</span>
             <span className="hidden text-white/60 md:inline"> · {SELLER.autosaveHint}</span>
           </p>
           <div className="flex shrink-0 items-center gap-2">
@@ -216,10 +278,10 @@ export function AxinFlow({
               {editor.saveState === "error" ? SELLER.saveError : null}
             </p>
             <p
-              className="hidden rounded-pill bg-[#1D2733] px-2.5 py-1 text-[11px] font-semibold text-white/85 md:block"
+              className="rounded-pill bg-[#1D2733] px-2.5 py-1 text-[11px] font-semibold text-white/85"
               data-testid="axin-progress"
             >
-              {doneCount}/7 {SELLER.progressDone}
+              {SELLER.stageWord} {furthestIndex + 1} / {STAGE_COUNT}
             </p>
           </div>
         </div>
@@ -254,14 +316,13 @@ export function AxinFlow({
           <SectionCard
             sectionKey="quickstart"
             index={1}
-            title={SECTION_TITLES.quickstart}
-            open={openSection === "quickstart"}
-            complete={complete.quickstart}
-            needsAttention={attention.has("quickstart")}
+            title={STAGE_TITLES.quickstart}
+            state={stageStateOf("quickstart")}
             summary={quickStartSummary(dto, catalog)}
-            onOpen={() => setOpenSection("quickstart")}
-            onComplete={() => completeSection("quickstart")}
-            completeDisabled={!complete.quickstart}
+            attentionMessage={SELLER.attentionRequired}
+            onOpen={() => openVisited("quickstart")}
+            onContinue={() => void advance()}
+            continueDisabled={!stageValid.quickstart}
             footerStart={autosaveChip}
           >
             <QuickStartSection editor={editor} catalog={catalog} />
@@ -270,29 +331,27 @@ export function AxinFlow({
           <SectionCard
             sectionKey="details"
             index={2}
-            title={SECTION_TITLES.details}
-            open={openSection === "details"}
-            complete={complete.details}
-            needsAttention={attention.has("details")}
+            title={STAGE_TITLES.details}
+            state={stageStateOf("details")}
             summary={detailsSummary(dto, catalog)}
-            onOpen={() => setOpenSection("details")}
-            onComplete={() => completeSection("details")}
+            onOpen={() => openVisited("details")}
+            onContinue={() => void advance()}
             footerStart={autosaveChip}
           >
+            <p className="mb-3 text-xs text-muted">{SELLER.detailsOptionalHint}</p>
             <DetailsSection editor={editor} catalog={catalog} />
           </SectionCard>
 
           <SectionCard
             sectionKey="sale"
             index={3}
-            title={SECTION_TITLES.sale}
-            open={openSection === "sale"}
-            complete={complete.sale}
-            needsAttention={attention.has("sale")}
+            title={STAGE_TITLES.sale}
+            state={stageStateOf("sale")}
             summary={saleSummary(dto, catalog)}
-            onOpen={() => setOpenSection("sale")}
-            onComplete={() => completeSection("sale")}
-            completeDisabled={!complete.sale}
+            attentionMessage={SELLER.attentionRequired}
+            onOpen={() => openVisited("sale")}
+            onContinue={() => void advance()}
+            continueDisabled={!stageValid.sale}
             footerStart={autosaveChip}
           >
             <SaleSection editor={editor} catalog={catalog} />
@@ -301,65 +360,53 @@ export function AxinFlow({
           <SectionCard
             sectionKey="photos"
             index={4}
-            title={SECTION_TITLES.photos}
-            open={openSection === "photos"}
-            complete={complete.photos}
-            needsAttention={attention.has("photos")}
+            title={STAGE_TITLES.photos}
+            state={stageStateOf("photos")}
             summary={dto.images.length > 0 ? `${dto.images.length} şəkil` : null}
-            onOpen={() => setOpenSection("photos")}
-            onComplete={() => completeSection("photos")}
-            completeDisabled={!complete.photos}
+            attentionMessage={SELLER.attentionPhotos}
+            onOpen={() => openVisited("photos")}
+            onContinue={() => void advance()}
+            continueDisabled={!stageValid.photos}
             footerStart={autosaveChip}
           >
             <PhotosStep editor={editor} />
           </SectionCard>
 
+          {/* Stage 5 — combined journey stage (Stage A temporary
+              adapter: the two O.9 subcomponents render inside ONE
+              card; Stage B seals the subgroup visual composition). */}
           <SectionCard
-            sectionKey="extras"
+            sectionKey="info-contact"
             index={5}
-            title={SECTION_TITLES.extras}
-            open={openSection === "extras"}
-            complete={complete.extras}
-            needsAttention={attention.has("extras")}
-            summary={extrasSummary(dto)}
-            onOpen={() => setOpenSection("extras")}
-            onComplete={() => completeSection("extras")}
+            title={STAGE_TITLES.infoContact}
+            state={stageStateOf("infoContact")}
+            summary={infoContactSummary(dto)}
+            attentionMessage={SELLER.attentionContact}
+            onOpen={() => openVisited("infoContact")}
+            onContinue={() => void advance()}
+            continueDisabled={!stageValid.infoContact}
             footerStart={autosaveChip}
           >
             <ExtrasSection editor={editor} catalog={catalog} />
-          </SectionCard>
-
-          <SectionCard
-            sectionKey="contact"
-            index={6}
-            title={SECTION_TITLES.contact}
-            open={openSection === "contact"}
-            complete={complete.contact}
-            needsAttention={attention.has("contact")}
-            summary={contactSummary(dto)}
-            onOpen={() => setOpenSection("contact")}
-            onComplete={() => completeSection("contact")}
-            completeDisabled={!complete.contact}
-            footerStart={autosaveChip}
-          >
+            <div className="my-4 border-t border-line" aria-hidden="true" />
             <ContactSection editor={editor} authPhoneE164={authPhoneE164} authDisplayName={authDisplayName} />
           </SectionCard>
 
           <SectionCard
             sectionKey="review"
-            index={7}
-            title={SECTION_TITLES.review}
-            open={openSection === "review"}
-            complete={false}
-            needsAttention={false}
+            index={6}
+            title={STAGE_TITLES.review}
+            state={stageStateOf("review")}
             summary={null}
-            onOpen={() => setOpenSection("review")}
+            onOpen={() => openVisited("review")}
           >
             <ReviewSection
               editor={editor}
               catalog={catalog}
               isResubmission={isResubmission}
-              onEdit={(section) => setOpenSection(section)}
+              onEdit={(section) =>
+                openVisited(section === "contact" || section === "extras" ? "infoContact" : (section as StageKey))
+              }
             />
             {submitError !== null ? (
               <div role="alert" className="mt-4 rounded-control border-l-4 border-danger bg-danger-soft p-4" data-testid="wizard-submit-error">
@@ -432,17 +479,14 @@ function saleSummary(dto: OwnerListingDto, catalog: WizardCatalog): string | nul
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-function extrasSummary(dto: OwnerListingDto): string | null {
+function infoContactSummary(dto: OwnerListingDto): string | null {
   const parts = [
+    dto.sellerName,
+    dto.contactPhone,
     dto.featureIds.length > 0 ? `${dto.featureIds.length} təchizat` : null,
     dto.description !== null && dto.description !== "" ? "təsvir var" : null,
   ].filter((p): p is string => p !== null);
-  return parts.length > 0 ? parts.join(" · ") : "istəyə bağlı";
-}
-
-function contactSummary(dto: OwnerListingDto): string | null {
-  const parts = [dto.sellerName, dto.contactPhone].filter((p): p is string => p !== null);
-  return parts.length > 0 ? parts.join(" · ") : null;
+  return parts.length > 0 ? parts.slice(0, 3).join(" · ") : null;
 }
 
 // --- sections ---------------------------------------------------------------

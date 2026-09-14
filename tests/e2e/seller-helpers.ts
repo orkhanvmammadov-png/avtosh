@@ -195,6 +195,29 @@ export async function setListingFeeMinor(minor: number): Promise<void> {
   }
 }
 
+/** O.10 tests: clear listing contact so the combined stage is the
+    resume target (direct SQL — no revision bump, no app pathway). */
+export async function clearListingContact(listingId: string): Promise<void> {
+  const sql = db();
+  try {
+    await sql`update listings set seller_name = null, contact_phone_e164 = null where id = ${listingId}`;
+  } finally {
+    await sql.end();
+  }
+}
+
+/** O.10 tests: prefill sale fields directly (proves the frontier
+    Continue is index+1 and never a next-incomplete scan). */
+export async function setListingSaleFields(listingId: string): Promise<void> {
+  const sql = db();
+  try {
+    await sql`update listings set price_minor = 1500000, mileage = 42000,
+      city_id = (select id from cities limit 1) where id = ${listingId}`;
+  } finally {
+    await sql.end();
+  }
+}
+
 /** O.9: account-level display name control for prefill tests. */
 export async function setUserDisplayName(userId: string, name: string | null): Promise<void> {
   const sql = db();

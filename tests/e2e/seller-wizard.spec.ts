@@ -3,6 +3,7 @@ import { expectNoHorizontalOverflow, seed } from "./helpers";
 import { loginAs, testPhone } from "./auth-helpers";
 import {
   bumpListingRevision,
+  clearListingContact,
   consumeFreePublications,
   getContactIsolation,
   getListingCatalogIds,
@@ -12,6 +13,7 @@ import {
   getListingYear,
   insertListingFixture,
   listingCounts,
+  setListingSaleFields,
   makeTestJpeg,
   setListingFeeMinor,
 } from "./seller-helpers";
@@ -114,6 +116,25 @@ test("quick start: dependency, no-results, keyboard; nothing persists before Ba�
   await expect(page.getByTestId("quick-start-model")).toHaveValue("");
 });
 
+test("O.10 frontier Continue is index+1 — later-valid data never causes a jump", async ({ page, context }, { project }) => {
+  await loginAs(context, testPhone(project.name, 55));
+  await quickStartCreate(page, { category: "CAR", brand: "Toyota", model: "Corolla", year: 2020 });
+  const listingId = page.url().match(/([0-9a-f-]{36})$/)![1];
+  await expect(page.getByTestId("axin-section-details")).toHaveAttribute("data-state", "open");
+  // make the NEXT stage (Satış) fully valid behind the scenes — a
+  // next-incomplete scan would now skip it straight to Şəkillər
+  await setListingSaleFields(listingId);
+  await page.getByTestId("axin-continue-details").click();
+  await expect(page.getByTestId("axin-section-sale")).toHaveAttribute("data-state", "open"); // +1, no jump
+  await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 3 / 6");
+  // upcoming stages are non-interactive — clicking changes nothing
+  const upcoming = page.getByTestId("axin-section-review");
+  await expect(upcoming).toHaveAttribute("data-state", "upcoming");
+  await upcoming.click({ force: true });
+  await expect(page.getByTestId("axin-section-sale")).toHaveAttribute("data-state", "open");
+  await expect(upcoming).toHaveAttribute("data-state", "upcoming");
+});
+
 test("condition claims: check → autosave → reload → uncheck → null (4.17O.2)", async ({ page, context }, { project }) => {
   const { userId } = await loginAs(context, testPhone(project.name, 38));
   const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 0 });
@@ -148,53 +169,50 @@ test("full seller journey: quick start → sections → photos → review → FR
   await expectNoHorizontalOverflow(page);
   await quickStartCreate(page, { category: "CAR", brand: "Toyota", model: "Corolla", year: 2021 });
 
-  // quick start data persisted — its collapsed summary proves the PATCH
+  // O.10 HARD REQUIREMENT: after Başla, DETALLAR is CURRENT — the
+  // optional stage is never auto-skipped for a fresh NEW listing.
+  await expect(page.getByTestId("axin-section-details")).toHaveAttribute("data-state", "open");
+  await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 2 / 6");
   await expect(page.getByTestId("axin-summary-quickstart")).toContainText("Toyota");
   await expect(page.getByTestId("axin-summary-quickstart")).toContainText("2021");
-  await expect(page.getByTestId("axin-progress")).toContainText("/7");
+  // later stages are UPCOMING — never ✓ merely because they are optional
+  await expect(page.getByTestId("axin-section-info-contact")).toHaveAttribute("data-state", "upcoming");
+  await expect(page.getByTestId("axin-section-review")).toHaveAttribute("data-state", "upcoming");
 
-  // refresh retains draft state (server persistence, not local state)
+  // refresh retains draft state AND lands back on Detallar (resume)
   await page.reload();
+  await expect(page.getByTestId("axin-section-details")).toHaveAttribute("data-state", "open");
   await expect(page.getByTestId("axin-summary-quickstart")).toContainText("Toyota");
 
-  // Satış məlumatı — price entered in AZN, mileage, city
-  await openSection(page, "sale");
+  // Detallar fully EMPTY → Davam et → Satış (sequential, never skipped)
+  await page.getByTestId("axin-continue-details").click();
+  await expect(page.getByTestId("axin-section-sale")).toHaveAttribute("data-state", "open");
+  await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 3 / 6");
+  await expect(page.getByTestId("axin-section-details")).toHaveAttribute("data-state", "visited"); // visited ≠ data entered
+
+  // Satış — required trio gates its own Davam et
+  await expect(page.getByTestId("axin-continue-sale")).toBeDisabled();
   await page.getByTestId("wizard-price").fill("25000");
   await page.getByTestId("wizard-mileage").fill("64000");
   await page.getByTestId("wizard-city").selectOption(seed().bakuCityId);
   await saveSettled(page);
-  await page.getByTestId("axin-complete-sale").click();
+  await page.getByTestId("axin-continue-sale").click();
+  await expect(page.getByTestId("axin-section-photos")).toHaveAttribute("data-state", "open");
+  await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 4 / 6");
 
-  // ƏLAQƏ — name + phone (so the only submit blocker left is images)
-  await openSection(page, "contact");
-  await page.getByTestId("wizard-seller-name").fill("E2E Satıcı");
-  await page.getByTestId("wizard-contact-phone").fill("+994501234567");
-  await saveSettled(page);
-  // AUTH ISOLATION (mandatory): the LISTING contact differs from the
-  // login phone; users.phone_e164 is never touched by the seller flow.
-  const listingId = page.url().match(/([0-9a-f-]{36})$/)![1];
-  {
-    const iso = await getContactIsolation(listingId, (await loginAs(context, testPhone(project.name, 31))).userId);
-    expect(iso.userPhone).toBe(testPhone(project.name, 31)); // login identity untouched
-    expect(iso.listingContact).toBe("+994501234567"); // listing-level contact
-    expect(iso.sellerName).toBe("E2E Satıcı"); // listing-level name only
-  }
+  // MONOTONIC PROGRESS: backward Dəyiş reopens Detallar but the
+  // journey position does NOT collapse; its Davam et returns forward
+  // to the furthest stage without re-traversing.
+  await page.getByTestId("axin-section-details").click();
+  await expect(page.getByTestId("axin-section-details")).toHaveAttribute("data-state", "open");
+  await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 4 / 6");
+  await page.getByTestId("axin-continue-details").click();
+  await expect(page.getByTestId("axin-section-photos")).toHaveAttribute("data-state", "open");
+  await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 4 / 6");
 
-  // Əlavə — description
-  await openSection(page, "extras");
-  await page.getByTestId("wizard-description").fill("Əla vəziyyətdə Toyota Corolla. E2E test elanı.");
-  await saveSettled(page);
-
-  // premature submit (0 photos) must fail safely via the backend and
-  // flag the photos card as needing attention
-  await openSection(page, "review");
-  await page.getByTestId("wizard-submit").click();
-  await expect(page.getByTestId("wizard-submit-error")).toContainText("Şəkil sayı kifayət deyil");
-  await expect(page.getByTestId("axin-section-photos")).toHaveAttribute("data-state", "attention");
-
-  // Şəkillər — amber minimum guidance before any upload
-  await openSection(page, "photos");
+  // Şəkillər — amber minimum guidance; Davam et blocked below 3
   await expect(page.getByTestId("wizard-photo-count")).toContainText("0/3 minimum");
+  await expect(page.getByTestId("axin-continue-photos")).toBeDisabled();
   await expect(page.getByTestId("wizard-photo-add")).toBeVisible();
   await page.getByTestId("wizard-photos-input").setInputFiles({
     name: "document.pdf",
@@ -220,9 +238,12 @@ test("full seller journey: quick start → sections → photos → review → FR
   await uploadJpegs(page, 1, 200);
   await expect(grid.locator('[data-testid="wizard-image"]')).toHaveCount(3, { timeout: 60_000 });
   await expect(page.getByTestId("wizard-photo-count")).toContainText("3 / 20"); // minimum satisfied
+  await page.getByTestId("axin-continue-photos").click();
 
-  // Əlavə — grouped feature expander with selected count + description counter
-  await openSection(page, "extras");
+  // Stage 5 — combined Əlavə məlumat və əlaqə (ONE stage, ONE Davam et)
+  await expect(page.getByTestId("axin-section-info-contact")).toHaveAttribute("data-state", "open");
+  await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 5 / 6");
+  await expect(page.getByTestId("axin-continue-info-contact")).toBeDisabled(); // contact required
   const featuresToggle = page.getByTestId("wizard-features-toggle");
   await expect(featuresToggle).toHaveAttribute("aria-expanded", "false");
   await featuresToggle.click();
@@ -234,7 +255,23 @@ test("full seller journey: quick start → sections → photos → review → FR
   await expect(firstFeature).toBeChecked();
   await saveSettled(page);
   await expect(featuresToggle).toContainText("(1)");
+  await page.getByTestId("wizard-description").fill("Əla vəziyyətdə Toyota Corolla. E2E test elanı.");
   await expect(page.getByTestId("wizard-description-count")).toContainText("/5000");
+  await page.getByTestId("wizard-seller-name").fill("E2E Satıcı");
+  await page.getByTestId("wizard-contact-phone").fill("+994501234567");
+  await saveSettled(page);
+  // AUTH ISOLATION (mandatory): the LISTING contact differs from the
+  // login phone; users.phone_e164 is never touched by the seller flow.
+  const listingId = page.url().match(/([0-9a-f-]{36})$/)![1];
+  {
+    const iso = await getContactIsolation(listingId, (await loginAs(context, testPhone(project.name, 31))).userId);
+    expect(iso.userPhone).toBe(testPhone(project.name, 31)); // login identity untouched
+    expect(iso.listingContact).toBe("+994501234567"); // listing-level contact
+    expect(iso.sellerName).toBe("E2E Satıcı"); // listing-level name only
+  }
+  await page.getByTestId("axin-continue-info-contact").click();
+  await expect(page.getByTestId("axin-section-review")).toHaveAttribute("data-state", "open");
+  await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 6 / 6");
 
   // Baxış — preview shows entered data + advisory quota; FREE submit
   await openSection(page, "review");
@@ -248,7 +285,7 @@ test("full seller journey: quick start → sections → photos → review → FR
   await expect(page.getByTestId("review-contact-phone")).toHaveText("050 123 45 67"); // friendly local format
   // Dəyiş jumps straight to the owning section and back
   await page.getByTestId("review-edit-contact").click();
-  await expect(page.getByTestId("axin-section-contact")).toHaveAttribute("data-state", "open");
+  await expect(page.getByTestId("axin-section-info-contact")).toHaveAttribute("data-state", "open");
   await openSection(page, "review");
   await expectNoHorizontalOverflow(page);
   await page.getByTestId("wizard-submit").click();
@@ -262,10 +299,14 @@ test("full seller journey: quick start → sections → photos → review → FR
 test("contact section: O.1 local phone UX, login-phone suggestion, inline validation (O.9E)", async ({ page, context }, { project }) => {
   const authPhone = testPhone(project.name, 45);
   const { userId } = await loginAs(context, authPhone);
-  const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: false });
+  // O.10: the combined stage must be REACHED — use a draft whose
+  // journey resume lands there (all prior stages data-complete,
+  // contact cleared).
+  const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 3 });
+  await clearListingContact(fixture.id);
   await page.goto(`/elan-yerlesdir/${fixture.id}`);
-  await openSection(page, "contact");
-  await expect(page.getByTestId("axin-section-contact")).toContainText("yalnız bu elan üçün");
+  await openSection(page, "info-contact");
+  await expect(page.getByTestId("axin-section-info-contact")).toContainText("yalnız bu elan üçün");
   // name required — inline, on blur, no modal
   await page.getByTestId("wizard-seller-name").click();
   await page.getByTestId("wizard-contact-phone").click(); // blur name
@@ -294,7 +335,7 @@ test("contact section: O.1 local phone UX, login-phone suggestion, inline valida
   expect(iso.sellerName).toBe("Orxan M."); // trimmed listing-level name
   // reload restores the friendly display from the server value
   await page.reload();
-  await openSection(page, "contact");
+  await openSection(page, "info-contact");
   await expect(page.getByTestId("wizard-seller-name")).toHaveValue("Orxan M.");
   const display = await page.getByTestId("wizard-contact-phone").inputValue();
   expect(display.replace(/\s/g, "")).toBe(`0${authPhone.slice(4)}`); // 0XX XXX XX XX of the same number
@@ -304,13 +345,14 @@ test("profile display name is an explicit suggestion, never phantom-completed li
   const { userId } = await loginAs(context, testPhone(project.name, 50));
   await setUserDisplayName(userId, "Seller A");
   try {
-    const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: false });
+    const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 3 });
+    await clearListingContact(fixture.id);
     await page.goto(`/elan-yerlesdir/${fixture.id}`);
-    await openSection(page, "contact");
+    await openSection(page, "info-contact");
     // the field is NOT falsely prefilled while listings.seller_name is
     // NULL — persisted state and UI can never disagree
     await expect(page.getByTestId("wizard-seller-name")).toHaveValue("");
-    await expect(page.getByTestId("axin-section-contact")).not.toHaveAttribute("data-state", "complete");
+    await expect(page.getByTestId("axin-section-info-contact")).not.toHaveAttribute("data-state", "complete");
     const chip = page.getByTestId("contact-use-profile-name");
     await expect(chip).toContainText("Seller A");
     // explicit acceptance persists through the normal PATCH
@@ -320,7 +362,7 @@ test("profile display name is an explicit suggestion, never phantom-completed li
     expect((await getContactIsolation(fixture.id, userId)).sellerName).toBe("Seller A");
     // reload restores from the LISTING, chip no longer offered
     await page.reload();
-    await openSection(page, "contact");
+    await openSection(page, "info-contact");
     await expect(page.getByTestId("wizard-seller-name")).toHaveValue("Seller A");
     await expect(page.getByTestId("contact-use-profile-name")).toHaveCount(0);
     // the account-level name was only read, never written

@@ -40,7 +40,7 @@ test("1024 is a designed tier: 640 column, 2-col fields, 4-up photos, in-card ac
   expect(mileage.x).toBeGreaterThan(price.x + price.width - 1);
 
   // in-card complete action (NOT the fixed bar)
-  const bar = page.getByTestId("axin-complete-sale");
+  const bar = page.getByTestId("axin-continue-sale");
   expect(await bar.evaluate((el) => getComputedStyle(el.parentElement!).position)).not.toBe("fixed");
 
   // photos: 4-up (first four tiles share a row)
@@ -75,7 +75,7 @@ test("768 is a structural transition: ~492 column, stacked fields, sticky action
   expect(Math.round(mileage.x)).toBe(Math.round(price.x));
 
   // sticky primary action (fixed, full-width, ≥48px)
-  const completeBtn = page.getByTestId("axin-complete-sale");
+  const completeBtn = page.getByTestId("axin-continue-sale");
   expect(await completeBtn.evaluate((el) => getComputedStyle(el.parentElement!).position)).toBe("fixed");
   const btnBox = (await completeBtn.boundingBox())!;
   expect(btnBox.height).toBeGreaterThanOrEqual(47);
@@ -90,7 +90,7 @@ test("768 is a structural transition: ~492 column, stacked fields, sticky action
   expect(t3.y).toBeGreaterThan(t0.y + 10); // wraps to the next row
 
   // contact stacked
-  await openSection(page, "contact");
+  await openSection(page, "info-contact");
   const name = (await page.getByTestId("wizard-seller-name").boundingBox())!;
   const phone = (await page.getByTestId("wizard-contact-phone").boundingBox())!;
   expect(phone.y).toBeGreaterThan(name.y + name.height - 1);
@@ -120,15 +120,17 @@ test("390 purpose-built flow: compact header, overlay within viewport, sticky ba
   await page.keyboard.press("Escape");
   await expectNoHorizontalOverflow(page);
 
-  // flow header is the compact "Yeni elan · n/7" (no chip, no promise)
+  // O.10 header: the Mərhələ X / 6 journey chip on every width; the
+  // autosave promise stays md+ only
   await page.goto(`/elan-yerlesdir/${fixture.id}`);
-  await expect(page.getByTestId("axin-progress")).toBeHidden();
+  await expect(page.getByTestId("axin-progress")).toBeVisible();
+  await expect(page.getByTestId("axin-progress")).toContainText("Mərhələ");
   await expect(page.getByText("Qaralama avtomatik saxlanılır")).toBeHidden();
   await expect(page.getByText(/Yeni elan/)).toBeVisible();
 
   // sticky bar (h≥48, fixed, safe-area aware) never covers the field
   await openSection(page, "sale");
-  const completeBtn = page.getByTestId("axin-complete-sale");
+  const completeBtn = page.getByTestId("axin-continue-sale");
   expect(await completeBtn.evaluate((el) => getComputedStyle(el.parentElement!).position)).toBe("fixed");
   const price = page.getByTestId("wizard-price");
   await price.click(); // focus = software-keyboard scenario
@@ -139,13 +141,14 @@ test("390 purpose-built flow: compact header, overlay within viewport, sticky ba
   await expectNoHorizontalOverflow(page);
 
   // contact: inline error stays visible above the bar
-  await openSection(page, "contact");
+  await openSection(page, "info-contact");
   await page.getByTestId("wizard-contact-phone").fill("010 21");
   await page.getByTestId("wizard-seller-name").click(); // blur → error
   const error = page.getByText("Nömrə natamamdır", { exact: false });
   await expect(error).toBeVisible();
+  await error.scrollIntoViewIfNeeded(); // combined card is tall at 390
   const errBox = (await error.boundingBox())!;
-  const contactBar = (await page.getByTestId("axin-complete-contact").boundingBox())!;
+  const contactBar = (await page.getByTestId("axin-continue-info-contact").boundingBox())!;
   expect(errBox.y + errBox.height).toBeLessThanOrEqual(contactBar.y + 1);
 
   // review: sticky submit + centered ghost skip; fee separate from promo
