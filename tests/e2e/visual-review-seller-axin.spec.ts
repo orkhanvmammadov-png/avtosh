@@ -387,4 +387,55 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
     await expectNoHorizontalOverflow(page);
     await page.screenshot({ path: `${OUT}/o10-stagea-390-sale-after-continue.png`, fullPage: true });
   });
+
+  /** O.10 Stage B — combined Stage 5 composition states. */
+  test("o10-stageb-captures", async ({ page, context }) => {
+    test.setTimeout(240_000);
+    const { userId } = await loginAs(context, "+994508890029");
+    const draft = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 3 });
+    await clearListingContact(draft.id); // journey resumes on Stage 5
+
+    // 1440 — combined stage, then contact validation state
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/elan-yerlesdir/${draft.id}`);
+    await expect(page.getByTestId("axin-section-info-contact")).toHaveAttribute("data-state", "open");
+    await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 5 / 6");
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({ path: `${OUT}/o10-stageb-1440-combined.png`, fullPage: true });
+    await page.getByTestId("wizard-contact-phone").fill("010 21");
+    await page.getByTestId("wizard-seller-name").click();
+    await expect(page.getByText("Nömrə natamamdır", { exact: false })).toBeVisible();
+    await page.screenshot({ path: `${OUT}/o10-stageb-1440-contact-validation.png`, fullPage: true });
+    // valid contact → Davam et → Review with the combined Dəyiş rows
+    await page.getByTestId("wizard-contact-phone").fill("010 218 41 91");
+    await page.getByTestId("wizard-seller-name").fill("Orxan M.");
+    await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+    await page.getByTestId("axin-continue-info-contact").click();
+    await expect(page.getByTestId("axin-section-review")).toHaveAttribute("data-state", "open");
+    await expect(page.getByTestId("review-extras")).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({ path: `${OUT}/o10-stageb-1440-review-combined-deyis.png`, fullPage: true });
+
+    // 390 — combined stage, validation, sticky CTA, review
+    const draft390 = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 3 });
+    await clearListingContact(draft390.id);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/elan-yerlesdir/${draft390.id}`);
+    await expect(page.getByTestId("axin-section-info-contact")).toHaveAttribute("data-state", "open");
+    await page.waitForLoadState("networkidle");
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o10-stageb-390-combined.png`, fullPage: true });
+    await page.getByTestId("wizard-contact-phone").fill("010 21");
+    await page.getByTestId("wizard-seller-name").click();
+    await expect(page.getByText("Nömrə natamamdır", { exact: false })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o10-stageb-390-contact-validation.png`, fullPage: true });
+    await page.getByTestId("wizard-contact-phone").fill("010 218 41 91");
+    await page.getByTestId("wizard-seller-name").fill("Orxan M.");
+    await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+    await page.getByTestId("axin-continue-info-contact").click();
+    await expect(page.getByTestId("axin-section-review")).toHaveAttribute("data-state", "open");
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o10-stageb-390-review.png`, fullPage: true });
+  });
 });

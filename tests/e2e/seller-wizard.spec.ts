@@ -244,6 +244,10 @@ test("full seller journey: quick start → sections → photos → review → FR
   await expect(page.getByTestId("axin-section-info-contact")).toHaveAttribute("data-state", "open");
   await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 5 / 6");
   await expect(page.getByTestId("axin-continue-info-contact")).toBeDisabled(); // contact required
+  // ONE combined card, TWO subgroups (combined-stage.md)
+  await expect(page.getByTestId("subgroup-extras")).toContainText("istəyə bağlıdır");
+  await expect(page.getByTestId("subgroup-contact")).toContainText("mütləqdir");
+  await expect(page.getByTestId("axin-continue-info-contact")).toHaveCount(1); // one CTA only
   const featuresToggle = page.getByTestId("wizard-features-toggle");
   await expect(featuresToggle).toHaveAttribute("aria-expanded", "false");
   await featuresToggle.click();
@@ -283,8 +287,12 @@ test("full seller journey: quick start → sections → photos → review → FR
   // the ƏLAQƏ review block catches wrong name/phone before submit
   await expect(page.getByTestId("review-contact-name")).toHaveText("E2E Satıcı");
   await expect(page.getByTestId("review-contact-phone")).toHaveText("050 123 45 67"); // friendly local format
-  // Dəyiş jumps straight to the owning section and back
+  // Dəyiş jumps straight to the owning COMBINED stage and back —
+  // contact fields and extras both route to infoContact
   await page.getByTestId("review-edit-contact").click();
+  await expect(page.getByTestId("axin-section-info-contact")).toHaveAttribute("data-state", "open");
+  await openSection(page, "review");
+  await page.getByTestId("review-edit-extras").click();
   await expect(page.getByTestId("axin-section-info-contact")).toHaveAttribute("data-state", "open");
   await openSection(page, "review");
   await expectNoHorizontalOverflow(page);
@@ -322,9 +330,16 @@ test("contact section: O.1 local phone UX, login-phone suggestion, inline valida
   await phone.fill("010 21");
   await page.getByTestId("wizard-seller-name").click(); // blur phone
   await expect(page.getByText("Nömrə natamamdır", { exact: false })).toBeVisible();
+  // an invalid pending phone blocks advancing: the flush inside Davam
+  // et fails (server rejects), navigation refuses, save-error shows —
+  // Review stays unreachable and nothing fake is stored
+  await page.getByTestId("axin-continue-info-contact").click();
+  await expect(page.getByTestId("axin-section-info-contact")).toHaveAttribute("data-state", "open");
+  await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanmadı. Yenidən cəhd edin.");
   // one-tap login-phone suggestion appears only for an EMPTY unsaved field
   await phone.fill("");
   await saveSettled(page); // contact cleared server-side
+  await expect(page.getByTestId("axin-continue-info-contact")).toBeDisabled(); // name+phone both required
   const chip = page.getByTestId("contact-use-login-phone");
   await expect(chip).toBeVisible();
   await chip.click();

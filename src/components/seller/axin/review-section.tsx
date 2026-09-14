@@ -169,6 +169,20 @@ export function ReviewSection({
           </div>
           <EditLink onClick={() => onEdit("contact")} testid="review-edit-contact" />
         </div>
+        {/* Əlavə məlumat lives in the SAME combined stage (O.10) —
+            its Dəyiş routes to infoContact exactly like the contact
+            fields above. */}
+        <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-line pt-2.5" data-testid="review-extras">
+          <p className="text-xs text-slate-strong">
+            {[
+              dto.featureIds.length > 0 ? `${dto.featureIds.length} ${SELLER.features.toLowerCase()}` : null,
+              dto.description !== null && dto.description !== "" ? SELLER.description : null,
+            ]
+              .filter((v): v is string => v !== null)
+              .join(" · ") || `${SELLER.sectionExtras} — ${SELLER.subgroupOptional}`}
+          </p>
+          <EditLink onClick={() => onEdit("extras")} testid="review-edit-extras" />
+        </div>
       </div>
 
       {/* fee line — advisory quota; hidden entirely for resubmission

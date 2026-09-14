@@ -122,6 +122,8 @@ export const SELLER = {
   attentionRequired: "Tələb olunan məlumat çatışmır",
   attentionPhotos: "Minimum 3 şəkil tələb olunur",
   attentionContact: "Ad və əlaqə nömrəsi tələb olunur",
+  subgroupOptional: "istəyə bağlıdır",
+  subgroupRequired: "mütləqdir",
   sectionReview: "Baxış və dərc",
   sectionComplete: "Bölməni tamamla",
   sectionEdit: "Dəyiş",
@@ -132,8 +134,9 @@ export const SELLER = {
   sellerName: "Satıcının adı",
   sellerNameHint: "elanda görünür",
   sellerNamePlaceholder: "Ad daxil edin",
-  contactIntro:
-    "Bu elanda alıcılar sizinlə necə əlaqə saxlasın? Bu məlumat alıcıların sizinlə əlaqə saxlaması üçün istifadə olunacaq. Giriş nömrənizə təsir etmir.",
+  // O.10 combined-stage intro (combined-stage.md — supersedes the
+  // longer O.9 copy for this stage)
+  contactIntro: "Alıcıların sizinlə əlaqəsi üçün. Giriş nömrənizə təsir etmir.",
   contactPhoneListingOnly: "Bu nömrə yalnız bu elan üçün əlaqə nömrəsidir.",
   contactPhoneLocalHint: "yerli formatda yazın — 010 218 41 91",
   contactPhoneIncomplete: "Nömrə natamamdır — Azərbaycan nömrəsi 9 rəqəmdir",

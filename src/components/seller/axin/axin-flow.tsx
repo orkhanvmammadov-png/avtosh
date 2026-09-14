@@ -372,9 +372,10 @@ export function AxinFlow({
             <PhotosStep editor={editor} />
           </SectionCard>
 
-          {/* Stage 5 — combined journey stage (Stage A temporary
-              adapter: the two O.9 subcomponents render inside ONE
-              card; Stage B seals the subgroup visual composition). */}
+          {/* Stage 5 — ONE journey stage, TWO subgroups inside ONE
+              card (combined-stage.md): caps sublabels + optional/
+              required helpers separated by a hairline — no nested
+              cards, no second CTA, no re-split into journey steps. */}
           <SectionCard
             sectionKey="info-contact"
             index={5}
@@ -387,9 +388,25 @@ export function AxinFlow({
             continueDisabled={!stageValid.infoContact}
             footerStart={autosaveChip}
           >
-            <ExtrasSection editor={editor} catalog={catalog} />
+            <div data-testid="subgroup-extras">
+              <h3 className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-muted">
+                {SELLER.sectionExtras}
+                <span className="ml-1.5 font-medium normal-case tracking-normal">· {SELLER.subgroupOptional}</span>
+              </h3>
+              <div className="mt-2.5">
+                <ExtrasSection editor={editor} catalog={catalog} />
+              </div>
+            </div>
             <div className="my-4 border-t border-line" aria-hidden="true" />
-            <ContactSection editor={editor} authPhoneE164={authPhoneE164} authDisplayName={authDisplayName} />
+            <div data-testid="subgroup-contact">
+              <h3 className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-muted">
+                {SELLER.sectionContact}
+                <span className="ml-1.5 font-medium normal-case tracking-normal">· {SELLER.subgroupRequired}</span>
+              </h3>
+              <div className="mt-2.5">
+                <ContactSection editor={editor} authPhoneE164={authPhoneE164} authDisplayName={authDisplayName} />
+              </div>
+            </div>
           </SectionCard>
 
           <SectionCard
