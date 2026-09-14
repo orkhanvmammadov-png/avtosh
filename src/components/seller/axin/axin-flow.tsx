@@ -17,6 +17,7 @@ import {
   type SubmitResult,
 } from "@/lib/seller/owner-api";
 import { MISSING_FIELD_LABELS, REASON_LABELS } from "@/lib/seller/status";
+import { STAGES, STAGE_COUNT, correctionEntryStage, deriveResumeStage, type StageKey } from "@/lib/seller/journey";
 import { PayButton } from "@/components/seller/pay-button";
 import type { SellerModerationFeedbackDto } from "@/services/my-listings";
 import { useListingEditor, type ListingEditor } from "@/components/seller/use-listing-editor";
@@ -45,10 +46,6 @@ import { TypeaheadField } from "@/components/seller/axin/typeahead-field";
  * seals its combined visual composition — Stage A renders the two O.9
  * subcomponents inside its single card as a temporary adapter).
  */
-const STAGES = ["quickstart", "details", "sale", "photos", "infoContact", "review"] as const;
-type StageKey = (typeof STAGES)[number];
-const STAGE_COUNT = STAGES.length;
-
 const STAGE_TITLES: Record<StageKey, string> = {
   quickstart: SELLER.quickStartTitle,
   details: SELLER.sectionDetails,
@@ -69,32 +66,6 @@ const MISSING_CODE_SECTION: Record<string, StageKey> = {
   contact_phone: "infoContact",
   seller_name: "infoContact",
 };
-
-/**
- * Pure resume derivation (audit-dependent.md item 2, Stage A form):
- * frontend-only, from persisted draft data. Rules — invalid Quick
- * Start → stage 1; a fresh Quick-Start draft (nothing beyond
- * identity) → Detallar; otherwise the first required-unmet stage
- * (Satış → Şəkillər → Əlaqə); everything met → Review. Under strict
- * sequential flow, data at stage N proves stages < N were visited;
- * a trailing EMPTY optional visit is not recoverable from data (the
- * documented, accepted limitation — Stage C adds nothing persisted).
- */
-function deriveResumeStage(dto: OwnerListingDto): StageKey {
-  const identity = dto.brandId !== null && dto.modelId !== null && dto.year !== null;
-  if (!identity) return "quickstart";
-  const saleData = dto.priceMinor !== null || dto.mileage !== null || dto.cityId !== null;
-  const saleValid = dto.priceMinor !== null && dto.mileage !== null && dto.cityId !== null;
-  const photosData = dto.images.length > 0;
-  const extrasData = dto.featureIds.length > 0 || dto.description !== null;
-  const contactData = dto.sellerName !== null || dto.contactPhone !== null;
-  const contactValid = dto.sellerName !== null && dto.contactPhone !== null;
-  if (!saleData && !photosData && !extrasData && !contactData) return "details"; // fresh draft
-  if (!saleValid) return "sale";
-  if (dto.images.length < 3) return "photos";
-  if (!contactValid) return "infoContact";
-  return "review";
-}
 
 interface SubmitErrorView {
   title: string;
@@ -162,7 +133,7 @@ export function AxinFlow({
   // visited ≡ index <= furthestIndex. Resume derivation is the pure
   // audited hierarchy; Stage C finalizes correction deep-linking.
   const [openStage, setOpenStage] = useState<StageKey>(() =>
-    isResubmission ? "review" : deriveResumeStage(initial),
+    isResubmission ? correctionEntryStage(feedback?.reasonCode ?? null) : deriveResumeStage(initial),
   );
   const [furthestIndex, setFurthestIndex] = useState<number>(() =>
     isResubmission ? STAGES.indexOf("review") : STAGES.indexOf(deriveResumeStage(initial)),
