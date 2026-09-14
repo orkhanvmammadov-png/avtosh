@@ -60,7 +60,7 @@ test("open stage carries aria-current=step, heading focus follows forward and ex
   await page.getByTestId("axin-section-sale").click();
   await expect(page.getByTestId("axin-section-sale")).toHaveAttribute("data-state", "open");
   await expectFocus(page, "axin-heading-sale");
-  await expect(announcer).toHaveText("Mərhələ 3 / 6 — Satış məlumatı");
+  await expect(announcer).toHaveText("Mərhələ 3 / 6 — Satış məlumatları");
   // journey position (header) never collapses backward
   await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 6 / 6");
 });
@@ -110,7 +110,7 @@ test("correction entry announces and focuses the honestly mapped stage", async (
   await expect(page.getByTestId("axin-section-sale")).toHaveAttribute("data-state", "open");
   await expect(page.locator('[aria-current="step"]')).toHaveCount(1);
   await expectFocus(page, "axin-heading-sale");
-  await expect(page.getByTestId("axin-stage-announcer")).toHaveText("Mərhələ 3 / 6 — Satış məlumatı");
+  await expect(page.getByTestId("axin-stage-announcer")).toHaveText("Mərhələ 3 / 6 — Satış məlumatları");
 
   // combined stage card exposes exactly two subgroup headings
   await page.getByTestId("axin-section-info-contact").click();

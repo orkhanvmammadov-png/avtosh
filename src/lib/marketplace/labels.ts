@@ -109,7 +109,7 @@ export const SELLER = {
   quickStartTitle: "Sürətli başlanğıc",
   quickStartStart: "Başla →",
   sectionDetails: "Detallar",
-  sectionSale: "Satış məlumatı",
+  sectionSale: "Satış məlumatları",
   sectionPhotos: "Şəkillər",
   sectionExtras: "Əlavə məlumat",
   sectionContact: "Əlaqə məlumatları",
