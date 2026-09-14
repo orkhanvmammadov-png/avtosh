@@ -117,7 +117,11 @@ export function SectionCard({
       data-state="open"
       className="rounded-[12px] border-2 border-[#147A4E] bg-raised p-4"
     >
-      <h2 className="text-[14px] font-bold tracking-[-0.01em] text-ink">
+      <h2
+        tabIndex={-1}
+        data-testid={`axin-heading-${sectionKey}`}
+        className="text-[14px] font-bold tracking-[-0.01em] text-ink outline-none"
+      >
         {index}. {title}
       </h2>
       <div className="mt-3">{children}</div>
@@ -137,6 +141,7 @@ export function SectionCard({
                 className="inline-flex h-12 w-full items-center justify-center rounded-control bg-primary px-5 text-[13px] font-bold text-white transition-colors duration-150 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50 desk:h-10 desk:w-auto"
               >
                 {continueLabel}
+                <span aria-hidden="true" className="ml-1.5">→</span>
               </button>
             </div>
           ) : null}

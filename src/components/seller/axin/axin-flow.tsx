@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { ResultPanel } from "@/components/ui/result-panel";
 import { formatPriceMinor } from "@/lib/format";
@@ -151,6 +151,17 @@ export function AxinFlow({
     return "visited";
   }
 
+  // O.10 Stage D accessibility: on EVERY real stage change — forward
+  // Davam et, explicit backward Dəyiş/visited-row navigation, and
+  // initial resume/correction entry — keyboard focus moves to the
+  // opened stage heading (the user requested the navigation, so the
+  // jump is expected and orients screen readers). Autosave rerenders
+  // never re-run this effect (keyed to openStage only).
+  useEffect(() => {
+    const heading = document.querySelector<HTMLElement>('section[data-state="open"] h2[tabindex="-1"]');
+    heading?.focus();
+  }, [openStage]);
+
   /** Reopen a VISITED stage (backward/Dəyiş — never a forward shortcut). */
   function openVisited(key: StageKey) {
     if (STAGES.indexOf(key) <= furthestIndex) setOpenStage(key);
@@ -225,8 +236,8 @@ export function AxinFlow({
       {/* Navy flow header — title, autosave promise, Mərhələ X / 6
           (journey POSITION — never a completion count). */}
       <div className="bg-navy text-white">
-        <div className="mx-auto flex h-12 max-w-full items-center justify-between gap-3 px-4 md:max-w-[540px] md:px-6 desk:max-w-[640px] desk:px-0 xl:max-w-[680px]">
-          <p className="min-w-0 truncate text-[13px]">
+        <div className="relative mx-auto flex h-12 max-w-full items-center justify-center gap-3 px-4 md:max-w-[540px] md:justify-between md:px-6 desk:max-w-[640px] desk:px-0 xl:max-w-[680px]">
+          <p className="hidden min-w-0 truncate text-[13px] md:block">
             <span className="font-bold">{SELLER.newListing}</span>
             <span className="hidden text-white/60 md:inline"> · {SELLER.autosaveHint}</span>
           </p>
@@ -234,7 +245,7 @@ export function AxinFlow({
             <p
               aria-live="polite"
               data-testid="wizard-save-state"
-              className={`text-[11px] font-medium ${
+              className={`sr-only text-[11px] font-medium md:not-sr-only ${
                 editor.saveState === "saving"
                   ? "text-white/70"
                   : editor.saveState === "saved"
@@ -249,7 +260,7 @@ export function AxinFlow({
               {editor.saveState === "error" ? SELLER.saveError : null}
             </p>
             <p
-              className="rounded-pill bg-[#1D2733] px-2.5 py-1 text-[11px] font-semibold text-white/85"
+              className="text-[14px] font-bold text-white md:rounded-pill md:bg-[#1D2733] md:px-2.5 md:py-1 md:text-[11px] md:font-semibold md:text-white/85"
               data-testid="axin-progress"
             >
               {SELLER.stageWord} {furthestIndex + 1} / {STAGE_COUNT}
@@ -282,6 +293,10 @@ export function AxinFlow({
             {feedback.note !== null ? <p className="mt-1 text-sm text-slate-strong">{feedback.note}</p> : null}
           </div>
         ) : null}
+
+        <p className="sr-only" role="status" data-testid="axin-stage-announcer">
+          {SELLER.stageWord} {openIndex + 1} / {STAGE_COUNT} — {STAGE_TITLES[openStage]}
+        </p>
 
         <div key={editor.resetKey} className="space-y-2.5">
           <SectionCard

@@ -438,4 +438,147 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
     await expectNoHorizontalOverflow(page);
     await page.screenshot({ path: `${OUT}/o10-stageb-390-review.png`, fullPage: true });
   });
+
+  /**
+   * O.10 Stage D — implementation counterparts for ALL 22 approved
+   * references (fullPage sticky-bar mid-scroll placement remains the
+   * known, documented capture artifact).
+   */
+  test("o10-staged-captures", async ({ page, context }) => {
+    test.setTimeout(480_000);
+    const header = { clip: { x: 0, y: 0, width: 1440, height: 170 } };
+
+    const quickStart = async (shotPrefix: string | null) => {
+      await page.goto("/elan-yerlesdir");
+      const brand = page.getByTestId("quick-start-brand");
+      await brand.click();
+      await brand.fill("Toy");
+      await page.getByTestId("quick-start-brand-listbox").getByText("Toyota", { exact: true }).click();
+      const model = page.getByTestId("quick-start-model");
+      await model.click();
+      await model.fill("Co");
+      await page.getByTestId("quick-start-model-listbox").getByText("Corolla", { exact: true }).click();
+      await page.getByTestId("quick-start-year").click();
+      await page.getByTestId("quick-start-year-opt-2021").click();
+      await expect(page.getByTestId("quick-start-begin")).toBeEnabled();
+      if (shotPrefix !== null) {
+        await page.screenshot({ path: `${OUT}/${shotPrefix}-quickstart-complete.png`, fullPage: true });
+      }
+      await page.getByTestId("quick-start-begin").click();
+      await page.waitForURL(/\/elan-yerlesdir\/[0-9a-f-]{36}$/);
+      await expect(page.getByTestId("axin-section-details")).toHaveAttribute("data-state", "open");
+      await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 2 / 6");
+      await page.waitForLoadState("networkidle");
+    };
+
+    // ---- 1440 sequence journey (user 30) ----
+    await loginAs(context, "+994508890030");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await quickStart("o10-staged-1440"); // → o10-1440-quickstart-complete
+    await page.screenshot({ path: `${OUT}/o10-staged-1440-details-current.png`, fullPage: true }); // → o10-1440-details-current
+    await page.screenshot({ path: `${OUT}/o10-staged-progress-1440-m2.png`, ...header }); // → o10-progress-states (pill, md+)
+    await page.getByTestId("axin-continue-details").click();
+    await expect(page.getByTestId("axin-section-sale")).toHaveAttribute("data-state", "open");
+    await page.screenshot({ path: `${OUT}/o10-staged-1440-sale.png`, fullPage: true }); // → o10-1440-sale
+    // details row VISITED while empty — visited ≠ completed
+    await page
+      .getByTestId("axin-section-details")
+      .screenshot({ path: `${OUT}/o10-staged-1440-details-empty-visited.png` }); // → o10-1440-details-empty-visited
+
+    // ---- fixture-driven stage states (user 31) ----
+    const fx = await loginAs(context, "+994508890031");
+    const photosDraft = await insertListingFixture(fx.userId, { status: "DRAFT", complete: true, images: 0 });
+    const combinedDraft = await insertListingFixture(fx.userId, { status: "DRAFT", complete: true, images: 3 });
+    await clearListingContact(combinedDraft.id);
+    const reviewDraft = await insertListingFixture(fx.userId, { status: "DRAFT", complete: true, images: 3 });
+
+    // 1440 — photos current, combined stage, review
+    await page.goto(`/elan-yerlesdir/${photosDraft.id}`);
+    await expect(page.getByTestId("axin-section-photos")).toHaveAttribute("data-state", "open");
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({ path: `${OUT}/o10-staged-1440-photos.png`, fullPage: true }); // → o10-1440-photos
+    await page.goto(`/elan-yerlesdir/${combinedDraft.id}`);
+    await expect(page.getByTestId("axin-section-info-contact")).toHaveAttribute("data-state", "open");
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({ path: `${OUT}/o10-staged-1440-combined-info-contact.png`, fullPage: true }); // → o10-1440-combined-info-contact
+    await page
+      .getByTestId("axin-section-info-contact")
+      .screenshot({ path: `${OUT}/o10-staged-combined-stage.png` }); // → o10-combined-stage (card composition)
+    await page.goto(`/elan-yerlesdir/${reviewDraft.id}`);
+    await expect(page.getByTestId("axin-section-review")).toHaveAttribute("data-state", "open");
+    await expect(page.getByTestId("axin-progress")).toHaveText("Mərhələ 6 / 6");
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({ path: `${OUT}/o10-staged-1440-review.png`, fullPage: true }); // → o10-1440-review
+    await page.screenshot({ path: `${OUT}/o10-staged-progress-1440-m6.png`, ...header }); // → o10-progress-states
+
+    // needs-attention (states legend): correction entry with contact
+    // cleared — visited+invalid required stage shows the red row
+    const attention = await insertListingFixture(fx.userId, {
+      status: "CORRECTION_REQUIRED",
+      complete: true,
+      images: 3,
+      review: { decision: "CORRECTION_REQUESTED", reasonCode: "OTHER", note: "Stage D captures" },
+    });
+    await clearListingContact(attention.id);
+    await page.goto(`/elan-yerlesdir/${attention.id}`);
+    await expect(page.getByTestId("axin-section-review")).toHaveAttribute("data-state", "open");
+    await expect(page.getByTestId("axin-section-info-contact")).toHaveAttribute("data-state", "attention");
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({ path: `${OUT}/o10-staged-1440-state-attention.png`, fullPage: true }); // → o10-section-state-legend
+
+    // 1024 / 768 — sequence overview + combined stage
+    for (const [w, h, tag] of [
+      [1024, 800, "1024"],
+      [768, 1024, "768"],
+    ] as const) {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto(`/elan-yerlesdir/${photosDraft.id}`);
+      await expect(page.getByTestId("axin-section-photos")).toHaveAttribute("data-state", "open");
+      await page.waitForLoadState("networkidle");
+      await expectNoHorizontalOverflow(page);
+      await page.screenshot({ path: `${OUT}/o10-staged-${tag}-sequence.png`, fullPage: true }); // → o10-{w}-sequence
+      await page.goto(`/elan-yerlesdir/${combinedDraft.id}`);
+      await expect(page.getByTestId("axin-section-info-contact")).toHaveAttribute("data-state", "open");
+      await page.waitForLoadState("networkidle");
+      await expectNoHorizontalOverflow(page);
+      await page.screenshot({ path: `${OUT}/o10-staged-${tag}-combined-info-contact.png`, fullPage: true }); // → o10-{w}-combined-info-contact
+    }
+
+    // ---- 390 series ----
+    await page.setViewportSize({ width: 390, height: 844 });
+    await quickStart("o10-staged-390"); // → o10-390-quickstart-complete
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o10-staged-390-details.png`, fullPage: true }); // → o10-390-details (centered Mərhələ, no pill)
+    await page.screenshot({ path: `${OUT}/o10-staged-progress-390-m2.png`, clip: { x: 0, y: 0, width: 390, height: 170 } }); // → o10-progress-states
+    // sticky empty-details Davam et within the viewport (not fullPage)
+    await page.screenshot({ path: `${OUT}/o10-staged-390-details-empty-continue.png` }); // → o10-390-details-empty-continue
+    await page.getByTestId("axin-continue-details").click();
+    await expect(page.getByTestId("axin-section-sale")).toHaveAttribute("data-state", "open");
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o10-staged-390-sale.png`, fullPage: true }); // → o10-390-sale
+
+    await page.goto(`/elan-yerlesdir/${photosDraft.id}`);
+    await expect(page.getByTestId("axin-section-photos")).toHaveAttribute("data-state", "open");
+    await page.waitForLoadState("networkidle");
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o10-staged-390-photos.png`, fullPage: true }); // → o10-390-photos
+
+    await page.goto(`/elan-yerlesdir/${combinedDraft.id}`);
+    await expect(page.getByTestId("axin-section-info-contact")).toHaveAttribute("data-state", "open");
+    await page.waitForLoadState("networkidle");
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o10-staged-390-combined-info-contact.png`, fullPage: true }); // → o10-390-combined-info-contact
+    await page.getByTestId("wizard-contact-phone").fill("010 21");
+    await page.getByTestId("wizard-seller-name").click();
+    await expect(page.getByText("Nömrə natamamdır", { exact: false })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o10-staged-390-contact-validation.png`, fullPage: true }); // → o10-390-contact-validation
+
+    await page.goto(`/elan-yerlesdir/${reviewDraft.id}`);
+    await expect(page.getByTestId("axin-section-review")).toHaveAttribute("data-state", "open");
+    await page.waitForLoadState("networkidle");
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o10-staged-390-review.png`, fullPage: true }); // → o10-390-review
+    await page.screenshot({ path: `${OUT}/o10-staged-progress-390-m6.png`, clip: { x: 0, y: 0, width: 390, height: 170 } }); // → o10-progress-states
+  });
 });

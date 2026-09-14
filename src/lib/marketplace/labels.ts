@@ -118,7 +118,7 @@ export const SELLER = {
   continueCta: "Davam et",
   fixCta: "Düzəlt",
   stageWord: "Mərhələ",
-  detailsOptionalHint: "Bu bölmədəki sahələr istəyə bağlıdır — boş buraxa bilərsiniz.",
+  detailsOptionalHint: "Bütün sahələr istəyə bağlıdır — boş keçə bilərsiniz",
   attentionRequired: "Tələb olunan məlumat çatışmır",
   attentionPhotos: "Minimum 3 şəkil tələb olunur",
   attentionContact: "Ad və əlaqə nömrəsi tələb olunur",

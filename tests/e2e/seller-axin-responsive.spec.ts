@@ -120,13 +120,20 @@ test("390 purpose-built flow: compact header, overlay within viewport, sticky ba
   await page.keyboard.press("Escape");
   await expectNoHorizontalOverflow(page);
 
-  // O.10 header: the Mərhələ X / 6 journey chip on every width; the
-  // autosave promise stays md+ only
+  // O.10 header at 390 (o10-390-details.png): the bar shows ONLY the
+  // centered bold "Mərhələ X / 6" — no pill, no "Yeni elan" title, and
+  // the autosave promise stays md+ only
   await page.goto(`/elan-yerlesdir/${fixture.id}`);
-  await expect(page.getByTestId("axin-progress")).toBeVisible();
-  await expect(page.getByTestId("axin-progress")).toContainText("Mərhələ");
+  const progress = page.getByTestId("axin-progress");
+  await expect(progress).toBeVisible();
+  await expect(progress).toContainText("Mərhələ");
   await expect(page.getByText("Qaralama avtomatik saxlanılır")).toBeHidden();
-  await expect(page.getByText(/Yeni elan/)).toBeVisible();
+  await expect(page.getByTestId("axin-flow").getByText("Yeni elan", { exact: true })).toBeHidden();
+  // centered within the 390 bar, rendered plain (no pill background)
+  const pBox = (await progress.boundingBox())!;
+  const center = pBox.x + pBox.width / 2;
+  expect(Math.abs(center - 195)).toBeLessThanOrEqual(8);
+  expect(await progress.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe("rgba(0, 0, 0, 0)");
 
   // sticky bar (h≥48, fixed, safe-area aware) never covers the field
   await openSection(page, "sale");
