@@ -47,7 +47,7 @@ async function pendingListing(seller: Session): Promise<{ id: string; revision: 
   const patch = await api(routes.patch, "PATCH", `${LISTINGS_BASE}/${draft.id}`, {
     body: {
       expected_revision: draft.revision, brand_id: brandId, model_id: modelId, year: 2018,
-      price_minor: 1200000, mileage: 50000, city_id: cityId, contact_phone: "+994501234567",
+      price_minor: 1200000, mileage: 50000, city_id: cityId, contact_phone: "+994501234567", seller_name: "Test Satıcı",
     },
     cookie: seller.cookie, params: { listingId: draft.id },
   });
@@ -186,7 +186,7 @@ describe("moderation queue", () => {
     try {
       const draft = await createDraftVia(routes, seller.cookie);
       await api(routes.patch, "PATCH", `${LISTINGS_BASE}/${draft.id}`, {
-        body: { expected_revision: 1, brand_id: brandId, model_id: modelId, year: 2018, price_minor: 1, mileage: 1, city_id: cityId, contact_phone: "+994501234567" },
+        body: { expected_revision: 1, brand_id: brandId, model_id: modelId, year: 2018, price_minor: 1, mileage: 1, city_id: cityId, contact_phone: "+994501234567", seller_name: "Test Satıcı" },
         cookie: seller.cookie, params: { listingId: draft.id },
       });
       let rev = 2;

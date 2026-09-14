@@ -54,7 +54,7 @@ export async function insertListingFixture(
     const published = ["ACTIVE", "SOLD", "EXPIRED", "SUSPENDED"].includes(status);
     const [row] = await sql`
       insert into listings (owner_id, category_id, brand_id, model_id, city_id, year, engine_cc,
-        price_minor, mileage, no_accident, not_repainted, description, contact_phone_e164, status,
+        price_minor, mileage, no_accident, not_repainted, description, contact_phone_e164, seller_name, status,
         submitted_at, published_at, current_expires_at, sold_at)
       values (${ownerId},
         (select id from categories where code = 'CAR'),
@@ -63,6 +63,7 @@ export async function insertListingFixture(
         ${complete ? 2021 : null}, ${options.engineCc ?? null}, ${complete ? 2500000 : null}, ${complete ? 64000 : null},
         ${options.noAccident ?? null}, ${options.notRepainted ?? null},
         ${complete ? "E2E fixture təsviri" : null}, ${complete ? "+994501234567" : null},
+        ${complete ? "E2E Satıcı" : null},
         ${status}::listing_status,
         ${submitted ? sql`now()` : null},
         ${published ? sql`now() - interval '1 day'` : null},
@@ -189,6 +190,65 @@ export async function setListingFeeMinor(minor: number): Promise<void> {
       update system_settings set value = ${String(minor)}::jsonb
       where key = 'listing.publication_fee_minor'
     `;
+  } finally {
+    await sql.end();
+  }
+}
+
+/** O.9: account-level display name control for prefill tests. */
+export async function setUserDisplayName(userId: string, name: string | null): Promise<void> {
+  const sql = db();
+  try {
+    await sql`update users set display_name = ${name} where id = ${userId}`;
+  } finally {
+    await sql.end();
+  }
+}
+
+export async function getUserDisplayName(userId: string): Promise<string | null> {
+  const sql = db();
+  try {
+    return (await sql`select display_name from users where id = ${userId}`)[0]
+      .display_name as string | null;
+  } finally {
+    await sql.end();
+  }
+}
+
+/** O.9 auth-isolation proof: login phone vs listing contact. */
+export async function getContactIsolation(
+  listingId: string,
+  userId: string,
+): Promise<{ userPhone: string; listingContact: string | null; sellerName: string | null }> {
+  const sql = db();
+  try {
+    const [u] = await sql`select phone_e164 from users where id = ${userId}`;
+    const [l] = await sql`select contact_phone_e164, seller_name from listings where id = ${listingId}`;
+    return {
+      userPhone: u.phone_e164 as string,
+      listingContact: l.contact_phone_e164 as string | null,
+      sellerName: l.seller_name as string | null,
+    };
+  } finally {
+    await sql.end();
+  }
+}
+
+/** O.9 promotion intent columns + payment types for a listing. */
+export async function getListingIntents(
+  listingId: string,
+): Promise<{ premium: string | null; boost: string | null; paymentTypes: string[] }> {
+  const sql = db();
+  try {
+    const [row] = await sql`
+      select premium_intent_package_id, boost_intent_package_id from listings where id = ${listingId}
+    `;
+    const payments = await sql`select type::text as type from payments where listing_id = ${listingId}`;
+    return {
+      premium: row.premium_intent_package_id as string | null,
+      boost: row.boost_intent_package_id as string | null,
+      paymentTypes: payments.map((p) => p.type as string),
+    };
   } finally {
     await sql.end();
   }

@@ -51,6 +51,7 @@ export interface ModerationListingRow {
   barter_available: boolean;
   description: string | null;
   contact_phone_e164: string | null;
+  seller_name: string | null;
   submitted_at: Date | null;
   published_at: Date | null;
   current_expires_at: Date | null;
@@ -140,7 +141,7 @@ export async function getModerationListing(
            ft.name_az as fuel_type, tr.name_az as transmission, bt.name_az as body_type,
            dt.name_az as drive_type, mt.name_az as motorcycle_type, co.name_az as color,
            ci.name_az as city_name, l.credit_available, l.barter_available, l.no_accident, l.not_repainted,
-           l.description, l.contact_phone_e164, l.submitted_at, l.published_at,
+           l.description, l.contact_phone_e164, l.seller_name, l.submitted_at, l.published_at,
            l.current_expires_at,
            u.id as owner_id, u.phone_e164 as owner_phone,
            u.display_name as owner_display_name, u.status as owner_status,

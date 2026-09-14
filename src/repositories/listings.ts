@@ -34,6 +34,9 @@ export interface ListingRow {
   not_repainted: boolean | null;
   description: string | null;
   contact_phone_e164: string | null;
+  seller_name: string | null;
+  premium_intent_package_id: string | null;
+  boost_intent_package_id: string | null;
   status: string;
   revision: number;
   created_at: Date;
@@ -67,7 +70,9 @@ export async function getOwnedListing(
       l.currency, l.mileage, l.engine_cc, l.fuel_type_id, l.transmission_id,
       l.body_type_id, l.drive_type_id, l.motorcycle_type_id, l.color_id,
       l.city_id, l.credit_available, l.barter_available, l.no_accident, l.not_repainted, l.description,
-      l.contact_phone_e164, l.status, l.revision, l.created_at, l.updated_at
+      l.contact_phone_e164, l.seller_name,
+      l.premium_intent_package_id, l.boost_intent_package_id,
+      l.status, l.revision, l.created_at, l.updated_at
     from listings l
     join categories c on c.id = l.category_id
     where l.id = ${listingId} and l.owner_id = ${ownerId}
@@ -193,7 +198,9 @@ export async function getOwnedListingRowForUpdate(
       l.currency, l.mileage, l.engine_cc, l.fuel_type_id, l.transmission_id,
       l.body_type_id, l.drive_type_id, l.motorcycle_type_id, l.color_id,
       l.city_id, l.credit_available, l.barter_available, l.no_accident, l.not_repainted, l.description,
-      l.contact_phone_e164, l.status, l.revision, l.created_at, l.updated_at
+      l.contact_phone_e164, l.seller_name,
+      l.premium_intent_package_id, l.boost_intent_package_id,
+      l.status, l.revision, l.created_at, l.updated_at
     from listings l
     join categories c on c.id = l.category_id
     where l.id = ${listingId} and l.owner_id = ${ownerId}

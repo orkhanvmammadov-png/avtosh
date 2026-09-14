@@ -89,6 +89,7 @@ export default async function ModerationReviewPage({
     ["Rənglənməyib", detail.notRepainted === true ? "Qeyd edilib" : "Qeyd edilməyib"],
     ["Kredit", detail.creditAvailable ? "Var" : "Yoxdur"],
     ["Barter", detail.barterAvailable ? "Var" : "Yoxdur"],
+    ["Satıcının adı (elanda)", detail.sellerName],
     [STAFF.contactField, detail.contactPhone],
     [STAFF.seller, `${detail.seller.displayName ?? "—"} · ${detail.seller.phoneMasked}`],
     [STAFF.submittedAt, detail.submittedAt === null ? null : formatDateTime(detail.submittedAt)],

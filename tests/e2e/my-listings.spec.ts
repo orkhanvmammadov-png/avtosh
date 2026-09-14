@@ -110,16 +110,21 @@ test("correction round trip: feedback → edit → resubmit → PENDING_MODERATI
   await card.getByTestId("owner-action").click();
   await expect(page).toHaveURL(new RegExp(`/elan-yerlesdir/${fixture.id}`));
 
-  // the wizard shows the seller-safe feedback and allows editing
+  // the AXIN flow shows the seller-safe feedback and allows editing
   await expect(page.getByTestId("wizard-feedback")).toContainText("Şübhəli qiymət");
   await expect(page.getByTestId("wizard-feedback")).toContainText("Qiyməti dəqiqləşdirin.");
-  await page.getByTestId("wizard-step-2").click();
+  await page.getByTestId("axin-section-sale").click();
   await page.getByTestId("wizard-price").fill("21500");
   await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
 
   // resubmit (never a second initial submission)
-  await page.getByTestId("wizard-step-5").click();
+  const reviewCard = page.getByTestId("axin-section-review");
+  if ((await reviewCard.getAttribute("data-state")) !== "open") {
+    await reviewCard.click();
+  }
   await expect(page.getByTestId("wizard-submit")).toHaveText("Yenidən göndər");
+  // resubmission reuses the existing publication: no fee line at all
+  await expect(page.getByTestId("wizard-quota")).toHaveCount(0);
   await page.getByTestId("wizard-submit").click();
   await expect(page.getByTestId("wizard-result")).toHaveAttribute("data-outcome", "MODERATION", { timeout: 20_000 });
 

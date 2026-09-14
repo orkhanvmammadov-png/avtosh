@@ -28,6 +28,12 @@ export interface OwnerCardRow {
   current_expires_at: Date | null;
   premium_until: Date | null;
   boost_until: Date | null;
+  premium_intent_package_id: string | null;
+  boost_intent_package_id: string | null;
+  premium_intent_package_active: boolean | null;
+  boost_intent_package_active: boolean | null;
+  premium_satisfied: boolean;
+  boost_satisfied: boolean;
   review_decision: string | null;
   review_reason_code: string | null;
   review_note: string | null;
@@ -55,6 +61,17 @@ export async function listOwnerListings(
       (select max(lp.ends_at) from listing_promotions lp
         where lp.listing_id = l.id and lp.type = 'BOOST'
           and lp.status in ('SCHEDULED','ACTIVE') and lp.ends_at > now()) as boost_until,
+      -- O.9 creation-time promotion intent + Owner-decided satisfaction
+      -- rule: ANY SUCCESS payment of the same type satisfies the
+      -- intent (package match NOT required — a newer same-type
+      -- purchase supersedes the old preference).
+      l.premium_intent_package_id, l.boost_intent_package_id,
+      pip.is_active as premium_intent_package_active,
+      bip.is_active as boost_intent_package_active,
+      exists (select 1 from payments p where p.listing_id = l.id
+        and p.type = 'PREMIUM' and p.status = 'SUCCESS') as premium_satisfied,
+      exists (select 1 from payments p where p.listing_id = l.id
+        and p.type = 'BOOST' and p.status = 'SUCCESS') as boost_satisfied,
       r.decision as review_decision, r.reason_code as review_reason_code,
       r.note as review_note, r.reviewed_at as review_reviewed_at
     from listings l
@@ -62,6 +79,8 @@ export async function listOwnerListings(
     left join brands b on b.id = l.brand_id
     left join models m on m.id = l.model_id
     left join cities ci on ci.id = l.city_id
+    left join promotion_packages pip on pip.id = l.premium_intent_package_id
+    left join promotion_packages bip on bip.id = l.boost_intent_package_id
     left join lateral (
       select mr.decision::text as decision, mr.reason_code, mr.note, mr.reviewed_at
       from moderation_reviews mr

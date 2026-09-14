@@ -92,13 +92,30 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
             {presentation.action.label}
           </Link>
           {listing.status === "ACTIVE" ? (
-            <Link
-              href={`/profil/elanlar/${listing.id}/tesviq`}
-              className="inline-flex min-h-12 items-center justify-center rounded-control bg-primary px-3 text-sm font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed"
-              data-testid="owner-promote"
-            >
-              {SELLER.promote}
-            </Link>
+            (() => {
+              // O.9 post-ACTIVE handoff: a creation-time intent is
+              // pending only while no same-type SUCCESS payment exists
+              // AND its intended package is still active; then the CTA
+              // continues the seller's own choice. Satisfaction is per
+              // TYPE, so Premium purchased leaves a Boost intent live.
+              const pendingIntent =
+                (listing.premiumIntent !== null &&
+                  listing.premiumIntent.packageActive &&
+                  !listing.premiumSatisfied) ||
+                (listing.boostIntent !== null &&
+                  listing.boostIntent.packageActive &&
+                  !listing.boostSatisfied);
+              return (
+                <Link
+                  href={`/profil/elanlar/${listing.id}/tesviq`}
+                  className="inline-flex min-h-12 items-center justify-center rounded-control bg-primary px-3 text-sm font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed"
+                  data-testid="owner-promote"
+                  data-intent={pendingIntent ? "pending" : "none"}
+                >
+                  {pendingIntent ? SELLER.promoContinueIntent : SELLER.promote}
+                </Link>
+              );
+            })()
           ) : null}
         </div>
       ) : null}

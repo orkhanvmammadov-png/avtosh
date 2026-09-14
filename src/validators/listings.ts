@@ -52,6 +52,12 @@ export const draftPatchSchema = z
     not_repainted: z.union([z.literal(true), z.null()]).optional(),
     description: z.string().max(5000).nullable().optional(),
     contact_phone: z.string().max(32).nullable().optional(),
+    // O.9 AXIN: listing-level public seller name (trimmed in the
+    // service; empty becomes null) and per-type promotion intent
+    // PREFERENCES (never a payment source of truth).
+    seller_name: z.string().max(100).nullable().optional(),
+    premium_intent_package_id: z.uuid().nullable().optional(),
+    boost_intent_package_id: z.uuid().nullable().optional(),
     feature_ids: z.array(z.uuid()).max(100).optional(),
   })
   .strict()

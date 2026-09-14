@@ -227,14 +227,17 @@ test.describe("advanced search visual artifacts", () => {
   }
 
   test("asv2-seller-condition-fields-1440", async ({ page, context }) => {
-    await loginAs(context, testPhone("desktop", 46));
+    // O.9: the AXIN flow replaced the step wizard — the condition
+    // chips live in the Satış məlumatı section card.
+    const { userId } = await loginAs(context, testPhone("desktop", 46));
+    const draft = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 0 });
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto("/elan-yerlesdir");
-    await page.getByTestId("create-category-CAR").check();
-    await page.getByTestId("create-listing-button").click();
-    await page.waitForURL(/\/elan-yerlesdir\/[0-9a-f-]{36}$/);
-    await page.getByTestId("wizard-step-2").click();
-    await expect(page.getByTestId("wizard-no-accident")).toBeVisible();
+    await page.goto(`/elan-yerlesdir/${draft.id}`);
+    const sale = page.getByTestId("axin-section-sale");
+    if ((await sale.getAttribute("data-state")) !== "open") {
+      await sale.click();
+    }
+    await expect(page.getByTestId("wizard-no-accident-chip")).toBeVisible();
     await page.screenshot({ path: `${OUT}/asv2-seller-condition-fields-1440.png`, fullPage: true });
   });
 

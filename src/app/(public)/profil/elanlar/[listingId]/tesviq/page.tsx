@@ -101,6 +101,20 @@ export default async function PromotionPage({
   }
   const listing = listings.find((item) => item.id === listingId);
   const title = listing !== undefined ? vehicleTitle(listing) : "Elan";
+  // O.9 preselection: a PENDING creation-time intent (no same-type
+  // SUCCESS payment yet) whose intended package is still active
+  // preselects type+package. DUAL-PENDING PRIORITY IS DETERMINISTIC:
+  // PREMIUM first; once Premium is satisfied by any same-type
+  // SUCCESS, BOOST becomes the remaining continuation. The seller
+  // still initiates checkout explicitly — nothing auto-launches.
+  const preselect =
+    listing === undefined
+      ? null
+      : listing.premiumIntent !== null && listing.premiumIntent.packageActive && !listing.premiumSatisfied
+        ? { type: "PREMIUM" as const, packageId: listing.premiumIntent.packageId }
+        : listing.boostIntent !== null && listing.boostIntent.packageActive && !listing.boostSatisfied
+          ? { type: "BOOST" as const, packageId: listing.boostIntent.packageId }
+          : null;
 
   return (
     <Container>
@@ -114,6 +128,8 @@ export default async function PromotionPage({
           packages={packages}
           premiumUntil={state.premiumUntil}
           boostUntil={state.boostUntil}
+          initialType={preselect?.type}
+          initialPackageId={preselect?.packageId}
         />
       </div>
     </div>

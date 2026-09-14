@@ -19,15 +19,21 @@ export function PromotionPurchase({
   packages,
   premiumUntil,
   boostUntil,
+  initialType,
+  initialPackageId,
 }: {
   listingId: string;
   listingTitle: string;
   packages: PromotionPackageDto[];
   premiumUntil: string | null;
   boostUntil: string | null;
+  /** O.9 pending-intent preselection — presentation only; checkout
+      stays an explicit seller action with full server re-validation. */
+  initialType?: "PREMIUM" | "BOOST";
+  initialPackageId?: string;
 }) {
-  const [type, setType] = useState<"PREMIUM" | "BOOST">("PREMIUM");
-  const [packageId, setPackageId] = useState<string | null>(null);
+  const [type, setType] = useState<"PREMIUM" | "BOOST">(initialType ?? "PREMIUM");
+  const [packageId, setPackageId] = useState<string | null>(initialPackageId ?? null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 

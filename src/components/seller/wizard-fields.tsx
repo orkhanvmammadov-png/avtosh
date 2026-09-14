@@ -98,6 +98,7 @@ export function DeferredInput({
   inputMode,
   placeholder,
   maxLength,
+  inputClassName = "",
   onValue,
 }: {
   id: string;
@@ -108,6 +109,8 @@ export function DeferredInput({
   inputMode?: "numeric" | "tel" | "text";
   placeholder?: string;
   maxLength?: number;
+  /** Additive presentation classes (O.9 AXIN value styling). */
+  inputClassName?: string;
   onValue: (value: string) => void;
 }) {
   const [value, setValue] = useState(initialValue);
@@ -116,7 +119,7 @@ export function DeferredInput({
       <input
         id={id}
         data-testid={id}
-        className={fieldClass}
+        className={`${fieldClass} ${inputClassName}`}
         value={value}
         inputMode={inputMode}
         placeholder={placeholder}
@@ -165,6 +168,77 @@ export function DeferredCheckbox({
       />
       <span className="text-sm font-medium text-ink">{label}</span>
     </label>
+  );
+}
+
+/**
+ * O.9 AXIN lightweight toggle chip (components.md Booleans): white
+ * chip with the standard border, selected = green tint + green border
+ * + ✓ prefix (non-color signal). Semantically a REAL checkbox — the
+ * input is visually hidden but keeps native semantics and state
+ * assertions; the label carries the visible chip and the click
+ * target. Controlled variant.
+ */
+export function ChipToggle({
+  id,
+  label,
+  checked,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label
+      htmlFor={id}
+      data-testid={`${id}-chip`}
+      className={`inline-flex h-10 cursor-pointer select-none items-center gap-1.5 rounded-control border px-3.5 text-[13px] font-medium transition-colors duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40 ${
+        checked
+          ? "border-[#147A4E] bg-[#E7F2EC] text-[#147A4E]"
+          : "border-line-strong bg-raised text-ink hover:border-muted"
+      }`}
+    >
+      <input
+        id={id}
+        data-testid={id}
+        type="checkbox"
+        className="sr-only"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <span aria-hidden="true" className={checked ? "" : "invisible"}>
+        ✓
+      </span>
+      {label}
+    </label>
+  );
+}
+
+/** Local-state ChipToggle (DeferredCheckbox philosophy) for claims. */
+export function DeferredChipToggle({
+  id,
+  label,
+  initialChecked,
+  onValue,
+}: {
+  id: string;
+  label: string;
+  initialChecked: boolean;
+  onValue: (checked: boolean) => void;
+}) {
+  const [checked, setChecked] = useState(initialChecked);
+  return (
+    <ChipToggle
+      id={id}
+      label={label}
+      checked={checked}
+      onChange={(next) => {
+        setChecked(next);
+        onValue(next);
+      }}
+    />
   );
 }
 

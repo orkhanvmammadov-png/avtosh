@@ -51,6 +51,7 @@ async function completeDraft(cookie: string): Promise<{ id: string; revision: nu
       mileage: 80000,
       city_id: cityId,
       contact_phone: "+994501234567",
+      seller_name: "Test Satıcı",
     },
     cookie,
     params: { listingId: draft.id },
@@ -240,7 +241,7 @@ describe("POST /me/listings/:id/submit — validation", () => {
     expect(r.status).toBe(400);
     expect(r.body.error?.code).toBe("LISTING_INCOMPLETE");
     expect((r.body.error?.details as { missing: string[] }).missing).toEqual(
-      expect.arrayContaining(["brand", "model", "year", "price", "mileage", "city", "contact_phone"]),
+      expect.arrayContaining(["brand", "model", "year", "price", "mileage", "city", "contact_phone", "seller_name"]),
     );
   });
 
@@ -250,7 +251,7 @@ describe("POST /me/listings/:id/submit — validation", () => {
     const patch = await api(routes.patch, "PATCH", `${LISTINGS_BASE}/${draft.id}`, {
       body: {
         expected_revision: 1, brand_id: carBrandId, model_id: carModelId, year: 2019,
-        price_minor: 900000, mileage: 1000, city_id: cityId, contact_phone: "+994501234567",
+        price_minor: 900000, mileage: 1000, city_id: cityId, contact_phone: "+994501234567", seller_name: "Test Satıcı",
       },
       cookie: seller.cookie,
       params: { listingId: draft.id },
