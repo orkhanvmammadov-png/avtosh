@@ -92,6 +92,11 @@ export function TypeaheadField({
         setOpen(true);
         return;
       }
+      // An empty list (still loading, or no matches) must not corrupt
+      // activeIndex to -1 — Enter would stay dead even after options
+      // arrive. Arrow on an empty list is a no-op; index 0 stays valid
+      // for the moment results render.
+      if (filtered.length === 0) return;
       const delta = event.key === "ArrowDown" ? 1 : -1;
       setActiveIndex((i) => Math.min(filtered.length - 1, Math.max(0, i + delta)));
       const next = listRef.current?.children[

@@ -105,6 +105,10 @@ test("quick start: dependency, no-results, keyboard; nothing persists before Ba�
   await brand.fill("zzz-yoxdur");
   await expect(page.getByTestId("quick-start-brand-empty")).toHaveText("Nəticə tapılmadı");
   await brand.fill("Toy");
+  // synchronize on REAL readiness: the option must be rendered before
+  // keyboard navigation can select it (the async brand catalog can
+  // land after fill on a slow worker)
+  await expect(page.getByTestId("quick-start-brand-listbox").getByText("Toyota", { exact: true })).toBeVisible();
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(brand).toHaveValue(/Toyota/);
