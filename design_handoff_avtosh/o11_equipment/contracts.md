@@ -1,0 +1,13 @@
+# Contracts preserved
+- O.10 sealed: 6-stage journey, Stage 5 composition (Təchizat → Təsvir → Əlaqə), Mərhələ X/6, CTA wording, autosave, validation gates — untouched.
+- O.7 sealed: detail page architecture; equipment slots into the existing features panel only.
+- Review: count-only, unchanged.
+- Equipment optional; no max; no visual pressure to select.
+- Catalog schema (audit-established, not new design): features.id = UUID identity · features.code = immutable UPPER_SNAKE stable identity (ABS, ESC, TRACTION_CONTROL, REAR_CAMERA, APPLE_CARPLAY, WIRELESS_CHARGING — never lowercase) · features.name_az = label · features.category_id = applicability · features.sort_order = ordering · features.is_active = activation · O.11 adds ONLY features.group_code TEXT NULL.
+- ABS: existing entity — code ABS, existing UUID preserved per database, category_id NULL (global), group_code SAFETY; never deleted/reinserted/duplicated. CAR: under Təhlükəsizlik. MOTO: ABS only, under Təhlükəsizlik, search hidden.
+- 58 CAR-visible = ABS + 57 CAR-scoped; counts derive from real selected UUIDs; technical PATCH cap 100 is NOT a product maximum and never appears in UX.
+- feature_ids PATCH contract, autosave, quota, fee, moderation, Premium/Boost, payment/Kapital, auth: unchanged.
+- Historical data: no automatic enrichment — only listing-selected UUIDs render; old listings never visually gain equipment.
+- Admin: no O.11 screens; existing activation capability suffices.
+- Out of scope, untouched: search-results equipment filters, buyer filters, VIN/AI/trim detection, MOTO taxonomy, dealer presets, comparison.
+- Production data sourced from real catalog + listing selections; all reference imagery uses representative demo data.
