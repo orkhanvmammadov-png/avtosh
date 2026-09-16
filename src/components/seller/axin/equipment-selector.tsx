@@ -169,35 +169,51 @@ export function EquipmentSelector({ editor, features }: { editor: ListingEditor;
                 const groupSelected = group.items.reduce((n, f) => n + (selected.has(f.id) ? 1 : 0), 0);
                 const expanded = searching || openGroups.has(group.code);
                 const regionId = `${baseId}-eq-${group.code}`;
+                // O.11.5D a11y: in search mode collapse is bypassed,
+                // so the header must NOT be a button whose activation
+                // is a silent no-op — it renders as a plain row (same
+                // visuals, no disclosure semantics). In normal mode it
+                // is a real disclosure button; aria-controls is set
+                // only while the region exists (no dangling id).
+                const headerContent = (
+                  <>
+                    <span className="min-w-0 truncate text-[12.5px] font-semibold text-ink">{group.label}</span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      {groupSelected > 0 ? (
+                        <span
+                          className="rounded-pill bg-[#E7F2EC] px-2 py-0.5 text-[11px] font-semibold text-[#0F6440]"
+                          data-testid={`equipment-group-count-${group.code}`}
+                        >
+                          {groupSelected} {SELLER.equipmentGroupSelectedWord}
+                        </span>
+                      ) : null}
+                      <span aria-hidden="true" className={`text-muted transition-transform duration-150 ${expanded ? "rotate-180" : ""}`}>
+                        ▾
+                      </span>
+                    </span>
+                  </>
+                );
+                const headerClass = `flex min-h-11 w-full items-center justify-between gap-2 px-3.5 py-2 text-left transition-colors duration-150 md:min-h-10 ${
+                  expanded ? "bg-[#F9F8F5]" : "hover:bg-row-hover"
+                }`;
                 return (
                   <div key={group.code} className={gi > 0 ? "border-t border-line" : ""}>
-                    <button
-                      type="button"
-                      aria-expanded={expanded}
-                      aria-controls={regionId}
-                      onClick={() => {
-                        if (!searching) toggleGroup(group.code);
-                      }}
-                      data-testid={`equipment-group-${group.code}`}
-                      className={`flex min-h-11 w-full items-center justify-between gap-2 px-3.5 py-2 text-left transition-colors duration-150 md:min-h-10 ${
-                        expanded ? "bg-[#F9F8F5]" : "hover:bg-row-hover"
-                      }`}
-                    >
-                      <span className="min-w-0 truncate text-[12.5px] font-semibold text-ink">{group.label}</span>
-                      <span className="flex shrink-0 items-center gap-2">
-                        {groupSelected > 0 ? (
-                          <span
-                            className="rounded-pill bg-[#E7F2EC] px-2 py-0.5 text-[11px] font-semibold text-[#0F6440]"
-                            data-testid={`equipment-group-count-${group.code}`}
-                          >
-                            {groupSelected} {SELLER.equipmentGroupSelectedWord}
-                          </span>
-                        ) : null}
-                        <span aria-hidden="true" className={`text-muted transition-transform duration-150 ${expanded ? "rotate-180" : ""}`}>
-                          ▾
-                        </span>
-                      </span>
-                    </button>
+                    {searching ? (
+                      <div data-testid={`equipment-group-${group.code}`} className={headerClass}>
+                        {headerContent}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        aria-expanded={expanded}
+                        aria-controls={expanded ? regionId : undefined}
+                        onClick={() => toggleGroup(group.code)}
+                        data-testid={`equipment-group-${group.code}`}
+                        className={headerClass}
+                      >
+                        {headerContent}
+                      </button>
+                    )}
                     {expanded ? (
                       <div id={regionId} className="grid grid-cols-1 gap-1 px-2 pb-2 desk:grid-cols-2" data-testid={`equipment-options-${group.code}`}>
                         {(searching ? group.visibleItems : group.items).map((feature) => {

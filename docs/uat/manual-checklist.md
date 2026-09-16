@@ -641,3 +641,53 @@ Mark exactly one box per case and add notes for anything non-obvious.
 - **Result:** [ ] PASS [ ] FAIL [ ] BLOCKED
 - **Notes:**
 
+
+## O.11 EQUIPMENT CATALOG
+
+### UAT-073
+- **Actor:** Any seller
+- **Precondition:** Fresh `pnpm uat:dev`
+- **Action:** Open a CAR draft's Stage 5 → Təchizat; count groups and items (or check `/api/v1/catalog/features?category=CAR`)
+- **Expected Result:** 58 equipment items across exactly 7 groups (Təhlükəsizlik, Sürücü köməkçiləri, Park və kameralar, Komfort, Klimat və interyer, Multimedia və texnologiya, İşıq və eksteryer); exactly one ABS; Təhlükəsizlik expanded by default, other six collapsed
+- **Result:** [ ] PASS [ ] FAIL [ ] BLOCKED
+- **Notes:**
+
+### UAT-074
+- **Actor:** Any seller
+- **Precondition:** CAR draft, Təchizat open
+- **Action:** Type "kamera", then ASCII "goruntu", then a nonsense term; clear with ✕
+- **Expected Result:** Matching groups auto-shown with options visible, zero-match groups hidden; ASCII finds AZ labels; nonsense shows "Heç nə tapılmadı" + "Axtarışı təmizlə"; clearing restores prior group disclosure; selections never change from searching
+- **Result:** [ ] PASS [ ] FAIL [ ] BLOCKED
+- **Notes:**
+
+### UAT-075
+- **Actor:** Any seller
+- **Precondition:** CAR draft, Təchizat open
+- **Action:** Rapidly tick several checkboxes across multiple groups without pausing; watch counts; reload the page
+- **Expected Result:** Every toggle sticks (no lost selection); trigger shows "n təchizat seçilib" and each group a real "n seçilib" pill; after reload the exact same set is selected; modifying and reloading again persists the final set
+- **Result:** [ ] PASS [ ] FAIL [ ] BLOCKED
+- **Notes:**
+
+### UAT-076
+- **Actor:** Any seller
+- **Precondition:** MOTORCYCLE draft, Stage 5
+- **Action:** Open Təchizat
+- **Expected Result:** Only "Təhlükəsizlik → ABS"; no search field; none of the CAR-only options or empty groups
+- **Result:** [ ] PASS [ ] FAIL [ ] BLOCKED
+- **Notes:**
+
+### UAT-077
+- **Actor:** Any seller
+- **Precondition:** Draft with several equipment selections, Review open
+- **Action:** Check the equipment row
+- **Expected Result:** Count only ("n təchizat") with Dəyiş back to Stage 5 — never an item list; zero selections stay valid and never block Davam et / submission
+- **Result:** [ ] PASS [ ] FAIL [ ] BLOCKED
+- **Notes:**
+
+### UAT-078
+- **Actor:** Seller + Moderator + Anonymous
+- **Precondition:** Listing with >12 selected equipment items published via the normal flow
+- **Action:** Open the public listing detail; expand/collapse the equipment section
+- **Expected Result:** "Vəziyyət · Təchizat" shows ONLY the seller-selected items grouped in the approved order (item order = catalog order, empty groups hidden); collapsed shows the first 12 with "Bütün təchizatı göstər (n)" carrying the real total; expanding shows all and "Gizlət"; ≤12 selections show fully with no control; zero selections show no Təchizat block at all
+- **Result:** [ ] PASS [ ] FAIL [ ] BLOCKED
+- **Notes:**

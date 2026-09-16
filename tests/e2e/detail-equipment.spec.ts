@@ -153,4 +153,14 @@ test("390: grouped equipment collapsed and expanded stay overflow-free with a co
   await page.getByTestId("features-toggle").click();
   await expect(page.getByTestId("features").locator("li")).toHaveCount(23);
   await expectNoHorizontalOverflow(page);
+
+  // 360 narrow-mobile safety: expanded long-label state stays usable
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.getByTestId("features").scrollIntoViewIfNeeded();
+  await expectNoHorizontalOverflow(page);
+  const toggle360 = (await page.getByTestId("features-toggle").boundingBox())!;
+  expect(toggle360.x + toggle360.width).toBeLessThanOrEqual(360.5);
+  await page.getByTestId("features-toggle").click(); // collapse
+  await expect(page.getByTestId("features").locator("li")).toHaveCount(12);
+  await expectNoHorizontalOverflow(page);
 });

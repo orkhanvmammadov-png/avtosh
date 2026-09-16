@@ -237,6 +237,90 @@ test("390: selector, search and no-results stay overflow-free; sticky CTA never 
   const bar = (await page.getByTestId("axin-continue-info-contact").boundingBox())!;
   expect(phoneBox.y + phoneBox.height).toBeLessThanOrEqual(bar.y + 1);
   await expectNoHorizontalOverflow(page);
+
+  // 360 narrow-mobile safety (no redesign — just proven usable)
+  await page.setViewportSize({ width: 360, height: 780 });
+  await expectNoHorizontalOverflow(page);
+  const row360 = (await page.getByTestId("equipment-group-DRIVER_ASSISTANCE").boundingBox())!;
+  expect(row360.height).toBeGreaterThanOrEqual(43);
+  expect(row360.x + row360.width).toBeLessThanOrEqual(360.5);
+  await search.fill("kamera");
+  await expect(page.getByTestId("equipment-group-PARKING_CAMERA")).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await page.getByTestId("equipment-search-clear").click();
+  // count pill stays within the viewport with a selection present
+  const safety360 = page.getByTestId("equipment-options-SAFETY").locator('input[type="checkbox"]').first();
+  await safety360.click();
+  await expect(safety360).toBeChecked();
+  const pill = (await page.getByTestId("equipment-group-count-SAFETY").boundingBox())!;
+  expect(pill.x + pill.width).toBeLessThanOrEqual(360.5);
+  await expectNoHorizontalOverflow(page);
+});
+
+test("keyboard-only operation: disclosure, search, groups, rapid checkbox toggles, truthful search-mode semantics", async ({ page, context }, { project }) => {
+  test.skip(project.name !== "desktop", "keyboard/AT contract; one project");
+  test.setTimeout(240_000);
+  const { userId } = await loginAs(context, testPhone("desktop", 73));
+  const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 3 });
+  await page.goto(`/elan-yerlesdir/${fixture.id}`);
+  await openSection(page, "info-contact");
+
+  // open the outer disclosure with the keyboard
+  const toggle = page.getByTestId("wizard-features-toggle");
+  await toggle.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("wizard-features")).toBeVisible();
+
+  // search: type + Escape-clear without focus loss
+  const search = page.getByTestId("equipment-search");
+  await search.focus();
+  await page.keyboard.type("kamera");
+  await expect(page.getByTestId("equipment-group-PARKING_CAMERA")).toBeVisible();
+  // search-mode headers are plain rows — no fake no-op disclosure
+  // button, no aria-expanded claim while collapse is bypassed
+  const searchHeader = page.getByTestId("equipment-group-PARKING_CAMERA");
+  expect(await searchHeader.evaluate((el) => el.tagName)).toBe("DIV");
+  expect(await searchHeader.getAttribute("aria-expanded")).toBeNull();
+  await page.keyboard.press("Escape");
+  await expect(search).toHaveValue("");
+  expect(await page.evaluate(() => document.activeElement?.getAttribute("data-testid"))).toBe("equipment-search");
+
+  // group disclosure: real button, Space toggles, aria-controls only
+  // while the region exists
+  const group = page.getByTestId("equipment-group-MULTIMEDIA");
+  expect(await group.evaluate((el) => el.tagName)).toBe("BUTTON");
+  expect(await group.getAttribute("aria-controls")).toBeNull(); // collapsed → no dangling id
+  await group.focus();
+  await page.keyboard.press("Space");
+  await expect(group).toHaveAttribute("aria-expanded", "true");
+  const controls = await group.getAttribute("aria-controls");
+  expect(controls).not.toBeNull();
+  expect(await page.locator(`[id="${controls}"]`).count()).toBe(1); // valid reference
+
+  // RAPID KEYBOARD SELECTION under held persistence — Space on four
+  // checkboxes with no per-toggle waits; every intent must survive
+  let release!: () => void;
+  const hold = new Promise<void>((r) => {
+    release = r;
+  });
+  await page.route("**/api/v1/me/listings/**", async (route) => {
+    if (route.request().method() === "PATCH") await hold;
+    await route.continue();
+  });
+  const safety = page.getByTestId("equipment-options-SAFETY").locator('input[type="checkbox"]');
+  for (let i = 0; i < 4; i++) {
+    await safety.nth(i).focus();
+    await page.keyboard.press("Space");
+  }
+  for (let i = 0; i < 4; i++) await expect(safety.nth(i)).toBeChecked();
+  await expect(page.getByTestId("equipment-summary")).toHaveText("4 təchizat seçilib");
+  release();
+  await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+  for (let i = 0; i < 4; i++) await expect(safety.nth(i)).toBeChecked();
+  await page.unroute("**/api/v1/me/listings/**");
+  await page.reload();
+  await openSelector(page);
+  await expect(page.getByTestId("equipment-summary")).toHaveText("4 təchizat seçilib"); // persisted set == visible set
 });
 
 test("rapid same-group multi-select loses nothing while persistence is in flight", async ({ page, context }, { project }) => {
