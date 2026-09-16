@@ -57,6 +57,13 @@ const importFileSchema = z.object({
         code: z.string().regex(/^[A-Z][A-Z0-9_]{1,63}$/),
         name_az: z.string().min(1).max(100),
         category: categoryCode.nullable().default(null),
+        // Stable grouping metadata (O.11): UPPER_SNAKE group code such
+        // as SAFETY. Optional/nullable — legacy features stay NULL.
+        group_code: z
+          .string()
+          .regex(/^[A-Z][A-Z0-9_]{1,63}$/)
+          .nullable()
+          .default(null),
         is_active: z.boolean().default(true),
         sort_order: z.int().default(0),
       }),
@@ -180,12 +187,13 @@ export async function runCatalogImport(
       const featureCategoryId =
         feature.category === null ? null : categoryIds.get(feature.category)!;
       await tx`
-        insert into features (code, name_az, category_id, is_active, sort_order)
+        insert into features (code, name_az, category_id, group_code, is_active, sort_order)
         values (${feature.code}, ${feature.name_az}, ${featureCategoryId},
-                ${feature.is_active}, ${feature.sort_order})
+                ${feature.group_code}, ${feature.is_active}, ${feature.sort_order})
         on conflict (code) do update
           set name_az = excluded.name_az,
               category_id = excluded.category_id,
+              group_code = excluded.group_code,
               is_active = excluded.is_active,
               sort_order = excluded.sort_order
       `;

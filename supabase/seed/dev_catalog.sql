@@ -61,6 +61,13 @@ insert into cities (name_az, slug, sort_order) values
   ('Sumqayıt', 'sumqayit', 3)
 on conflict (slug) do nothing;
 
+-- O.11: the authoritative equipment catalog is data/catalog/o11-equipment.json,
+-- applied through the real importer (single source of truth):
+--   DATABASE_URL=... pnpm catalog:import data/catalog/o11-equipment.json
+-- The legacy dev-only sample features below predate O.11. They are
+-- KEPT (never deleted — existing dev listing relations stay valid) but
+-- deactivated: the O.11 catalog supersedes them (REAR_CAMERA and ABS
+-- are part of O.11 and get their final metadata from the importer).
 insert into features (code, name_az, category_id, sort_order) values
   ('AIR_CONDITIONING', 'Kondisioner', (select id from categories where code = 'CAR'), 1),
   ('LEATHER_SEATS', 'Dəri salon', (select id from categories where code = 'CAR'), 2),
@@ -68,3 +75,6 @@ insert into features (code, name_az, category_id, sort_order) values
   ('REAR_CAMERA', 'Arxa görüntü kamerası', (select id from categories where code = 'CAR'), 4),
   ('ABS', 'ABS', null, 5)
 on conflict (code) do nothing;
+
+update features set is_active = false
+where code in ('AIR_CONDITIONING', 'LEATHER_SEATS', 'PARKING_SENSOR');
