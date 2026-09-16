@@ -170,7 +170,7 @@ beforeAll(async () => {
   petrol = (await sql<{ id: string }[]>`select id from reference_options where group_code='FUEL_TYPE' and code='PETROL'`)[0].id;
   sedan = (await sql<{ id: string }[]>`select id from reference_options where group_code='BODY_TYPE' and code='SEDAN'`)[0].id;
   sport = (await sql<{ id: string }[]>`select id from reference_options where group_code='MOTORCYCLE_TYPE' and code='SPORT'`)[0].id;
-  featGlobal = (await sql<{ id: string }[]>`insert into features (code, name_az) values ('PM_ABS', 'Pm ABS') returning id`)[0].id;
+  featGlobal = (await sql<{ id: string }[]>`insert into features (code, name_az, group_code) values ('PM_ABS', 'Pm ABS', 'SAFETY') returning id`)[0].id;
   featCar = (await sql<{ id: string }[]>`insert into features (code, name_az, category_id) values ('PM_AC', 'Pm AC', ${carCat}) returning id`)[0].id;
 
   // visibility matrix
@@ -406,6 +406,18 @@ describe("public detail", () => {
     return api(detailRoute, "GET", `http://localhost/api/v1/listings/${publicId}`, { params: { publicId } });
   }
 
+  it("keeps a later-deactivated selected feature visible on public detail (historical contract)", async () => {
+    const sql = getSql();
+    await sql`update features set is_active = false where id = ${featCar}`;
+    try {
+      const r = await detail(created.active1.publicId);
+      const feats = (r.body.data?.listing as { features: { code: string }[] }).features;
+      expect(feats.map((f) => f.code)).toContain("PM_AC");
+    } finally {
+      await sql`update features set is_active = true where id = ${featCar}`;
+    }
+  });
+
   it("returns the full contactable DTO for ACTIVE listings and counts views best-effort", async () => {
     const r = await detail(created.active1.publicId);
     expect(r.status).toBe(200);
@@ -413,7 +425,13 @@ describe("public detail", () => {
     expect(d).toMatchObject({ status: "ACTIVE", contactable: true, brand: "PmAudi", model: "PmA4", fuelType: "Benzin", bodyType: "Sedan", creditAvailable: true });
     expect((d.images as { url: string; isPrimary: boolean }[]).length).toBe(2);
     expect((d.images as { url: string; isPrimary: boolean }[])[0].isPrimary).toBe(true);
-    expect((d.features as { code: string }[]).map((f) => f.code).sort()).toEqual(["PM_ABS", "PM_AC"]);
+    const feats = d.features as { code: string; name: string; group: string | null }[];
+    expect(feats.map((f) => f.code).sort()).toEqual(["PM_ABS", "PM_AC"]);
+    // O.11 additive public group metadata; legacy NULL serializes as null
+    expect(feats.find((f) => f.code === "PM_ABS")?.group).toBe("SAFETY");
+    expect(feats.find((f) => f.code === "PM_AC")?.group).toBeNull();
+    // no internal feature identity exposed
+    expect(Object.keys(feats[0]).sort()).toEqual(["code", "group", "name"]);
     expect((d.seller as { contactPhoneMasked: string }).contactPhoneMasked).toBe("+994•••••••67");
     const raw = fullJson(r.body);
     expect(raw).not.toContain(ownerId);

@@ -466,7 +466,9 @@ export interface PublicDetailDto {
   noAccident: boolean | null;
   notRepainted: boolean | null;
   description: string | null;
-  features: { code: string; name: string }[];
+  /** Selected equipment only; group = stable O.11 group code, null
+      for legacy rows (AZ labels stay frontend-side). */
+  features: { code: string; name: string; group: string | null }[];
   seller: { displayName: string | null; contactPhoneMasked: string | null } | null;
 }
 

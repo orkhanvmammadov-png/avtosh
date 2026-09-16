@@ -507,3 +507,43 @@ export async function moderationReviewCount(listingId: string): Promise<number> 
     await sql.end();
   }
 }
+
+/** O.11 Stage C: replace a listing's selected equipment by stable
+    catalog codes (fixture-only; the seller flow always uses UUIDs). */
+export async function setListingFeaturesByCode(listingId: string, codes: string[]): Promise<void> {
+  const sql = db();
+  try {
+    await sql`delete from listing_features where listing_id = ${listingId}`;
+    if (codes.length > 0) {
+      await sql`
+        insert into listing_features (listing_id, feature_id)
+        select ${listingId}, f.id from features f where f.code in ${sql(codes)}
+      `;
+    }
+  } finally {
+    await sql.end();
+  }
+}
+
+/** O.11 Stage C: insert a dedicated legacy/test feature row (never one
+    of the 58 O.11 codes) and optionally deactivate it — attaching and
+    deactivating a PRIVATE row never disturbs the shared catalog. */
+export async function insertTestFeature(
+  code: string,
+  nameAz: string,
+  options: { group?: string | null; active?: boolean } = {},
+): Promise<void> {
+  const sql = db();
+  try {
+    await sql`
+      insert into features (code, name_az, category_id, group_code, is_active)
+      values (${code}, ${nameAz}, null, ${options.group ?? null}, ${options.active ?? true})
+      on conflict (code) do update
+        set name_az = excluded.name_az,
+            group_code = excluded.group_code,
+            is_active = excluded.is_active
+    `;
+  } finally {
+    await sql.end();
+  }
+}

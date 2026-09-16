@@ -683,4 +683,50 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
     await expectNoHorizontalOverflow(page);
     await page.screenshot({ path: `${OUT}/o11-stageb-390-moto-abs-only.png`, fullPage: true });
   });
+
+  /** O.11 Stage C — public detail grouped equipment captures. */
+  test("o11-stagec-captures", async ({ page, context }) => {
+    test.setTimeout(300_000);
+    const { userId } = await loginAs(context, "+994508890035");
+    const { insertTestFeature, setListingFeaturesByCode } = await import("./seller-helpers");
+
+    const small = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 3 });
+    await setListingFeaturesByCode(small.id, [
+      "ABS", "ESC", "CRUISE_CONTROL", "REAR_CAMERA", "KEYLESS_ENTRY", "CLIMATE_CONTROL", "BLUETOOTH", "LED_HEADLIGHTS",
+    ]);
+    const large = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 3 });
+    await insertTestFeature("O11T_LEGACY", "Legacy avadanlıq", { group: null, active: false });
+    await setListingFeaturesByCode(large.id, [
+      "ABS", "ESC", "TRACTION_CONTROL", "FRONT_AIRBAGS", "SIDE_AIRBAGS", "CURTAIN_AIRBAGS", "ISOFIX", "TPMS",
+      "CRUISE_CONTROL", "ADAPTIVE_CRUISE_CONTROL", "BLIND_SPOT_MONITOR", "LANE_DEPARTURE_WARNING", "LANE_KEEP_ASSIST",
+      "AUTONOMOUS_EMERGENCY_BRAKING", "FORWARD_COLLISION_WARNING", "TRAFFIC_SIGN_RECOGNITION", "HILL_START_ASSIST",
+      "AUTO_HOLD", "REAR_CAMERA", "SURROUND_VIEW_CAMERA", "FRONT_PARKING_SENSORS", "REAR_PARKING_SENSORS", "O11T_LEGACY",
+    ]);
+
+    // 1440 — grouped normal (8 items, all seven groups)
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/elan/${small.publicId}`);
+    await expect(page.getByTestId("features")).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({ path: `${OUT}/o11-stagec-detail-1440-equipment-grouped.png`, fullPage: true });
+
+    // 390 — small selection (no expand control)
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/elan/${small.publicId}`);
+    await expect(page.getByTestId("features")).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o11-stagec-detail-390-equipment-small.png`, fullPage: true });
+
+    // 390 — large selection collapsed (12 + toggle) and expanded (23 + Digər)
+    await page.goto(`/elan/${large.publicId}`);
+    await expect(page.getByTestId("features-toggle")).toContainText("(23)");
+    await page.waitForLoadState("networkidle");
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o11-stagec-detail-390-equipment-grouped.png`, fullPage: true });
+    await page.getByTestId("features-toggle").click();
+    await expect(page.getByTestId("features").locator("li")).toHaveCount(23);
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o11-stagec-detail-390-equipment-expanded.png`, fullPage: true });
+  });
 });
