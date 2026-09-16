@@ -8,8 +8,11 @@
 --
 -- Idempotent: safe to apply repeatedly. Never applied by migrations.
 --
--- Usage against a local development database:
---   psql "$DATABASE_URL" -f supabase/seed/dev_catalog.sql
+-- Usage against a local development database (applies this file AND
+-- the authoritative O.11 equipment catalog in one step):
+--   DATABASE_URL=... pnpm db:seed:dev
+-- (applying only this file via psql is possible but leaves the O.11
+-- equipment catalog out — db:seed:dev is the normal bootstrap)
 -- =========================================================================
 
 insert into brands (name, slug, sort_order) values
@@ -62,8 +65,8 @@ insert into cities (name_az, slug, sort_order) values
 on conflict (slug) do nothing;
 
 -- O.11: the authoritative equipment catalog is data/catalog/o11-equipment.json,
--- applied through the real importer (single source of truth):
---   DATABASE_URL=... pnpm catalog:import data/catalog/o11-equipment.json
+-- applied through the real importer by `pnpm db:seed:dev` (single
+-- source of truth — do not copy its rows here).
 -- The legacy dev-only sample features below predate O.11. They are
 -- KEPT (never deleted — existing dev listing relations stay valid) but
 -- deactivated: the O.11 catalog supersedes them (REAR_CAMERA and ABS
