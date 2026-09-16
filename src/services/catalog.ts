@@ -59,6 +59,9 @@ export interface FeatureDto {
   id: string;
   code: string;
   name: string;
+  /** Stable equipment group code (O.11) — null for ungrouped legacy
+      rows; AZ labels live in the shared frontend constants. */
+  group: string | null;
 }
 
 async function resolveActiveCategory(code: string): Promise<CategoryRow> {
@@ -138,5 +141,5 @@ export async function getFeatures(
       ? undefined
       : await resolveActiveCategory(categoryCode);
   const rows = await listActiveFeatures(category?.id);
-  return rows.map((row) => ({ id: row.id, code: row.code, name: row.name_az }));
+  return rows.map((row) => ({ id: row.id, code: row.code, name: row.name_az, group: row.group_code }));
 }

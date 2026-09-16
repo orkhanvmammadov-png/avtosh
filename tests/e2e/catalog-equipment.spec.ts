@@ -10,8 +10,11 @@ test("CAR features API returns the full 58-item O.11 catalog in deterministic or
   test.skip(project.name !== "desktop", "pure API check; one project");
   const res = await request.get("/api/v1/catalog/features?category=CAR");
   expect(res.ok()).toBe(true);
-  const items = (await res.json()).data as { id: string; code: string; name: string }[];
+  const items = (await res.json()).data as { id: string; code: string; name: string; group: string | null }[];
   expect(items).toHaveLength(58);
+  // O.11 Stage B additive DTO field: stable group code on every item
+  expect(items[0].group).toBe("SAFETY");
+  expect(new Set(items.map((i) => i.group)).size).toBe(7);
   expect(new Set(items.map((i) => i.code)).size).toBe(58);
   // deterministic order: SAFETY first (ABS leads), LIGHTING_EXTERIOR last
   expect(items[0].code).toBe("ABS");

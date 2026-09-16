@@ -262,7 +262,7 @@ test("full seller journey: quick start → sections → photos → review → FR
   await firstFeature.click();
   await expect(firstFeature).toBeChecked();
   await saveSettled(page);
-  await expect(featuresToggle).toContainText("(1)");
+  await expect(featuresToggle).toContainText("1 təchizat seçilib"); // O.11 honest summary
   await page.getByTestId("wizard-description").fill("Əla vəziyyətdə Toyota Corolla. E2E test elanı.");
   await expect(page.getByTestId("wizard-description-count")).toContainText("/5000");
   await page.getByTestId("wizard-seller-name").fill("E2E Satıcı");

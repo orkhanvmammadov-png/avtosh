@@ -44,6 +44,7 @@ export interface FeatureRow {
   id: string;
   code: string;
   name_az: string;
+  group_code: string | null;
 }
 
 export async function listActiveCategories(): Promise<CategoryRow[]> {
@@ -236,14 +237,14 @@ export async function listActiveFeatures(
   const sql = getSql();
   if (categoryId === undefined) {
     return sql<FeatureRow[]>`
-      select id, code, name_az
+      select id, code, name_az, group_code
       from features
       where is_active
       order by sort_order, name_az
     `;
   }
   return sql<FeatureRow[]>`
-    select id, code, name_az
+    select id, code, name_az, group_code
     from features
     where is_active
       and (category_id is null or category_id = ${categoryId})
