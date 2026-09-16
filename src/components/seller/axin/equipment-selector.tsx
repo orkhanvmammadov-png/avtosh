@@ -4,8 +4,10 @@ import { useId, useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import type { CatalogItem } from "@/components/seller/use-wizard-catalog";
 import type { ListingEditor } from "@/components/seller/use-listing-editor";
-import { equipmentMatches, groupEquipment } from "@/lib/marketplace/equipment";
+import { applySelectionOps, equipmentMatches, groupEquipment } from "@/lib/marketplace/equipment";
 import { SELLER } from "@/lib/marketplace/labels";
+
+const EMPTY_OPS: ReadonlyMap<string, boolean> = new Map();
 
 /**
  * O.11 seller equipment selector (4a — O.11 EQUIPMENT CATALOG UX):
@@ -18,6 +20,17 @@ import { SELLER } from "@/lib/marketplace/labels";
  * is never mutated and returns when the query clears. Selection stays
  * UUID-backed through the existing draft editor PATCH; search typing
  * and accordion toggling never write to the draft.
+ *
+ * RAPID MULTI-SELECT (O.11.5B-C1): the server-DTO checkbox value lags
+ * one round-trip, so clicks faster than a save must not derive the
+ * next feature_ids from stale dto.featureIds. Every toggle appends to
+ * an intent log (id → desired state); display AND every PATCH value
+ * are dto.featureIds + the FULL log, which is correct under any
+ * staleness, and the serialized editor chain guarantees the last
+ * response carries the final array (no out-of-order responses exist).
+ * Once the editor settles (saved / error / conflict) the log is
+ * dropped and the server DTO is truth again — a failed PATCH therefore
+ * rolls the checkboxes back through the existing error model.
  */
 export function EquipmentSelector({ editor, features }: { editor: ListingEditor; features: CatalogItem[] }) {
   const { dto } = editor;
@@ -27,9 +40,22 @@ export function EquipmentSelector({ editor, features }: { editor: ListingEditor;
   // UI-only disclosure state (never persisted): first approved group
   // open by default. Search bypasses (but never rewrites) this set.
   const [openGroups, setOpenGroups] = useState<ReadonlySet<string>>(() => new Set(["SAFETY"]));
+  // Selection intent log since the last editor settle (see header).
+  const [ops, setOps] = useState<ReadonlyMap<string, boolean>>(EMPTY_OPS);
+
+  // Reconcile: once nothing is dirty/saving, the adopted server DTO is
+  // the complete truth (it reflects every sent intent — or, on save
+  // error/conflict, the state the seller must honestly see), so the
+  // log is redundant and any external change (category pruning,
+  // conflict reload) must win. Render-time adjustment — guarded, so it
+  // converges immediately; never runs while a save is in flight.
+  if (ops !== EMPTY_OPS && !editor.dirty) {
+    setOps(EMPTY_OPS);
+  }
 
   const groups = useMemo(() => groupEquipment(features), [features]);
-  const selected = useMemo(() => new Set(dto.featureIds), [dto.featureIds]);
+  const selectedIds = useMemo(() => applySelectionOps(dto.featureIds, ops), [dto.featureIds, ops]);
+  const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
   const searching = query.trim() !== "";
   // The one-short-group catalog (MOTO: ABS only) hides search — one
   // visible row needs no filter (moto-abs-only reference).
@@ -55,13 +81,16 @@ export function EquipmentSelector({ editor, features }: { editor: ListingEditor;
   }
 
   function toggleFeature(id: string, checked: boolean) {
-    const ids = checked ? [...dto.featureIds, id] : dto.featureIds.filter((v) => v !== id);
-    editor.patch({ feature_ids: ids }, { immediate: true });
+    const nextOps = new Map(ops).set(id, checked);
+    setOps(nextOps);
+    // NEVER an absolute list from stale render state: base + full log
+    // is correct whatever dto snapshot this render happens to hold.
+    editor.patch({ feature_ids: applySelectionOps(dto.featureIds, nextOps) }, { immediate: true });
   }
 
   if (features.length === 0) return null;
 
-  const total = dto.featureIds.length;
+  const total = selectedIds.length;
 
   return (
     <fieldset>

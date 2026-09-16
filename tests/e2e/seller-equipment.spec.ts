@@ -238,3 +238,115 @@ test("390: selector, search and no-results stay overflow-free; sticky CTA never 
   expect(phoneBox.y + phoneBox.height).toBeLessThanOrEqual(bar.y + 1);
   await expectNoHorizontalOverflow(page);
 });
+
+test("rapid same-group multi-select loses nothing while persistence is in flight", async ({ page, context }, { project }) => {
+  test.skip(project.name !== "desktop", "deterministic race harness; one project");
+  test.setTimeout(240_000);
+  const { userId } = await loginAs(context, testPhone("desktop", 68));
+  const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 3 });
+  await page.goto(`/elan-yerlesdir/${fixture.id}`);
+  await openSelector(page);
+
+  // hold EVERY draft PATCH until released — clicks intentionally race
+  // unresolved persistence (the exact reported failure mode)
+  let release!: () => void;
+  const hold = new Promise<void>((r) => {
+    release = r;
+  });
+  await page.route("**/api/v1/me/listings/**", async (route) => {
+    if (route.request().method() === "PATCH") await hold;
+    await route.continue();
+  });
+
+  const safety = page.getByTestId("equipment-options-SAFETY").locator('input[type="checkbox"]');
+  // ABS, ESC, ISOFIX(#6)? — first four SAFETY rows, clicked with NO
+  // per-click round-trip waits
+  for (let i = 0; i < 4; i++) await safety.nth(i).click();
+
+  // optimistic state is already honest while the first PATCH hangs
+  for (let i = 0; i < 4; i++) await expect(safety.nth(i)).toBeChecked();
+  await expect(page.getByTestId("equipment-summary")).toHaveText("4 təchizat seçilib");
+  await expect(page.getByTestId("equipment-group-count-SAFETY")).toHaveText("4 seçilib");
+
+  release();
+  await saveSettled(page);
+  // settled server truth equals the visible state — nothing lost
+  for (let i = 0; i < 4; i++) await expect(safety.nth(i)).toBeChecked();
+  await expect(page.getByTestId("equipment-summary")).toHaveText("4 təchizat seçilib");
+  await expect(page.getByTestId("equipment-group-count-SAFETY")).toHaveText("4 seçilib");
+
+  // draft persistence: reload rehydrates all four UUIDs
+  await page.unroute("**/api/v1/me/listings/**");
+  await page.reload();
+  await openSelector(page);
+  await expect(page.getByTestId("equipment-summary")).toHaveText("4 təchizat seçilib");
+  await expect(page.getByTestId("equipment-group-count-SAFETY")).toHaveText("4 seçilib");
+  const rehydrated = page.getByTestId("equipment-options-SAFETY").locator('input[type="checkbox"]');
+  for (let i = 0; i < 4; i++) await expect(rehydrated.nth(i)).toBeChecked();
+});
+
+test("rapid cross-group select, mixed toggle and rapid deselect stay consistent", async ({ page, context }, { project }) => {
+  test.skip(project.name !== "desktop", "deterministic race harness; one project");
+  test.setTimeout(240_000);
+  const { userId } = await loginAs(context, testPhone("desktop", 69));
+  const fixture = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 3 });
+  await page.goto(`/elan-yerlesdir/${fixture.id}`);
+  await openSelector(page);
+  // expose four groups first (accordion clicks never PATCH)
+  for (const code of ["DRIVER_ASSISTANCE", "PARKING_CAMERA", "MULTIMEDIA"]) {
+    await page.getByTestId(`equipment-group-${code}`).click();
+  }
+
+  let release!: () => void;
+  const hold = new Promise<void>((r) => {
+    release = r;
+  });
+  await page.route("**/api/v1/me/listings/**", async (route) => {
+    if (route.request().method() === "PATCH") await hold;
+    await route.continue();
+  });
+
+  const boxIn = (code: string, n = 0) =>
+    page.getByTestId(`equipment-options-${code}`).locator('input[type="checkbox"]').nth(n);
+
+  // rapid, await-free realistic sequence:
+  // select ABS → select cruise → select rear-camera → select carplay
+  // → DESELECT ABS → select ESC
+  await boxIn("SAFETY", 0).click();
+  await boxIn("DRIVER_ASSISTANCE", 0).click();
+  await boxIn("PARKING_CAMERA", 0).click();
+  await boxIn("MULTIMEDIA", 0).click();
+  await boxIn("SAFETY", 0).click(); // deselect ABS
+  await boxIn("SAFETY", 1).click(); // select ESC
+
+  await expect(boxIn("SAFETY", 0)).not.toBeChecked();
+  await expect(boxIn("SAFETY", 1)).toBeChecked();
+  await expect(page.getByTestId("equipment-summary")).toHaveText("4 təchizat seçilib");
+  for (const code of ["SAFETY", "DRIVER_ASSISTANCE", "PARKING_CAMERA", "MULTIMEDIA"]) {
+    await expect(page.getByTestId(`equipment-group-count-${code}`)).toHaveText("1 seçilib");
+  }
+
+  release();
+  await saveSettled(page);
+  // no stale response resurrects the deselected ABS
+  await expect(boxIn("SAFETY", 0)).not.toBeChecked();
+  await expect(page.getByTestId("equipment-summary")).toHaveText("4 təchizat seçilib");
+
+  // search interaction stays consistent after the correction
+  const search = page.getByTestId("equipment-search");
+  await search.fill("kamera");
+  const cameraBoxes = page.getByTestId("equipment-options-PARKING_CAMERA").locator('input[type="checkbox"]');
+  await cameraBoxes.nth(1).click(); // 360° kamera
+  await expect(cameraBoxes.nth(1)).toBeChecked();
+  await saveSettled(page);
+  await page.getByTestId("equipment-search-clear").click();
+  await expect(page.getByTestId("equipment-summary")).toHaveText("5 təchizat seçilib");
+  await expect(page.getByTestId("equipment-group-count-PARKING_CAMERA")).toHaveText("2 seçilib");
+
+  // reload — persisted truth equals everything above
+  await page.unroute("**/api/v1/me/listings/**");
+  await page.reload();
+  await openSelector(page);
+  await expect(page.getByTestId("equipment-summary")).toHaveText("5 təchizat seçilib");
+  await expect(page.getByTestId("equipment-options-SAFETY").locator('input[type="checkbox"]').first()).not.toBeChecked();
+});

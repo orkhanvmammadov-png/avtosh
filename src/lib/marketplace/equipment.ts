@@ -98,3 +98,23 @@ export function equipmentMatches(label: string, query: string): boolean {
   if (q === "") return false;
   return normalizeEquipmentText(label).includes(q);
 }
+
+/**
+ * Applies an ordered log of selection intents (id → desired checked
+ * state) onto a base UUID list. Because every entry carries the FULL
+ * intent since the last settle, the result is correct even when
+ * `base` is a stale in-flight server snapshot — this is what makes
+ * rapid multi-select lose nothing. Deduplicated; base order kept,
+ * additions appended in intent order.
+ */
+export function applySelectionOps(base: readonly string[], ops: Iterable<readonly [string, boolean]>): string[] {
+  const set = new Set(base);
+  for (const [id, want] of ops) {
+    if (want) {
+      set.add(id);
+    } else {
+      set.delete(id);
+    }
+  }
+  return [...set];
+}

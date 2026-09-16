@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   EQUIPMENT_GROUPS,
+  applySelectionOps,
   equipmentMatches,
   groupEquipment,
   normalizeEquipmentText,
@@ -89,5 +90,32 @@ describe("groupEquipment — approved order and fallback", () => {
       "Multimedia və texnologiya",
       "İşıq və eksteryer",
     ]);
+  });
+});
+
+describe("applySelectionOps — rapid-select intent log", () => {
+  it("applies the full intent log over a STALE base without losing earlier adds", () => {
+    // base is the pre-flight snapshot; A is already in flight but the
+    // log still carries it, so nothing is lost
+    expect(applySelectionOps([], [["A", true], ["B", true]])).toEqual(["A", "B"]);
+    expect(applySelectionOps(["A"], [["A", true], ["B", true]])).toEqual(["A", "B"]);
+  });
+
+  it("mixed toggles resolve to the last intent per id (select A,B → deselect A → select C)", () => {
+    expect(
+      applySelectionOps([], [["A", true], ["B", true], ["A", false], ["C", true]]),
+    ).toEqual(["B", "C"]);
+  });
+
+  it("rapid deselect never resurrects removed ids from a stale base", () => {
+    expect(applySelectionOps(["A", "B", "C"], [["A", false], ["B", false]])).toEqual(["C"]);
+  });
+
+  it("deduplicates and keeps base order with additions appended", () => {
+    expect(applySelectionOps(["A", "B"], [["A", true], ["C", true]])).toEqual(["A", "B", "C"]);
+  });
+
+  it("empty log returns the base unchanged", () => {
+    expect(applySelectionOps(["A"], [])).toEqual(["A"]);
   });
 });
