@@ -581,4 +581,152 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
     await page.screenshot({ path: `${OUT}/o10-staged-390-review.png`, fullPage: true }); // → o10-390-review
     await page.screenshot({ path: `${OUT}/o10-staged-progress-390-m6.png`, clip: { x: 0, y: 0, width: 390, height: 170 } }); // → o10-progress-states
   });
+
+  /**
+   * O.11 Stage B — grouped searchable equipment selector captures,
+   * implementation counterparts of the approved o11-* references.
+   */
+  test("o11-stageb-captures", async ({ page, context }) => {
+    test.setTimeout(480_000);
+    const { userId } = await loginAs(context, "+994508890032");
+
+    const openEquipment = async () => {
+      const section = page.getByTestId("axin-section-info-contact");
+      if ((await section.getAttribute("data-state")) !== "open") await section.click();
+      await expect(section).toHaveAttribute("data-state", "open");
+      const toggle = page.getByTestId("wizard-features-toggle");
+      if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+      await expect(page.getByTestId("wizard-features")).toBeVisible();
+    };
+    const selectSome = async () => {
+      // checkboxes are CONTROLLED by the server DTO — await each
+      // round-trip before the next click (established wizard pattern)
+      const safety = page.getByTestId("equipment-options-SAFETY").locator('input[type="checkbox"]');
+      await safety.nth(0).click();
+      await expect(safety.nth(0)).toBeChecked();
+      await safety.nth(1).click();
+      await expect(safety.nth(1)).toBeChecked();
+      await page.getByTestId("equipment-group-MULTIMEDIA").click();
+      const mm = page.getByTestId("equipment-options-MULTIMEDIA").locator('input[type="checkbox"]').first();
+      await mm.click();
+      await expect(mm).toBeChecked();
+      await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+      await expect(page.getByTestId("equipment-summary")).toHaveText("3 təchizat seçilib");
+    };
+
+    // ---- 1440 ----
+    const car1440 = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 3 });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/elan-yerlesdir/${car1440.id}`);
+    const section = page.getByTestId("axin-section-info-contact");
+    await section.click();
+    await expect(section).toHaveAttribute("data-state", "open");
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({ path: `${OUT}/o11-stageb-1440-equipment-collapsed.png`, fullPage: true });
+    await openEquipment();
+    await page.screenshot({ path: `${OUT}/o11-stageb-1440-equipment-open.png`, fullPage: true });
+    await selectSome();
+    await page.screenshot({ path: `${OUT}/o11-stageb-1440-equipment-selected.png`, fullPage: true });
+    await page.getByTestId("equipment-search").fill("kamera");
+    await expect(page.getByTestId("equipment-group-PARKING_CAMERA")).toBeVisible();
+    await page.screenshot({ path: `${OUT}/o11-stageb-1440-equipment-search.png`, fullPage: true });
+    await page.getByTestId("equipment-search-clear").click();
+
+    // ---- 1024 / 768 representative open state ----
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await openEquipment();
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o11-stageb-1024-equipment.png`, fullPage: true });
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await openEquipment();
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o11-stageb-768-equipment.png`, fullPage: true });
+
+    // ---- 390 ----
+    const { userId: user390 } = await loginAs(context, "+994508890033");
+    const car390 = await insertListingFixture(user390, { status: "DRAFT", complete: true, images: 3 });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/elan-yerlesdir/${car390.id}`);
+    await page.getByTestId("axin-section-info-contact").click();
+    await expect(page.getByTestId("axin-section-info-contact")).toHaveAttribute("data-state", "open");
+    await page.waitForLoadState("networkidle");
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o11-stageb-390-equipment-collapsed.png`, fullPage: true });
+    await openEquipment();
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o11-stageb-390-equipment-open.png`, fullPage: true });
+    await selectSome();
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o11-stageb-390-equipment-selected.png`, fullPage: true });
+    await page.getByTestId("equipment-search").fill("kamera");
+    await expect(page.getByTestId("equipment-group-PARKING_CAMERA")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o11-stageb-390-equipment-search.png`, fullPage: true });
+    await page.getByTestId("equipment-search").fill("zzz-yoxdur");
+    await expect(page.getByTestId("equipment-no-results")).toBeVisible();
+    await page.screenshot({ path: `${OUT}/o11-stageb-390-equipment-no-results.png`, fullPage: true });
+    await page.getByTestId("equipment-no-results-clear").click();
+    // full Stage 5 context: equipment + description + contact + sticky CTA
+    await page.screenshot({ path: `${OUT}/o11-stageb-390-equipment-stage5-context.png`, fullPage: true });
+
+    // ---- MOTO ABS-only (390) ----
+    const { userId: userMoto } = await loginAs(context, "+994508890034");
+    const carForMoto = await insertListingFixture(userMoto, { status: "DRAFT", complete: true, images: 3 });
+    await page.goto(`/elan-yerlesdir/${carForMoto.id}`);
+    await page.getByTestId("axin-section-quickstart").click();
+    await expect(page.getByTestId("axin-section-quickstart")).toHaveAttribute("data-state", "open");
+    page.on("dialog", (dialog) => void dialog.accept());
+    await page.getByTestId("wizard-category").selectOption("MOTORCYCLE");
+    await expect(page.getByTestId("wizard-brand")).toHaveValue("", { timeout: 15_000 });
+    await openEquipment();
+    await expect(page.getByTestId("equipment-search")).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o11-stageb-390-moto-abs-only.png`, fullPage: true });
+  });
+
+  /** O.11 Stage C — public detail grouped equipment captures. */
+  test("o11-stagec-captures", async ({ page, context }) => {
+    test.setTimeout(300_000);
+    const { userId } = await loginAs(context, "+994508890035");
+    const { insertTestFeature, setListingFeaturesByCode } = await import("./seller-helpers");
+
+    const small = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 3 });
+    await setListingFeaturesByCode(small.id, [
+      "ABS", "ESC", "CRUISE_CONTROL", "REAR_CAMERA", "KEYLESS_ENTRY", "CLIMATE_CONTROL", "BLUETOOTH", "LED_HEADLIGHTS",
+    ]);
+    const large = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 3 });
+    await insertTestFeature("O11T_LEGACY", "Legacy avadanlıq", { group: null, active: false });
+    await setListingFeaturesByCode(large.id, [
+      "ABS", "ESC", "TRACTION_CONTROL", "FRONT_AIRBAGS", "SIDE_AIRBAGS", "CURTAIN_AIRBAGS", "ISOFIX", "TPMS",
+      "CRUISE_CONTROL", "ADAPTIVE_CRUISE_CONTROL", "BLIND_SPOT_MONITOR", "LANE_DEPARTURE_WARNING", "LANE_KEEP_ASSIST",
+      "AUTONOMOUS_EMERGENCY_BRAKING", "FORWARD_COLLISION_WARNING", "TRAFFIC_SIGN_RECOGNITION", "HILL_START_ASSIST",
+      "AUTO_HOLD", "REAR_CAMERA", "SURROUND_VIEW_CAMERA", "FRONT_PARKING_SENSORS", "REAR_PARKING_SENSORS", "O11T_LEGACY",
+    ]);
+
+    // 1440 — grouped normal (8 items, all seven groups)
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/elan/${small.publicId}`);
+    await expect(page.getByTestId("features")).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({ path: `${OUT}/o11-stagec-detail-1440-equipment-grouped.png`, fullPage: true });
+
+    // 390 — small selection (no expand control)
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/elan/${small.publicId}`);
+    await expect(page.getByTestId("features")).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o11-stagec-detail-390-equipment-small.png`, fullPage: true });
+
+    // 390 — large selection collapsed (12 + toggle) and expanded (23 + Digər)
+    await page.goto(`/elan/${large.publicId}`);
+    await expect(page.getByTestId("features-toggle")).toContainText("(23)");
+    await page.waitForLoadState("networkidle");
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o11-stagec-detail-390-equipment-grouped.png`, fullPage: true });
+    await page.getByTestId("features-toggle").click();
+    await expect(page.getByTestId("features").locator("li")).toHaveCount(23);
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `${OUT}/o11-stagec-detail-390-equipment-expanded.png`, fullPage: true });
+  });
 });

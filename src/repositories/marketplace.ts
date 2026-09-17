@@ -377,9 +377,12 @@ export async function getPublicDetail(
 export async function listPublicFeatureNames(
   sql: Sql,
   listingId: string,
-): Promise<{ code: string; name: string }[]> {
-  return sql<{ code: string; name: string }[]>`
-    select f.code, f.name_az as name
+): Promise<{ code: string; name: string; group: string | null }[]> {
+  // Deliberately NO is_active filter: a feature selected on a
+  // historical listing keeps displaying after catalog deactivation.
+  // Only listing-selected rows are joined — never the whole catalog.
+  return sql<{ code: string; name: string; group: string | null }[]>`
+    select f.code, f.name_az as name, f.group_code as "group"
     from listing_features lf join features f on f.id = lf.feature_id
     where lf.listing_id = ${listingId}
     order by f.sort_order, f.name_az

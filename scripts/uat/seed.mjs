@@ -3,7 +3,8 @@
 // see assertUatSafety(). It never touches production, Supabase, or
 // any remote database, and it changes no application code: everything
 // it inserts is reachable through the accepted business rules.
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { parseCatalogImportFile, runCatalogImport } from "../catalog/import.mts";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import postgres from "postgres";
@@ -107,7 +108,14 @@ const x5 = await model(bmw, "CAR", "X5", "x5");
 const mt07 = await model(yamaha, "MOTORCYCLE", "MT-07", "mt-07");
 const baku = (await sql`insert into cities (name_az, slug, sort_order) values ('Bakı', 'baki', 1) returning id`)[0].id;
 await sql`insert into cities (name_az, slug, sort_order) values ('Gəncə', 'gence', 2)`;
-const abs = (await sql`insert into features (code, name_az) values ('ABS', 'ABS') returning id`)[0].id;
+// O.11 equipment catalog — the SAME committed authoritative dataset
+// production uses, applied through the real importer (single source of
+// truth; no copied rows). ABS comes from this catalog.
+const o11 = parseCatalogImportFile(
+  JSON.parse(readFileSync(new URL("../../data/catalog/o11-equipment.json", import.meta.url), "utf8")),
+);
+await runCatalogImport(sql, o11, { dryRun: false });
+const abs = (await sql`select id from features where code = 'ABS'`)[0].id;
 const petrol = (await sql`select id from reference_options where group_code='FUEL_TYPE' and code='PETROL'`)[0].id;
 const auto = (await sql`select id from reference_options where group_code='TRANSMISSION' and code='AUTOMATIC'`)[0].id;
 const sedan = (await sql`select id from reference_options where group_code='BODY_TYPE' and code='SEDAN'`)[0].id;

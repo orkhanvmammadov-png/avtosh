@@ -93,11 +93,15 @@ beforeAll(async () => {
   `;
 
   await sql`
-    insert into features (code, name_az, category_id, is_active) values
+    insert into features (code, name_az, category_id, group_code, is_active) values
       ('AIR_CONDITIONING', 'Kondisioner',
-        (select id from categories where code = 'CAR'), true),
-      ('ABS', 'ABS', null, true),
-      ('HIDDEN_FEATURE', 'Gizli', null, false)
+        (select id from categories where code = 'CAR'), null, true),
+      ('ABS', 'ABS', null, 'SAFETY', true),
+      ('HIDDEN_FEATURE', 'Gizli', null, 'SAFETY', false)
+    on conflict (code) do update
+      set category_id = excluded.category_id,
+          group_code = excluded.group_code,
+          is_active = excluded.is_active
   `;
 });
 
@@ -316,8 +320,8 @@ describe("GET /catalog/options", () => {
 });
 
 describe("GET /catalog/features", () => {
-  it("returns global + category-scoped features for CAR", async () => {
-    const { body } = await call<{ code: string }[]>(
+  it("returns global + category-scoped features for CAR with additive group metadata", async () => {
+    const { body } = await call<{ code: string; group: string | null }[]>(
       getFeaturesRoute,
       `${BASE}/features?category=CAR`,
     );
@@ -325,15 +329,20 @@ describe("GET /catalog/features", () => {
     expect(codes).toContain("ABS");
     expect(codes).toContain("AIR_CONDITIONING");
     expect(codes).not.toContain("HIDDEN_FEATURE");
+    // O.11 additive DTO field: stable group code, nullable for legacy
+    // rows — the response never breaks on NULL
+    expect(body.data?.find((f) => f.code === "ABS")?.group).toBe("SAFETY");
+    expect(body.data?.find((f) => f.code === "AIR_CONDITIONING")?.group).toBeNull();
   });
 
-  it("returns only global features for MOTORCYCLE", async () => {
-    const { body } = await call<{ code: string }[]>(
+  it("returns only global features for MOTORCYCLE, ABS carrying group SAFETY", async () => {
+    const { body } = await call<{ code: string; group: string | null }[]>(
       getFeaturesRoute,
       `${BASE}/features?category=MOTORCYCLE`,
     );
     const codes = body.data?.map((f) => f.code);
     expect(codes).toContain("ABS");
     expect(codes).not.toContain("AIR_CONDITIONING");
+    expect(body.data?.find((f) => f.code === "ABS")?.group).toBe("SAFETY");
   });
 });

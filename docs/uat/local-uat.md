@@ -67,6 +67,12 @@ admin). Lifecycle-consistent publications (first 3 FREE, then PAID
 with SUCCESS fee payments), periods, reviews, promotion payments, and
 a suspension history row are seeded; nothing impossible is faked.
 
+**O.11 equipment catalog:** the seed applies the authoritative
+`data/catalog/o11-equipment.json` through the real importer, so a
+fresh UAT always exposes the full CAR equipment catalog — 58 items
+across the 7 approved groups, exactly one ABS (global), MOTORCYCLE
+seeing ABS only. See UAT-073…UAT-078 in the manual checklist.
+
 ## 5. What is REAL vs FAKE locally
 
 **REAL** (production code paths): all migrations and DB rules; OTP

@@ -1,0 +1,468 @@
+{
+  "features": [
+    {
+      "code": "ABS",
+      "name_az": "ABS",
+      "category": null,
+      "group_code": "SAFETY",
+      "is_active": true,
+      "sort_order": 101
+    },
+    {
+      "code": "ESC",
+      "name_az": "Elektron stabillik sistemi (ESP/ESC)",
+      "category": "CAR",
+      "group_code": "SAFETY",
+      "is_active": true,
+      "sort_order": 102
+    },
+    {
+      "code": "TRACTION_CONTROL",
+      "name_az": "Dartmaya nəzarət sistemi (TCS)",
+      "category": "CAR",
+      "group_code": "SAFETY",
+      "is_active": true,
+      "sort_order": 103
+    },
+    {
+      "code": "FRONT_AIRBAGS",
+      "name_az": "Ön hava yastıqları",
+      "category": "CAR",
+      "group_code": "SAFETY",
+      "is_active": true,
+      "sort_order": 104
+    },
+    {
+      "code": "SIDE_AIRBAGS",
+      "name_az": "Yan hava yastıqları",
+      "category": "CAR",
+      "group_code": "SAFETY",
+      "is_active": true,
+      "sort_order": 105
+    },
+    {
+      "code": "CURTAIN_AIRBAGS",
+      "name_az": "Pərdə hava yastıqları",
+      "category": "CAR",
+      "group_code": "SAFETY",
+      "is_active": true,
+      "sort_order": 106
+    },
+    {
+      "code": "ISOFIX",
+      "name_az": "ISOFIX",
+      "category": "CAR",
+      "group_code": "SAFETY",
+      "is_active": true,
+      "sort_order": 107
+    },
+    {
+      "code": "TPMS",
+      "name_az": "Təkər təzyiqinə nəzarət sistemi (TPMS)",
+      "category": "CAR",
+      "group_code": "SAFETY",
+      "is_active": true,
+      "sort_order": 108
+    },
+    {
+      "code": "CRUISE_CONTROL",
+      "name_az": "Kruiz-kontrol",
+      "category": "CAR",
+      "group_code": "DRIVER_ASSISTANCE",
+      "is_active": true,
+      "sort_order": 201
+    },
+    {
+      "code": "ADAPTIVE_CRUISE_CONTROL",
+      "name_az": "Adaptiv kruiz-kontrol",
+      "category": "CAR",
+      "group_code": "DRIVER_ASSISTANCE",
+      "is_active": true,
+      "sort_order": 202
+    },
+    {
+      "code": "BLIND_SPOT_MONITOR",
+      "name_az": "Kor zona monitorinqi",
+      "category": "CAR",
+      "group_code": "DRIVER_ASSISTANCE",
+      "is_active": true,
+      "sort_order": 203
+    },
+    {
+      "code": "LANE_DEPARTURE_WARNING",
+      "name_az": "Zolaqdan çıxma xəbərdarlığı",
+      "category": "CAR",
+      "group_code": "DRIVER_ASSISTANCE",
+      "is_active": true,
+      "sort_order": 204
+    },
+    {
+      "code": "LANE_KEEP_ASSIST",
+      "name_az": "Zolaqda saxlama assistenti",
+      "category": "CAR",
+      "group_code": "DRIVER_ASSISTANCE",
+      "is_active": true,
+      "sort_order": 205
+    },
+    {
+      "code": "AUTONOMOUS_EMERGENCY_BRAKING",
+      "name_az": "Avtomatik fövqəladə əyləc (AEB)",
+      "category": "CAR",
+      "group_code": "DRIVER_ASSISTANCE",
+      "is_active": true,
+      "sort_order": 206
+    },
+    {
+      "code": "FORWARD_COLLISION_WARNING",
+      "name_az": "Ön toqquşma xəbərdarlığı",
+      "category": "CAR",
+      "group_code": "DRIVER_ASSISTANCE",
+      "is_active": true,
+      "sort_order": 207
+    },
+    {
+      "code": "TRAFFIC_SIGN_RECOGNITION",
+      "name_az": "Yol nişanlarının tanınması",
+      "category": "CAR",
+      "group_code": "DRIVER_ASSISTANCE",
+      "is_active": true,
+      "sort_order": 208
+    },
+    {
+      "code": "HILL_START_ASSIST",
+      "name_az": "Təpədə start köməkçisi",
+      "category": "CAR",
+      "group_code": "DRIVER_ASSISTANCE",
+      "is_active": true,
+      "sort_order": 209
+    },
+    {
+      "code": "AUTO_HOLD",
+      "name_az": "Auto Hold",
+      "category": "CAR",
+      "group_code": "DRIVER_ASSISTANCE",
+      "is_active": true,
+      "sort_order": 210
+    },
+    {
+      "code": "REAR_CAMERA",
+      "name_az": "Arxa görüntü kamerası",
+      "category": "CAR",
+      "group_code": "PARKING_CAMERA",
+      "is_active": true,
+      "sort_order": 301
+    },
+    {
+      "code": "SURROUND_VIEW_CAMERA",
+      "name_az": "360° kamera",
+      "category": "CAR",
+      "group_code": "PARKING_CAMERA",
+      "is_active": true,
+      "sort_order": 302
+    },
+    {
+      "code": "FRONT_PARKING_SENSORS",
+      "name_az": "Ön park sensorları",
+      "category": "CAR",
+      "group_code": "PARKING_CAMERA",
+      "is_active": true,
+      "sort_order": 303
+    },
+    {
+      "code": "REAR_PARKING_SENSORS",
+      "name_az": "Arxa park sensorları",
+      "category": "CAR",
+      "group_code": "PARKING_CAMERA",
+      "is_active": true,
+      "sort_order": 304
+    },
+    {
+      "code": "AUTOMATIC_PARKING",
+      "name_az": "Avtomatik park sistemi",
+      "category": "CAR",
+      "group_code": "PARKING_CAMERA",
+      "is_active": true,
+      "sort_order": 305
+    },
+    {
+      "code": "KEYLESS_ENTRY",
+      "name_az": "Açar olmadan giriş",
+      "category": "CAR",
+      "group_code": "COMFORT",
+      "is_active": true,
+      "sort_order": 401
+    },
+    {
+      "code": "KEYLESS_START",
+      "name_az": "Açar olmadan mühərriki işə salma",
+      "category": "CAR",
+      "group_code": "COMFORT",
+      "is_active": true,
+      "sort_order": 402
+    },
+    {
+      "code": "REMOTE_START",
+      "name_az": "Uzaqdan mühərriki işə salma",
+      "category": "CAR",
+      "group_code": "COMFORT",
+      "is_active": true,
+      "sort_order": 403
+    },
+    {
+      "code": "POWER_FRONT_SEATS",
+      "name_az": "Elektrik tənzimlənən ön oturacaqlar",
+      "category": "CAR",
+      "group_code": "COMFORT",
+      "is_active": true,
+      "sort_order": 404
+    },
+    {
+      "code": "SEAT_MEMORY",
+      "name_az": "Oturacaq yaddaşı",
+      "category": "CAR",
+      "group_code": "COMFORT",
+      "is_active": true,
+      "sort_order": 405
+    },
+    {
+      "code": "HEATED_FRONT_SEATS",
+      "name_az": "Ön oturacaqların isidilməsi",
+      "category": "CAR",
+      "group_code": "COMFORT",
+      "is_active": true,
+      "sort_order": 406
+    },
+    {
+      "code": "HEATED_REAR_SEATS",
+      "name_az": "Arxa oturacaqların isidilməsi",
+      "category": "CAR",
+      "group_code": "COMFORT",
+      "is_active": true,
+      "sort_order": 407
+    },
+    {
+      "code": "VENTILATED_FRONT_SEATS",
+      "name_az": "Ön oturacaqların ventilyasiyası",
+      "category": "CAR",
+      "group_code": "COMFORT",
+      "is_active": true,
+      "sort_order": 408
+    },
+    {
+      "code": "HEATED_STEERING_WHEEL",
+      "name_az": "Sükanın isidilməsi",
+      "category": "CAR",
+      "group_code": "COMFORT",
+      "is_active": true,
+      "sort_order": 409
+    },
+    {
+      "code": "POWER_TAILGATE",
+      "name_az": "Elektrik baqaj qapağı",
+      "category": "CAR",
+      "group_code": "COMFORT",
+      "is_active": true,
+      "sort_order": 410
+    },
+    {
+      "code": "CLIMATE_CONTROL",
+      "name_az": "Klimat-kontrol",
+      "category": "CAR",
+      "group_code": "CLIMATE_INTERIOR",
+      "is_active": true,
+      "sort_order": 501
+    },
+    {
+      "code": "DUAL_ZONE_CLIMATE_CONTROL",
+      "name_az": "İki zonalı klimat-kontrol",
+      "category": "CAR",
+      "group_code": "CLIMATE_INTERIOR",
+      "is_active": true,
+      "sort_order": 502
+    },
+    {
+      "code": "REAR_CLIMATE_CONTROL",
+      "name_az": "Arxa klimat-kontrol",
+      "category": "CAR",
+      "group_code": "CLIMATE_INTERIOR",
+      "is_active": true,
+      "sort_order": 503
+    },
+    {
+      "code": "PANORAMIC_ROOF",
+      "name_az": "Panoramik dam",
+      "category": "CAR",
+      "group_code": "CLIMATE_INTERIOR",
+      "is_active": true,
+      "sort_order": 504
+    },
+    {
+      "code": "SUNROOF",
+      "name_az": "Lyuk",
+      "category": "CAR",
+      "group_code": "CLIMATE_INTERIOR",
+      "is_active": true,
+      "sort_order": 505
+    },
+    {
+      "code": "AMBIENT_LIGHTING",
+      "name_az": "Ambient işıqlandırma",
+      "category": "CAR",
+      "group_code": "CLIMATE_INTERIOR",
+      "is_active": true,
+      "sort_order": 506
+    },
+    {
+      "code": "RAIN_SENSOR",
+      "name_az": "Yağış sensoru",
+      "category": "CAR",
+      "group_code": "CLIMATE_INTERIOR",
+      "is_active": true,
+      "sort_order": 507
+    },
+    {
+      "code": "APPLE_CARPLAY",
+      "name_az": "Apple CarPlay",
+      "category": "CAR",
+      "group_code": "MULTIMEDIA",
+      "is_active": true,
+      "sort_order": 601
+    },
+    {
+      "code": "ANDROID_AUTO",
+      "name_az": "Android Auto",
+      "category": "CAR",
+      "group_code": "MULTIMEDIA",
+      "is_active": true,
+      "sort_order": 602
+    },
+    {
+      "code": "BLUETOOTH",
+      "name_az": "Bluetooth",
+      "category": "CAR",
+      "group_code": "MULTIMEDIA",
+      "is_active": true,
+      "sort_order": 603
+    },
+    {
+      "code": "NAVIGATION",
+      "name_az": "Naviqasiya sistemi",
+      "category": "CAR",
+      "group_code": "MULTIMEDIA",
+      "is_active": true,
+      "sort_order": 604
+    },
+    {
+      "code": "WIRELESS_CHARGING",
+      "name_az": "Simsiz şarj",
+      "category": "CAR",
+      "group_code": "MULTIMEDIA",
+      "is_active": true,
+      "sort_order": 605
+    },
+    {
+      "code": "PREMIUM_AUDIO",
+      "name_az": "Premium audio sistemi",
+      "category": "CAR",
+      "group_code": "MULTIMEDIA",
+      "is_active": true,
+      "sort_order": 606
+    },
+    {
+      "code": "USB_CONNECTIVITY",
+      "name_az": "USB / USB-C bağlantısı",
+      "category": "CAR",
+      "group_code": "MULTIMEDIA",
+      "is_active": true,
+      "sort_order": 607
+    },
+    {
+      "code": "DIGITAL_INSTRUMENT_CLUSTER",
+      "name_az": "Rəqəmsal cihaz paneli",
+      "category": "CAR",
+      "group_code": "MULTIMEDIA",
+      "is_active": true,
+      "sort_order": 608
+    },
+    {
+      "code": "HEAD_UP_DISPLAY",
+      "name_az": "Head-Up Display",
+      "category": "CAR",
+      "group_code": "MULTIMEDIA",
+      "is_active": true,
+      "sort_order": 609
+    },
+    {
+      "code": "LED_HEADLIGHTS",
+      "name_az": "LED faralar",
+      "category": "CAR",
+      "group_code": "LIGHTING_EXTERIOR",
+      "is_active": true,
+      "sort_order": 701
+    },
+    {
+      "code": "MATRIX_LED_HEADLIGHTS",
+      "name_az": "Matrix LED faralar",
+      "category": "CAR",
+      "group_code": "LIGHTING_EXTERIOR",
+      "is_active": true,
+      "sort_order": 702
+    },
+    {
+      "code": "ADAPTIVE_HEADLIGHTS",
+      "name_az": "Adaptiv faralar",
+      "category": "CAR",
+      "group_code": "LIGHTING_EXTERIOR",
+      "is_active": true,
+      "sort_order": 703
+    },
+    {
+      "code": "AUTOMATIC_HIGH_BEAM",
+      "name_az": "Avtomatik uzaq işıq",
+      "category": "CAR",
+      "group_code": "LIGHTING_EXTERIOR",
+      "is_active": true,
+      "sort_order": 704
+    },
+    {
+      "code": "LED_DAYTIME_RUNNING_LIGHTS",
+      "name_az": "LED gündüz işıqları",
+      "category": "CAR",
+      "group_code": "LIGHTING_EXTERIOR",
+      "is_active": true,
+      "sort_order": 705
+    },
+    {
+      "code": "FOG_LIGHTS",
+      "name_az": "Duman faraları",
+      "category": "CAR",
+      "group_code": "LIGHTING_EXTERIOR",
+      "is_active": true,
+      "sort_order": 706
+    },
+    {
+      "code": "POWER_FOLDING_MIRRORS",
+      "name_az": "Elektrik qatlanan güzgülər",
+      "category": "CAR",
+      "group_code": "LIGHTING_EXTERIOR",
+      "is_active": true,
+      "sort_order": 707
+    },
+    {
+      "code": "HEATED_MIRRORS",
+      "name_az": "Qızdırılan güzgülər",
+      "category": "CAR",
+      "group_code": "LIGHTING_EXTERIOR",
+      "is_active": true,
+      "sort_order": 708
+    },
+    {
+      "code": "ALLOY_WHEELS",
+      "name_az": "Yüngül lehimli disklər",
+      "category": "CAR",
+      "group_code": "LIGHTING_EXTERIOR",
+      "is_active": true,
+      "sort_order": 709
+    }
+  ]
+}

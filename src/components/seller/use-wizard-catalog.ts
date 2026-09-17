@@ -10,6 +10,8 @@ export interface CatalogItem {
   /** Presentation-only color swatch hex (already returned by the
       options API since O.2); exposed for the seller color palette. */
   swatch?: string | null;
+  /** O.11 stable equipment group code (features API only). */
+  group?: string | null;
 }
 
 export const OPTION_GROUPS = [

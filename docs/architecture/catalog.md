@@ -52,7 +52,9 @@ Three strictly separated tiers:
 
 1. **Migration seed** (immutable, all environments): categories,
    reference groups/options, roles, system settings.
-2. **Development sample** (`supabase/seed/dev_catalog.sql`):
+2. **Development sample** (`supabase/seed/dev_catalog.sql`, applied
+   together with the authoritative O.11 equipment catalog by the one
+   dev bootstrap command `pnpm db:seed:dev`):
    clearly-labeled, idempotent, small brand/model/city/feature sample
    for local development. Never applied by migrations, never
    production data.

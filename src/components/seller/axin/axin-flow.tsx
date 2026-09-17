@@ -27,6 +27,7 @@ import { SellerListboxField } from "@/components/seller/listbox-field";
 import { ChipToggle, DeferredChipToggle, DeferredInput, SelectField } from "@/components/seller/wizard-fields";
 import { PhotosStep } from "@/components/seller/photos-step";
 import { ContactSection } from "@/components/seller/axin/contact-section";
+import { EquipmentSelector } from "@/components/seller/axin/equipment-selector";
 import { ReviewSection } from "@/components/seller/axin/review-section";
 import { SectionCard, type StageState } from "@/components/seller/axin/section-card";
 import { TypeaheadField } from "@/components/seller/axin/typeahead-field";
@@ -726,62 +727,9 @@ function SaleSection({ editor, catalog }: { editor: ListingEditor; catalog: Wiza
 function ExtrasSection({ editor, catalog }: { editor: ListingEditor; catalog: WizardCatalog }) {
   const { dto } = editor;
   const [description, setDescription] = useState(dto.description ?? "");
-  const [featuresOpen, setFeaturesOpen] = useState(false);
   return (
     <div className="space-y-5">
-      {catalog.features.length > 0 ? (
-        <fieldset>
-          <button
-            type="button"
-            aria-expanded={featuresOpen}
-            onClick={() => setFeaturesOpen((v) => !v)}
-            data-testid="wizard-features-toggle"
-            className="flex h-10 w-full items-center justify-between rounded-control border border-line-strong bg-raised px-3.5 text-[13px] font-medium text-ink transition-colors duration-150 hover:border-muted"
-          >
-            <span>
-              {SELLER.featuresSelect}
-              {dto.featureIds.length > 0 ? (
-                <span className="ml-1.5 font-semibold text-primary">({dto.featureIds.length})</span>
-              ) : null}
-            </span>
-            <span aria-hidden="true" className="text-muted">
-              {featuresOpen ? "▴" : "▾"}
-            </span>
-          </button>
-          {featuresOpen ? (
-            <div
-              className="mt-2 grid max-h-72 grid-cols-1 gap-1 overflow-y-auto rounded-control border border-line p-2 sm:grid-cols-2"
-              data-testid="wizard-features"
-            >
-              {catalog.features.map((feature) => {
-                const checked = dto.featureIds.includes(feature.id);
-                return (
-                  <label
-                    key={feature.id}
-                    htmlFor={`wizard-feature-${feature.id}`}
-                    className="flex h-9 cursor-pointer items-center gap-2.5 rounded-[6px] px-2 text-[12.5px] text-ink transition-colors duration-150 hover:bg-row-hover"
-                  >
-                    <input
-                      id={`wizard-feature-${feature.id}`}
-                      data-testid={`wizard-feature-${feature.id}`}
-                      type="checkbox"
-                      className="h-4 w-4 accent-primary"
-                      checked={checked}
-                      onChange={(e) => {
-                        const ids = e.target.checked
-                          ? [...dto.featureIds, feature.id]
-                          : dto.featureIds.filter((id) => id !== feature.id);
-                        editor.patch({ feature_ids: ids }, { immediate: true });
-                      }}
-                    />
-                    {feature.name}
-                  </label>
-                );
-              })}
-            </div>
-          ) : null}
-        </fieldset>
-      ) : null}
+      <EquipmentSelector editor={editor} features={catalog.features} />
       <div>
         <label htmlFor="wizard-description" className="mb-1 block text-xs font-medium text-slate-strong">
           {SELLER.description}
