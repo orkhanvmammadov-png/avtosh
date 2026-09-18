@@ -92,6 +92,47 @@ export async function updateEditRevisionData(
   return rows[0];
 }
 
+/**
+ * Unconditional counter bump for serialized staged-image operations
+ * (the editor refetches after each op — mirroring the draft flow's
+ * incrementListingRevision). Guarded to editable states only.
+ */
+export async function incrementEditRevision(
+  sql: Sql,
+  revisionId: string,
+): Promise<number> {
+  const rows = await sql<{ revision: number }[]>`
+    update listing_edit_revisions
+    set revision = revision + 1
+    where id = ${revisionId}
+      and status in ('EDIT_DRAFT', 'CORRECTION_REQUIRED')
+    returning revision
+  `;
+  return rows[0]?.revision ?? 0;
+}
+
+/**
+ * Submit/resubmit transition to PENDING_MODERATION. A pure state
+ * transition: the content is unchanged, so the edit's own counter is
+ * NOT bumped (retries with the same expected revision are idempotent
+ * at the service layer).
+ */
+export async function submitEditRevisionRow(
+  sql: Sql,
+  input: { revisionId: string; expectedRevision: number },
+): Promise<EditRevisionRow | undefined> {
+  const rows = await sql<EditRevisionRow[]>`
+    update listing_edit_revisions
+    set status = 'PENDING_MODERATION',
+        submitted_at = now()
+    where id = ${input.revisionId}
+      and revision = ${input.expectedRevision}
+      and status in ('EDIT_DRAFT', 'CORRECTION_REQUIRED')
+    returning *
+  `;
+  return rows[0];
+}
+
 /** Terminal transition to CANCELLED (allowed source states guarded by
     the service). */
 export async function cancelEditRevision(

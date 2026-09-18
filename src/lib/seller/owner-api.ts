@@ -154,6 +154,107 @@ export async function fetchQuota(): Promise<QuotaDto> {
   return r.data.quota;
 }
 
+/**
+ * O.12 EDIT-mode persistence: the SAME editor contract (OwnerListingDto
+ * shape, PatchBody field space minus promotion intent) backed by the
+ * edit-revision endpoints. `revision` in the DTO is the EDIT revision's
+ * own counter; the approved listing is never written from here.
+ */
+export const draftEditorApi = {
+  fetch: fetchOwnerListing,
+  patch: patchListing,
+  requestUploadUrl,
+  confirmUpload,
+  deleteImage,
+  reorderImages,
+  setPrimaryImage,
+};
+
+export type EditorApi = typeof draftEditorApi;
+
+const editBase = (id: string): string => `${BASE}/${id}/edit-revision`;
+
+export async function fetchEditListing(id: string): Promise<OwnerListingDto> {
+  const r = await publicFetch<{ listing: OwnerListingDto }>(editBase(id));
+  return r.data.listing;
+}
+
+export const editEditorApi: EditorApi = {
+  fetch: fetchEditListing,
+  patch: async (id, expectedRevision, fields) => {
+    const r = await publicFetch<{ listing: OwnerListingDto }>(editBase(id), {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ expected_revision: expectedRevision, ...fields }),
+    });
+    return r.data.listing;
+  },
+  requestUploadUrl: async (id, file) => {
+    const r = await publicFetch<{
+      upload_id: string;
+      upload_url: string;
+      upload_token: string | null;
+      max_size_bytes: number;
+    }>(`${editBase(id)}/images/upload-url`, json({
+      filename: file.name.slice(0, 255),
+      declared_mime_type: file.type,
+      declared_size_bytes: file.size,
+    }));
+    return r.data;
+  },
+  confirmUpload: async (id, uploadId) => {
+    const r = await publicFetch<{ image: ListingImageDto; revision: number }>(
+      `${editBase(id)}/images/confirm`,
+      json({ upload_id: uploadId }),
+    );
+    return r.data;
+  },
+  deleteImage: async (id, imageId) => {
+    await publicFetch(`${editBase(id)}/images/${imageId}`, { method: "DELETE" });
+  },
+  reorderImages: async (id, imageIds) => {
+    await publicFetch(`${editBase(id)}/images/order`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ image_ids: imageIds }),
+    });
+  },
+  setPrimaryImage: async (id, imageId) => {
+    await publicFetch(`${editBase(id)}/images/${imageId}/primary`, { method: "PATCH" });
+  },
+};
+
+export interface EditSubmitResult {
+  listingId: string;
+  editRevisionId: string;
+  editStatus: string;
+  editRevision: number;
+  reactivationRequested: boolean;
+}
+
+export async function createOrGetEditRevision(id: string): Promise<void> {
+  await publicFetch(editBase(id), json({}));
+}
+
+export async function submitEditRevision(
+  id: string,
+  expectedRevision: number,
+  activate: boolean,
+): Promise<EditSubmitResult> {
+  const r = await publicFetch<EditSubmitResult>(
+    `${editBase(id)}/submit`,
+    json(activate ? { expected_revision: expectedRevision, activate: true } : { expected_revision: expectedRevision }),
+  );
+  return r.data;
+}
+
+export async function cancelEditRevision(
+  id: string,
+  expectedRevision: number,
+): Promise<void> {
+  await publicFetch(`${editBase(id)}/cancel`, json({ expected_revision: expectedRevision }));
+}
+
 export async function submitListing(id: string, expectedRevision: number): Promise<SubmitResult> {
   const r = await publicFetch<SubmitResult>(`${BASE}/${id}/submit`, json({ expected_revision: expectedRevision }));
   return r.data;

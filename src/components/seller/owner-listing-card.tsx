@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatDateAz, formatMileage, formatPriceMinor, vehicleTitle } from "@/lib/format";
 import { SELLER } from "@/lib/marketplace/labels";
 import { REASON_LABELS, statusPresentation, type StatusPresentation } from "@/lib/seller/status";
+import { EditEntryButton } from "@/components/seller/edit-entry-button";
 import { ListingLifecycleActions } from "@/components/seller/listing-lifecycle-actions";
 import type { OwnerCardDto } from "@/services/my-listings";
 
@@ -50,14 +51,43 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
         : statusPresentation(listing.status);
   const chip = editChip(listing);
   const title = vehicleTitle(listing);
-  const href =
-    presentation.action.kind === "wizard"
+  // O.12: expired cards derive their renewal affordance from the
+  // server capability (sealed order edit → moderation → renewal hides
+  // the CTA while an edit is open); other statuses keep the existing
+  // presentation-driven action.
+  const expired = m.primary === "EXPIRED";
+  const href = expired
+    ? m.renewal === "RENEW" || m.renewal === "RENEW_ACTIVATE"
+      ? `/profil/elanlar/${listing.id}/yenile`
+      : null
+    : presentation.action.kind === "wizard"
       ? `/elan-yerlesdir/${listing.id}`
       : presentation.action.kind === "public"
         ? `/elan/${listing.publicId}`
         : presentation.action.kind === "renew"
           ? `/profil/elanlar/${listing.id}/yenile`
           : null;
+  const actionLabel =
+    expired && m.renewal === "RENEW_ACTIVATE"
+      ? SELLER.actionRenewActivate
+      : presentation.action.kind === "none"
+        ? null
+        : presentation.action.label;
+
+  // O.12 edit affordance (ONE per card): EDIT starts via the explicit
+  // create-or-get button; CONTINUE/FIX resume, VIEW opens read-only.
+  const editLabel =
+    m.editAction === "CONTINUE"
+      ? SELLER.actionContinueEdit
+      : m.editAction === "VIEW"
+        ? SELLER.actionViewEdit
+        : m.editAction === "FIX"
+          ? SELLER.actionFix
+          : null;
+  // one green primary per card: resuming/fixing an edit is the primary
+  // next step wherever no promote CTA exists (deactivated/expired)
+  const editIsPrimary =
+    m.primary !== "ACTIVE" && (m.editAction === "CONTINUE" || m.editAction === "FIX");
 
   return (
     <article
@@ -123,6 +153,11 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
             {SELLER.afterModeration}
           </p>
         ) : null}
+        {expired && m.editStatus === "PENDING_MODERATION" ? (
+          <p className="mt-1 text-xs text-muted" data-testid="owner-renewal-hint">
+            {SELLER.expiredPendingHint}
+          </p>
+        ) : null}
         {listing.moderationFeedback !== null ? (
           <p className="mt-1 rounded-control bg-danger-soft px-2.5 py-1.5 text-xs leading-relaxed text-danger" data-testid="owner-feedback">
             <span className="font-semibold">{SELLER.moderationFeedback}: </span>
@@ -133,7 +168,7 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
           </p>
         ) : null}
       </div>
-      {href !== null || m.canDeactivate || m.canReactivate ? (
+      {href !== null || m.editAction !== null || m.canDeactivate || m.canReactivate ? (
         <div className="flex shrink-0 flex-col items-stretch justify-center gap-2">
           {href !== null && presentation.action.kind !== "none" ? (
           <Link
@@ -141,8 +176,24 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
             className="inline-flex min-h-12 items-center justify-center rounded-control border border-primary px-3 text-sm font-semibold tracking-[0.01em] text-primary transition-colors duration-150 hover:bg-primary-tint active:bg-primary-tint-pressed"
             data-testid="owner-action"
           >
-            {presentation.action.label}
+            {actionLabel}
           </Link>
+          ) : null}
+          {m.editAction === "EDIT" ? (
+            <EditEntryButton listingId={listing.id} primary={false} />
+          ) : editLabel !== null ? (
+            <Link
+              href={`/profil/elanlar/${listing.id}/redakte`}
+              className={
+                editIsPrimary
+                  ? "inline-flex min-h-12 items-center justify-center rounded-control bg-primary px-3 text-sm font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed"
+                  : "inline-flex min-h-12 items-center justify-center rounded-control border border-primary px-3 text-sm font-semibold tracking-[0.01em] text-primary transition-colors duration-150 hover:bg-primary-tint active:bg-primary-tint-pressed"
+              }
+              data-testid="owner-edit-link"
+              data-edit-action={m.editAction ?? undefined}
+            >
+              {editLabel}
+            </Link>
           ) : null}
           {listing.status === "ACTIVE" && m.primary === "ACTIVE" ? (
             (() => {

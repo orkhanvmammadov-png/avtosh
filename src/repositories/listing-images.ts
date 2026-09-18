@@ -23,6 +23,8 @@ export interface ImageUploadRow {
   declared_mime_type: string;
   declared_size_bytes: string;
   image_id: string | null;
+  /** O.12: staged confirmation target (mutually exclusive with image_id). */
+  edit_image_id: string | null;
   expires_at: Date;
 }
 
@@ -209,7 +211,7 @@ export async function getImageUpload(
   const rows = await sql<ImageUploadRow[]>`
     select id, listing_id, user_id, temp_storage_path, status,
            declared_mime_type, declared_size_bytes::text as declared_size_bytes,
-           image_id, expires_at
+           image_id, edit_image_id, expires_at
     from listing_image_uploads
     where id = ${uploadId} and listing_id = ${listingId} and user_id = ${userId}
   `;
@@ -226,7 +228,7 @@ export async function getImageUploadForUpdate(
   const rows = await sql<ImageUploadRow[]>`
     select id, listing_id, user_id, temp_storage_path, status,
            declared_mime_type, declared_size_bytes::text as declared_size_bytes,
-           image_id, expires_at
+           image_id, edit_image_id, expires_at
     from listing_image_uploads
     where id = ${uploadId} and listing_id = ${listingId} and user_id = ${userId}
     for update
@@ -254,6 +256,20 @@ export async function completeImageUpload(
   await sql`
     update listing_image_uploads
     set status = 'COMPLETED', image_id = ${imageId}, confirmed_at = now()
+    where id = ${uploadId}
+  `;
+}
+
+/** O.12: confirmation into the STAGED gallery — edit_image_id, never
+    image_id (the check constraint enforces exclusivity). */
+export async function completeEditImageUpload(
+  sql: Sql,
+  uploadId: string,
+  editImageId: string,
+): Promise<void> {
+  await sql`
+    update listing_image_uploads
+    set status = 'COMPLETED', edit_image_id = ${editImageId}, confirmed_at = now()
     where id = ${uploadId}
   `;
 }

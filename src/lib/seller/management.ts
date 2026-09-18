@@ -34,6 +34,16 @@ export interface OwnerManagementInput {
   editStatus: OwnerEditState;
 }
 
+/** Which edit affordance the card renders (Stage C — one per card):
+    EDIT starts/continues via create-or-get, CONTINUE/FIX resume the
+    open revision, VIEW is the read-only pending view. */
+export type OwnerEditAction = "EDIT" | "CONTINUE" | "VIEW" | "FIX" | null;
+
+/** Renewal affordance for EXPIRED listings: HIDDEN while an open edit
+    makes renewal the wrong next step (sealed order: edit → moderation
+    → renewal); RENEW_ACTIVATE after an APPROVED edit. */
+export type OwnerRenewalAction = "RENEW" | "RENEW_ACTIVATE" | "HIDDEN" | null;
+
 export interface OwnerManagement {
   primary: OwnerPrimaryState;
   /** True when status is still ACTIVE but the deadline already passed
@@ -51,6 +61,8 @@ export interface OwnerManagement {
   /** DEACTIVATED + open moderation + request recorded — show the
       "Moderasiya sonrası aktivləşəcək" line instead of a button. */
   awaitingActivation: boolean;
+  editAction: OwnerEditAction;
+  renewal: OwnerRenewalAction;
 }
 
 export function deriveOwnerManagement(
@@ -75,18 +87,54 @@ export function deriveOwnerManagement(
     input.editStatus === "PENDING_MODERATION" ||
     input.editStatus === "CORRECTION_REQUIRED";
 
+  // published-lifecycle editing (ACTIVE/EXPIRED incl. deactivated) —
+  // pre-publication keeps the wizard
+  const canEdit = primary === "ACTIVE" || primary === "DEACTIVATED" || primary === "EXPIRED";
+
+  // ONE edit affordance per card (01-state-matrix.md): a terminal
+  // APPROVED/REJECTED revision never resumes — a fresh edit starts
+  // through create-or-get when the lifecycle permits it.
+  const editAction: OwnerEditAction = !canEdit
+    ? null
+    : input.editStatus === "EDIT_DRAFT"
+      ? "CONTINUE"
+      : input.editStatus === "PENDING_MODERATION"
+        ? "VIEW"
+        : input.editStatus === "CORRECTION_REQUIRED"
+          ? "FIX"
+          : "EDIT";
+
+  // Renewal for EXPIRED listings: sealed order is edit → moderation →
+  // renewal, so an open edit hides the renewal CTA; an APPROVED edit
+  // upgrades it to the combined renew-and-activate entry.
+  const renewal: OwnerRenewalAction =
+    primary !== "EXPIRED"
+      ? null
+      : openEdit
+        ? "HIDDEN"
+        : input.editStatus === "APPROVED"
+          ? "RENEW_ACTIVATE"
+          : "RENEW";
+
   return {
     primary,
     effectiveExpired,
     sellerDeactivated: deactivated,
     reactivationRequested: input.reactivationRequested,
     editStatus: input.editStatus,
-    // published-lifecycle editing (ACTIVE/EXPIRED incl. deactivated) —
-    // Stage C exposes the navigation; pre-publication keeps the wizard
-    canEdit: primary === "ACTIVE" || primary === "DEACTIVATED" || primary === "EXPIRED",
+    canEdit,
     canDeactivate: primary === "ACTIVE",
-    canReactivate: primary === "DEACTIVATED" && !input.reactivationRequested,
+    // 01-state-matrix.md: DEACTIVATED+CORRECTION shows only Düzəliş et
+    // (activation flows through fix → resubmit → approval; a direct
+    // Aktiv et there would mislead), and a recorded request always
+    // replaces the button.
+    canReactivate:
+      primary === "DEACTIVATED" &&
+      !input.reactivationRequested &&
+      input.editStatus !== "CORRECTION_REQUIRED",
     awaitingActivation:
       primary === "DEACTIVATED" && input.reactivationRequested && openEdit,
+    editAction,
+    renewal,
   };
 }

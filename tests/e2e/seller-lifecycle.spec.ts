@@ -90,7 +90,7 @@ test("Aktiv et while an edit is in moderation records intent and shows the await
   await expect(card.getByTestId("owner-status")).toHaveText("Deaktiv");
 });
 
-test("Deaktiv filter, edit chips, and no navigation into the unimplemented edit route", async ({ page, context }, { project }) => {
+test("Deaktiv filter, edit chips, and real matrix-conform edit actions", async ({ page, context }, { project }) => {
   const { userId } = await loginAs(context, testPhone(project.name, 76));
   const active = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 1 });
   await insertEditRevisionFixture(active.id, "EDIT_DRAFT");
@@ -109,12 +109,14 @@ test("Deaktiv filter, edit chips, and no navigation into the unimplemented edit 
   // expired + deactivated presents as EXPIRED (renewal path wins)
   await expect(cardFor(expiredDeactivated.id).getByTestId("owner-status")).toHaveText("Müddəti bitib");
 
-  // §36: Stage B ships ZERO navigation into the O.12 edit flow — no
-  // href to the edit route and none of the Stage C entry labels
-  const list = page.getByTestId("my-listings-list");
-  expect(await list.locator('a[href*="/redakte"]').count()).toBe(0);
-  await expect(list).not.toContainText("Redaktəyə davam et");
-  await expect(list).not.toContainText("Redaktəyə bax");
+  // Stage C: the edit actions are REAL and follow the sealed matrix —
+  // an open draft resumes through the edit route (no dead links)
+  const activeEditLink = cardFor(active.id).getByTestId("owner-edit-link");
+  await expect(activeEditLink).toHaveText("Redaktəyə davam et");
+  await expect(activeEditLink).toHaveAttribute("href", `/profil/elanlar/${active.id}/redakte`);
+  await expect(cardFor(deactivated.id).getByTestId("owner-edit-link")).toHaveText("Redaktəyə davam et");
+  // expired + deactivated carries no open edit here → fresh-edit entry
+  await expect(cardFor(expiredDeactivated.id).getByTestId("owner-edit")).toHaveText("Redaktə et");
   // deactivated card keeps its lifecycle button but no public link
   expect(await cardFor(deactivated.id).locator('a[href^="/elan/"]').count()).toBe(0);
 

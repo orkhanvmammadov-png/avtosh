@@ -20,10 +20,11 @@ export const createDraftSchema = z
   })
   .strict();
 
-export const draftPatchSchema = z
-  .object({
-    expected_revision: z.number().int().min(1),
-    category: categoryCode.optional(),
+/** Seller-editable content fields shared by the draft PATCH and the
+    O.12 edit-revision PATCH (identical field semantics by contract). */
+const sellerContentPatchFields = {
+  expected_revision: z.number().int().min(1),
+  category: categoryCode.optional(),
     brand_id: z.uuid().nullable().optional(),
     model_id: z.uuid().nullable().optional(),
     year: z.number().int().min(LISTING_YEAR_MIN).max(listingYearMax()).nullable().optional(),
@@ -53,20 +54,47 @@ export const draftPatchSchema = z
     description: z.string().max(5000).nullable().optional(),
     contact_phone: z.string().max(32).nullable().optional(),
     // O.9 AXIN: listing-level public seller name (trimmed in the
-    // service; empty becomes null) and per-type promotion intent
-    // PREFERENCES (never a payment source of truth).
+    // service; empty becomes null).
     seller_name: z.string().max(100).nullable().optional(),
+    feature_ids: z.array(z.uuid()).max(100).optional(),
+} as const;
+
+const atLeastOneField = (value: Record<string, unknown>): boolean =>
+  Object.keys(value).length > 1;
+
+export const draftPatchSchema = z
+  .object({
+    ...sellerContentPatchFields,
+    // Per-type promotion intent PREFERENCES (never a payment source of
+    // truth) — draft-only; sealed OUT of the edit-revision field space.
     premium_intent_package_id: z.uuid().nullable().optional(),
     boost_intent_package_id: z.uuid().nullable().optional(),
-    feature_ids: z.array(z.uuid()).max(100).optional(),
   })
   .strict()
-  .refine(
-    (value) => Object.keys(value).length > 1,
-    "At least one editable field is required.",
-  );
+  .refine(atLeastOneField, "At least one editable field is required.");
 
 export type DraftPatchInput = z.infer<typeof draftPatchSchema>;
+
+/**
+ * O.12 edit-revision PATCH: the same seller field semantics as the
+ * draft PATCH, with `expected_revision` addressing the EDIT revision's
+ * own counter and no promotion-intent fields.
+ */
+export const editPatchSchema = z
+  .object(sellerContentPatchFields)
+  .strict()
+  .refine(atLeastOneField, "At least one editable field is required.");
+
+export type EditPatchInput = z.infer<typeof editPatchSchema>;
+
+/** O.12 edit submit: `activate` records the reactivation intent for
+    the approved combined "göndər və aktivləşdir" flow. */
+export const editSubmitSchema = z
+  .object({
+    expected_revision: z.number().int().min(1),
+    activate: z.boolean().optional(),
+  })
+  .strict();
 
 export const uploadUrlSchema = z
   .object({

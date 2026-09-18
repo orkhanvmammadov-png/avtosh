@@ -76,9 +76,12 @@ export function ListingLifecycleActions({
         if (outcome === "REACTIVATED") {
           setFeedback({ tone: "success", text: SELLER.toastActivated });
         } else if (outcome === "EDIT_INCOMPLETE") {
-          // not an error: the edit must be completed and submitted
-          // (Stage C adds the navigation into AXIN edit mode)
+          // flow B (04-reactivation-flows.md): NEVER publish the old
+          // version — route into the edit flow with the activation
+          // context; the seller completes and submits explicitly
           setFeedback({ tone: "info", text: SELLER.activateWithDraftNotice });
+          router.push(`/profil/elanlar/${listingId}/redakte?aktivlesdir=1`);
+          return;
         }
         // AWAITING_MODERATION / CORRECTION_REQUIRED / RENEWAL_REQUIRED:
         // the refreshed server DTO renders the approved state lines
@@ -113,7 +116,14 @@ export function ListingLifecycleActions({
           disabled={pending}
           onClick={() => void post("reactivate")}
           data-testid="owner-reactivate"
-          className="inline-flex min-h-11 items-center justify-center rounded-control border border-primary px-3 text-sm font-semibold tracking-[0.01em] text-primary transition-colors duration-150 hover:bg-primary-tint disabled:cursor-not-allowed disabled:opacity-50"
+          className={
+            // 01-state-matrix.md: with no open edit, Aktiv et is the
+            // card's green primary; alongside an edit affordance it
+            // stays an outline secondary
+            management.editAction === "EDIT"
+              ? "inline-flex min-h-11 items-center justify-center rounded-control bg-primary px-3 text-sm font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+              : "inline-flex min-h-11 items-center justify-center rounded-control border border-primary px-3 text-sm font-semibold tracking-[0.01em] text-primary transition-colors duration-150 hover:bg-primary-tint disabled:cursor-not-allowed disabled:opacity-50"
+          }
         >
           {SELLER.actionActivate}
         </button>

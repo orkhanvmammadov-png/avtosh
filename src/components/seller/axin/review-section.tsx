@@ -39,11 +39,15 @@ export function ReviewSection({
   editor,
   catalog,
   isResubmission,
+  editMode = false,
   onEdit,
 }: {
   editor: ListingEditor;
   catalog: WizardCatalog;
   isResubmission: boolean;
+  /** O.12 edit mode: edits are free — no fee/quota line and no
+      promotion-intent module (intent is sealed out of edit scope). */
+  editMode?: boolean;
   onEdit: (section: SectionKey) => void;
 }) {
   const { dto } = editor;
@@ -51,15 +55,17 @@ export function ReviewSection({
   const [packages, setPackages] = useState<PromotionPackageDto[] | null>(null);
 
   useEffect(() => {
+    if (editMode) return; // advisory quota is a NEW-flow concept only
     void fetchQuota()
       .then(setQuota)
       .catch(() => setQuota(null));
-  }, []);
+  }, [editMode]);
   useEffect(() => {
+    if (editMode) return;
     void publicFetch<{ packages: PromotionPackageDto[] }>("/api/v1/me/promotion-packages")
       .then((r) => setPackages(r.data.packages))
       .catch(() => setPackages([]));
-  }, []);
+  }, [editMode]);
 
   const title = vehicleTitle({
     brand: catalog.nameOf(dto.brandId),
@@ -187,7 +193,7 @@ export function ReviewSection({
 
       {/* fee line — advisory quota; hidden entirely for resubmission
           (existing publication is reused, no new fee/slot) */}
-      {!isResubmission && quota !== null ? (
+      {!isResubmission && !editMode && quota !== null ? (
         <div
           className="flex items-center justify-between gap-3 rounded-card border border-line bg-raised px-3.5 py-3"
           data-testid="wizard-quota"
@@ -206,8 +212,9 @@ export function ReviewSection({
         </div>
       ) : null}
 
-      {/* Promotion intent — optional, never preselected, intent only. */}
-      <PromotionIntentModule editor={editor} packages={packages} />
+      {/* Promotion intent — optional, never preselected, intent only.
+          Never rendered in edit mode (sealed out of edit scope). */}
+      {!editMode ? <PromotionIntentModule editor={editor} packages={packages} /> : null}
     </div>
   );
 }

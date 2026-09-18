@@ -47,13 +47,21 @@ describe("deriveOwnerManagement — sealed precedence and capabilities", () => {
     expect(m.awaitingActivation).toBe(false);
   });
 
-  it("DEACTIVATED + draft/pending/correction keeps the affordance until a request exists", () => {
-    for (const editStatus of ["EDIT_DRAFT", "PENDING_MODERATION", "CORRECTION_REQUIRED"] as const) {
+  it("DEACTIVATED + draft/pending keeps the affordance until a request exists", () => {
+    for (const editStatus of ["EDIT_DRAFT", "PENDING_MODERATION"] as const) {
       const m = derive({ sellerDeactivatedAt: PAST, editStatus });
       expect(m.primary).toBe("DEACTIVATED");
       expect(m.canReactivate).toBe(true);
       expect(m.awaitingActivation).toBe(false);
     }
+  });
+
+  it("DEACTIVATED + CORRECTION shows only Düzəliş et (Stage C matrix: no Aktiv et)", () => {
+    const m = derive({ sellerDeactivatedAt: PAST, editStatus: "CORRECTION_REQUIRED" });
+    expect(m.primary).toBe("DEACTIVATED");
+    expect(m.canReactivate).toBe(false);
+    expect(m.editAction).toBe("FIX");
+    expect(m.awaitingActivation).toBe(false);
   });
 
   it("DEACTIVATED + PENDING/CORRECTION + requested → awaiting line replaces the button", () => {
@@ -96,6 +104,31 @@ describe("deriveOwnerManagement — sealed precedence and capabilities", () => {
       expect(m.canReactivate).toBe(false);
       expect(m.canEdit).toBe(false);
     }
+  });
+
+  it("editAction: ONE affordance per card — start, resume, view, fix", () => {
+    expect(derive({}).editAction).toBe("EDIT");
+    expect(derive({ editStatus: "EDIT_DRAFT" }).editAction).toBe("CONTINUE");
+    expect(derive({ editStatus: "PENDING_MODERATION" }).editAction).toBe("VIEW");
+    expect(derive({ editStatus: "CORRECTION_REQUIRED" }).editAction).toBe("FIX");
+    // terminal revisions never resume — a fresh edit starts instead
+    expect(derive({ status: "EXPIRED", currentExpiresAt: PAST, editStatus: "APPROVED" }).editAction).toBe("EDIT");
+    expect(derive({ status: "SUSPENDED" }).editAction).toBeNull();
+    expect(derive({ status: "SOLD" }).editAction).toBeNull();
+    expect(derive({ status: "DRAFT", currentExpiresAt: null }).editAction).toBeNull();
+  });
+
+  it("renewal capability: open edit hides it; APPROVED upgrades it (sealed order)", () => {
+    expect(derive({}).renewal).toBeNull();
+    const ex = (editStatus: Parameters<typeof derive>[0]["editStatus"]) =>
+      derive({ status: "EXPIRED", currentExpiresAt: PAST, editStatus }).renewal;
+    expect(ex(null)).toBe("RENEW");
+    expect(ex("EDIT_DRAFT")).toBe("HIDDEN");
+    expect(ex("PENDING_MODERATION")).toBe("HIDDEN");
+    expect(ex("CORRECTION_REQUIRED")).toBe("HIDDEN");
+    expect(ex("APPROVED")).toBe("RENEW_ACTIVATE");
+    // effective expiry (job lag) carries the same renewal contract
+    expect(derive({ currentExpiresAt: PAST, editStatus: "EDIT_DRAFT" }).renewal).toBe("HIDDEN");
   });
 
   it("pre-publication statuses stay outside the O.12 management surface", () => {

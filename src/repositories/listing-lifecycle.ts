@@ -30,6 +30,7 @@ export interface LifecycleListingRow {
   barter_available: boolean;
   no_accident: boolean | null;
   not_repainted: boolean | null;
+  currency: string;
   description: string | null;
   contact_phone_e164: string | null;
   seller_name: string | null;
@@ -57,7 +58,7 @@ export async function lockOwnedListingForLifecycle(
       l.mileage, l.engine_cc, l.fuel_type_id, l.transmission_id,
       l.body_type_id, l.drive_type_id, l.motorcycle_type_id, l.color_id,
       l.city_id, l.credit_available, l.barter_available,
-      l.no_accident, l.not_repainted, l.description,
+      l.no_accident, l.not_repainted, l.currency, l.description,
       l.contact_phone_e164, l.seller_name,
       l.status, l.revision, l.current_expires_at,
       l.seller_deactivated_at, l.seller_reactivation_requested_at,
@@ -66,6 +67,33 @@ export async function lockOwnedListingForLifecycle(
     join categories c on c.id = l.category_id
     where l.id = ${listingId} and l.owner_id = ${ownerId}
     for update of l
+  `;
+  return rows[0];
+}
+
+/** Owner-scoped plain read (no lock) — for read paths that must not
+    hold row locks across storage signing (same shape). */
+export async function getOwnedListingForLifecycle(
+  sql: Sql,
+  listingId: string,
+  ownerId: string,
+): Promise<LifecycleListingRow | undefined> {
+  const rows = await sql<LifecycleListingRow[]>`
+    select
+      l.id, l.public_id::text as public_id, l.owner_id, l.category_id,
+      c.code as category_code,
+      l.brand_id, l.model_id, l.year, l.price_minor::text as price_minor,
+      l.mileage, l.engine_cc, l.fuel_type_id, l.transmission_id,
+      l.body_type_id, l.drive_type_id, l.motorcycle_type_id, l.color_id,
+      l.city_id, l.credit_available, l.barter_available,
+      l.no_accident, l.not_repainted, l.currency, l.description,
+      l.contact_phone_e164, l.seller_name,
+      l.status, l.revision, l.current_expires_at,
+      l.seller_deactivated_at, l.seller_reactivation_requested_at,
+      l.sold_at, l.deleted_at
+    from listings l
+    join categories c on c.id = l.category_id
+    where l.id = ${listingId} and l.owner_id = ${ownerId}
   `;
   return rows[0];
 }
@@ -84,7 +112,7 @@ export async function lockListingForLifecycle(
       l.mileage, l.engine_cc, l.fuel_type_id, l.transmission_id,
       l.body_type_id, l.drive_type_id, l.motorcycle_type_id, l.color_id,
       l.city_id, l.credit_available, l.barter_available,
-      l.no_accident, l.not_repainted, l.description,
+      l.no_accident, l.not_repainted, l.currency, l.description,
       l.contact_phone_e164, l.seller_name,
       l.status, l.revision, l.current_expires_at,
       l.seller_deactivated_at, l.seller_reactivation_requested_at,

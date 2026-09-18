@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PublicApiError } from "@/lib/marketplace/public-api";
 import {
-  fetchOwnerListing,
-  patchListing,
+  draftEditorApi,
+  type EditorApi,
   type OwnerListingDto,
   type PatchBody,
 } from "@/lib/seller/owner-api";
@@ -27,7 +27,12 @@ const DEBOUNCE_MS = 800;
  * saving until the seller explicitly reloads the server version —
  * local changes are never silently pushed over newer state.
  */
-export function useListingEditor(initial: OwnerListingDto) {
+export function useListingEditor(
+  initial: OwnerListingDto,
+  /** Persistence target: the draft endpoints (default) or the O.12
+      edit-revision endpoints — same contract, one editor. */
+  api: EditorApi = draftEditorApi,
+) {
   const [dto, setDto] = useState(initial);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [conflict, setConflict] = useState(false);
@@ -83,7 +88,7 @@ export function useListingEditor(initial: OwnerListingDto) {
     setSaveState("saving");
     setSaveError(null);
     try {
-      const next = await patchListing(dtoRef.current.id, dtoRef.current.revision, fields);
+      const next = await api.patch(dtoRef.current.id, dtoRef.current.revision, fields);
       adoptDto(next);
       setSaveState(Object.keys(pendingRef.current).length > 0 ? "dirty" : "saved");
       return true;
@@ -91,7 +96,7 @@ export function useListingEditor(initial: OwnerListingDto) {
       handleMutationError(error);
       return false;
     }
-  }, [adoptDto, handleMutationError]);
+  }, [adoptDto, api, handleMutationError]);
 
   const drain = useCallback(async () => {
     let ok = true;
@@ -158,7 +163,7 @@ export function useListingEditor(initial: OwnerListingDto) {
         try {
           const result = await op();
           if (options.refetch !== false) {
-            adoptDto(await fetchOwnerListing(dtoRef.current.id));
+            adoptDto(await api.fetch(dtoRef.current.id));
           }
           return result;
         } catch (error) {
@@ -169,12 +174,12 @@ export function useListingEditor(initial: OwnerListingDto) {
         }
       });
     },
-    [adoptDto, enqueue, handleMutationError, sendPending],
+    [adoptDto, api, enqueue, handleMutationError, sendPending],
   );
 
   /** Explicit conflict recovery: adopt the server version, drop local edits. */
   const reloadFromServer = useCallback(async () => {
-    const fresh = await fetchOwnerListing(dtoRef.current.id);
+    const fresh = await api.fetch(dtoRef.current.id);
     pendingRef.current = {};
     conflictRef.current = false;
     adoptDto(fresh);
@@ -182,7 +187,7 @@ export function useListingEditor(initial: OwnerListingDto) {
     setSaveState("idle");
     setSaveError(null);
     setResetKey((k) => k + 1); // remounts field components onto fresh values
-  }, [adoptDto]);
+  }, [adoptDto, api]);
 
   /**
    * Freshest revision at call time (dtoRef, not render state) — for
@@ -202,6 +207,7 @@ export function useListingEditor(initial: OwnerListingDto) {
   return useMemo(
     () => ({
       dto,
+      api,
       saveState,
       dirty,
       conflict,
@@ -214,7 +220,7 @@ export function useListingEditor(initial: OwnerListingDto) {
       adoptDto,
       currentRevision,
     }),
-    [dto, saveState, dirty, conflict, saveError, resetKey, patch, flush, runExclusive, reloadFromServer, adoptDto, currentRevision],
+    [dto, api, saveState, dirty, conflict, saveError, resetKey, patch, flush, runExclusive, reloadFromServer, adoptDto, currentRevision],
   );
 }
 

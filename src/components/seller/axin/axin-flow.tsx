@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { ResultPanel } from "@/components/ui/result-panel";
 import { formatPriceMinor } from "@/lib/format";
@@ -11,11 +11,16 @@ import { LISTING_YEAR_MIN, listingYearMax } from "@/lib/config/marketplace";
 import { SELLER, UI } from "@/lib/marketplace/labels";
 import { PublicApiError } from "@/lib/marketplace/public-api";
 import {
+  cancelEditRevision,
+  draftEditorApi,
+  editEditorApi,
   resubmitListing,
+  submitEditRevision,
   submitListing,
   type OwnerListingDto,
   type SubmitResult,
 } from "@/lib/seller/owner-api";
+import type { EditContextDto } from "@/services/listing-edit";
 import { MISSING_FIELD_LABELS, REASON_LABELS } from "@/lib/seller/status";
 import { STAGES, STAGE_COUNT, correctionEntryStage, deriveResumeStage, type StageKey } from "@/lib/seller/journey";
 import { PayButton } from "@/components/seller/pay-button";
@@ -76,6 +81,11 @@ interface SubmitErrorView {
 
 function submitErrorView(error: unknown): SubmitErrorView {
   if (error instanceof PublicApiError) {
+    if (error.code === "LISTING_LIFECYCLE_CONFLICT") {
+      // O.12: the edit is no longer available or its moderation state
+      // changed in another session — same conflict language everywhere
+      return { title: SELLER.lifecycleConflict, items: [], sections: [] };
+    }
     if (error.code === "LISTING_INCOMPLETE") {
       const details = error.details as { missing?: string[] } | null;
       const codes = details?.missing ?? [];
@@ -100,6 +110,7 @@ export function AxinFlow({
   feedback,
   authPhoneE164,
   authDisplayName,
+  edit,
 }: {
   initial: OwnerListingDto;
   feedback: SellerModerationFeedbackDto | null;
@@ -108,14 +119,30 @@ export function AxinFlow({
       through the normal PATCH. */
   authPhoneE164: string;
   authDisplayName: string | null;
+  /** O.12 EDIT mode — explicit, never inferred. Present = the editor
+      persists into the open edit revision; absent = NEW-listing flow,
+      byte-for-byte unchanged. */
+  edit?: { context: EditContextDto; activateIntent: boolean };
 }) {
-  const editor = useListingEditor(initial);
+  const isEdit = edit !== undefined;
+  const editor = useListingEditor(initial, isEdit ? editEditorApi : draftEditorApi);
   const catalog = useWizardCatalog(editor.dto.category, editor.dto.brandId);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<SubmitErrorView | null>(null);
   const [result, setResult] = useState<SubmitResult | null>(null);
-  const isResubmission = initial.status !== "DRAFT";
+  const [editResult, setEditResult] = useState<"SUBMITTED" | "CANCELLED" | null>(null);
+  const isResubmission = !isEdit && initial.status !== "DRAFT";
   const dto = editor.dto;
+
+  // O.12 edit context (03-axin-edit-mode.md): expired wins, then the
+  // requested/deactivated variants, then the active strip. The
+  // combined submit-and-activate CTA follows the same intent.
+  const editExpired = isEdit && edit.context.effectiveExpired;
+  const editActivate =
+    isEdit &&
+    !editExpired &&
+    edit.context.sellerDeactivated &&
+    (edit.context.reactivationRequested || edit.activateIntent);
 
   // STAGE VALIDITY — required data of each stage (validation.md).
   // This is NOT visited state and NOT completion display: it only
@@ -133,11 +160,16 @@ export function AxinFlow({
   // no DB field, no API). Under the strict sequential NEW journey,
   // visited ≡ index <= furthestIndex. Resume derivation is the pure
   // audited hierarchy; Stage C finalizes correction deep-linking.
+  // Correction entry (NEW resubmission or O.12 edit correction) deep-
+  // links by reason and unlocks the whole journey; otherwise the pure
+  // data-derived resume applies (a complete edit snapshot → Review).
+  const correctionEntry =
+    isResubmission || (isEdit && edit.context.editStatus === "CORRECTION_REQUIRED");
   const [openStage, setOpenStage] = useState<StageKey>(() =>
-    isResubmission ? correctionEntryStage(feedback?.reasonCode ?? null) : deriveResumeStage(initial),
+    correctionEntry ? correctionEntryStage(feedback?.reasonCode ?? null) : deriveResumeStage(initial),
   );
   const [furthestIndex, setFurthestIndex] = useState<number>(() =>
-    isResubmission ? STAGES.indexOf("review") : STAGES.indexOf(deriveResumeStage(initial)),
+    correctionEntry ? STAGES.indexOf("review") : STAGES.indexOf(deriveResumeStage(initial)),
   );
   const openIndex = STAGES.indexOf(openStage);
 
@@ -191,6 +223,19 @@ export function AxinFlow({
     try {
       const flushed = await editor.flush();
       if (!flushed) return;
+      if (isEdit) {
+        // revision submit: PURE revision transition (no status change,
+        // no fee/quota/publication); `activate` records the combined
+        // submit-and-activate intent for approval-time finalization
+        const submitted = await editor.runExclusive(
+          () => submitEditRevision(editor.dto.id, editor.currentRevision(), editActivate),
+          { refetch: false },
+        );
+        if (submitted !== null) {
+          setEditResult("SUBMITTED");
+        }
+        return;
+      }
       const submitFn = isResubmission ? resubmitListing : submitListing;
       // revision is read AT SEND TIME inside the serialized queue —
       // a just-queued immediate patch (skip-promo clearing) must not
@@ -222,6 +267,9 @@ export function AxinFlow({
     await submit();
   }
 
+  if (editResult !== null) {
+    return <EditResultScreen outcome={editResult} expired={editExpired} activate={editActivate} />;
+  }
   if (result !== null) {
     return <SubmitResultScreen result={result} />;
   }
@@ -239,7 +287,9 @@ export function AxinFlow({
       <div className="bg-navy text-white">
         <div className="relative mx-auto flex h-12 max-w-full items-center justify-center gap-3 px-4 md:max-w-[540px] md:justify-between md:px-6 desk:max-w-[640px] desk:px-0 xl:max-w-[680px]">
           <p className="hidden min-w-0 truncate text-[13px] md:block">
-            <span className="font-bold">{SELLER.newListing}</span>
+            <span className="font-bold" data-testid="axin-header-title">
+              {isEdit ? SELLER.editHeader : SELLER.newListing}
+            </span>
             <span className="hidden text-white/60 md:inline"> · {SELLER.autosaveHint}</span>
           </p>
           <div className="flex shrink-0 items-center gap-2">
@@ -270,7 +320,44 @@ export function AxinFlow({
         </div>
       </div>
 
+      {/* O.12 edit context strip — ONE strip under the header (never
+          per-stage banners): expired amber, otherwise deactivated /
+          requested / active variants. */}
+      {isEdit ? (
+        <div
+          className={editExpired ? "bg-[#FBEED8]" : "bg-[#EDF4F0]"}
+          data-testid="edit-context-strip"
+          data-variant={
+            editExpired
+              ? "expired"
+              : editActivate
+                ? "deactivated-requested"
+                : edit.context.sellerDeactivated
+                  ? "deactivated"
+                  : "active"
+          }
+        >
+          <p className="mx-auto max-w-full px-4 py-2 text-[11.5px] leading-normal text-ink md:max-w-[540px] md:px-6 desk:max-w-[640px] desk:px-0 xl:max-w-[680px]">
+            {editExpired
+              ? SELLER.stripExpired
+              : editActivate
+                ? SELLER.stripDeactivatedRequested
+                : edit.context.sellerDeactivated
+                  ? SELLER.stripDeactivated
+                  : SELLER.stripActive}
+          </p>
+        </div>
+      ) : null}
+
       <div className="mx-auto max-w-full px-4 pb-24 pt-5 md:max-w-[540px] md:px-6 desk:max-w-[640px] desk:px-0 desk:pb-8 xl:max-w-[680px]">
+        {isEdit && edit.activateIntent && edit.context.editStatus === "EDIT_DRAFT" && !edit.context.reactivationRequested ? (
+          <p
+            className="mb-4 rounded-control bg-primary-tint px-3.5 py-2.5 text-[12.5px] font-medium text-primary"
+            data-testid="edit-activate-notice"
+          >
+            {SELLER.activateWithDraftNotice}
+          </p>
+        ) : null}
         {editor.conflict ? (
           <div
             role="alert"
@@ -287,7 +374,11 @@ export function AxinFlow({
 
         {feedback !== null ? (
           <div className="mb-4 rounded-control border-l-4 border-warning bg-warning-soft p-4" data-testid="wizard-feedback">
-            <h2 className="text-sm font-semibold text-warning">{SELLER.moderationFeedback}</h2>
+            {/* edit mode scopes the reason to the REDAKTƏ — the
+                approved public listing is conceptually separate */}
+            <h2 className="text-sm font-semibold text-warning">
+              {isEdit ? SELLER.chipEditCorrection : SELLER.moderationFeedback}
+            </h2>
             <p className="mt-1 text-sm font-medium text-ink">
               {feedback.reasonCode !== null ? (REASON_LABELS[feedback.reasonCode] ?? feedback.reasonCode) : null}
             </p>
@@ -408,6 +499,7 @@ export function AxinFlow({
               editor={editor}
               catalog={catalog}
               isResubmission={isResubmission}
+              editMode={isEdit}
               onEdit={(section) =>
                 openVisited(section === "contact" || section === "extras" ? "infoContact" : (section as StageKey))
               }
@@ -434,9 +526,17 @@ export function AxinFlow({
                 disabled={submitting || editor.conflict}
                 data-testid="wizard-submit"
               >
-                {submitting ? SELLER.submitting : isResubmission ? SELLER.resubmit : SELLER.submit}
+                {submitting
+                  ? SELLER.submitting
+                  : isEdit
+                    ? editActivate
+                      ? SELLER.reviewSubmitEditActivate
+                      : SELLER.reviewSubmitEdit
+                    : isResubmission
+                      ? SELLER.resubmit
+                      : SELLER.submit}
               </Button>
-              {!isResubmission ? (
+              {!isResubmission && !isEdit ? (
                 <button
                   type="button"
                   onClick={() => void skipPromoAndSubmit()}
@@ -450,8 +550,178 @@ export function AxinFlow({
             </div>
           </SectionCard>
         </div>
+
+        {/* O.12 cancel edit (05-cancel-edit.md): low-priority ghost
+            under the wizard, EDIT_DRAFT / CORRECTION_REQUIRED only —
+            the pending read-only view never renders this component. */}
+        {isEdit ? (
+          <CancelEditAction
+            listingId={dto.id}
+            currentRevision={editor.currentRevision}
+            onCancelled={() => setEditResult("CANCELLED")}
+            disabled={submitting}
+          />
+        ) : null}
       </div>
     </div>
+  );
+}
+
+/** Ghost cancel action + confirm dialog (390: bottom sheet). Confirm
+    is outlined danger — destructive to the DRAFT only. */
+function CancelEditAction({
+  listingId,
+  currentRevision,
+  onCancelled,
+  disabled,
+}: {
+  listingId: string;
+  currentRevision: () => number;
+  onCancelled: () => void;
+  disabled: boolean;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!confirming) return;
+    dialogRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setConfirming(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [confirming]);
+
+  async function cancelEdit() {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    try {
+      await cancelEditRevision(listingId, currentRevision());
+      onCancelled();
+    } catch (err) {
+      setError(
+        err instanceof PublicApiError &&
+          (err.code === "LISTING_REVISION_CONFLICT" || err.code === "LISTING_LIFECYCLE_CONFLICT")
+          ? SELLER.lifecycleConflict
+          : SELLER.saveError,
+      );
+      setConfirming(false);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="mt-6 flex flex-col items-center gap-2">
+      <button
+        ref={triggerRef}
+        type="button"
+        disabled={disabled || pending}
+        onClick={() => setConfirming(true)}
+        data-testid="edit-cancel"
+        className="inline-flex min-h-11 items-center justify-center rounded-control px-4 text-[13px] font-medium text-slate-strong transition-colors duration-150 hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {SELLER.actionCancelEdit}
+      </button>
+      <p aria-live="polite" className="m-0 min-h-0" data-testid="edit-cancel-feedback">
+        {error !== null ? (
+          <span className="block text-xs font-medium text-danger">{error}</span>
+        ) : null}
+      </p>
+
+      {confirming ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center"
+          onClick={() => setConfirming(false)}
+        >
+          <div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-edit-title"
+            aria-describedby="cancel-edit-body"
+            tabIndex={-1}
+            data-testid="cancel-edit-dialog"
+            onClick={(event) => event.stopPropagation()}
+            className="w-full rounded-t-[14px] bg-raised p-5 outline-none md:w-[400px] md:rounded-card"
+          >
+            <h2 id="cancel-edit-title" className="text-[15px] font-bold text-ink">
+              {SELLER.cancelEditDialogTitle}
+            </h2>
+            <p id="cancel-edit-body" className="mt-2 text-[13px] leading-relaxed text-slate-strong">
+              {SELLER.cancelEditDialogBody}
+            </p>
+            <div className="mt-4 flex flex-col gap-2 md:flex-row md:justify-end">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => void cancelEdit()}
+                data-testid="cancel-edit-confirm"
+                className="inline-flex min-h-11 items-center justify-center rounded-control border border-danger px-4 text-sm font-semibold text-danger transition-colors duration-150 hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50 md:order-2"
+              >
+                {SELLER.actionCancelEdit}
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  setConfirming(false);
+                  triggerRef.current?.focus();
+                }}
+                data-testid="cancel-edit-back"
+                className="inline-flex min-h-11 items-center justify-center rounded-control border border-line-strong px-4 text-sm font-semibold text-ink transition-colors duration-150 hover:border-muted md:order-1"
+              >
+                {SELLER.cancelEditDialogBack}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Post-submit / post-cancel outcome for EDIT mode — server state is
+    already final; the seller returns to My Listings. */
+function EditResultScreen({
+  outcome,
+  expired,
+  activate,
+}: {
+  outcome: "SUBMITTED" | "CANCELLED";
+  expired: boolean;
+  activate: boolean;
+}) {
+  const submitted = outcome === "SUBMITTED";
+  return (
+    <ResultPanel
+      tone={submitted ? "success" : "neutral"}
+      title={submitted ? SELLER.toastEditSubmitted : SELLER.toastEditCancelled}
+      hint={
+        submitted
+          ? expired
+            ? SELLER.expiredRenewHint
+            : activate
+              ? SELLER.afterModeration
+              : SELLER.stripActive
+          : SELLER.cancelEditDialogBody
+      }
+      data-testid="edit-result"
+      data-outcome={outcome}
+      actions={
+        <Link href="/profil/elanlar" className={buttonClasses("primary", "px-6")}>
+          {UI.myListings}
+        </Link>
+      }
+    />
   );
 }
 
