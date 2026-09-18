@@ -11,11 +11,14 @@ import type { SearchSort } from "@/lib/config/marketplace";
 
 type Fragment = ReturnType<Sql>;
 
-/** The public visibility invariant — the ONLY definition in the codebase. */
+/** The public visibility invariant — the ONLY definition in the codebase.
+    O.12: a seller-deactivated listing (seller_deactivated_at set) is
+    removed from every public surface while its status/validity/promotion
+    clocks keep running untouched. */
 export function publicVisible(sql: Sql, alias = "l"): Fragment {
   return alias === "l"
-    ? sql`l.status = 'ACTIVE' and l.current_expires_at > now()`
-    : sql`lst.status = 'ACTIVE' and lst.current_expires_at > now()`;
+    ? sql`l.status = 'ACTIVE' and l.current_expires_at > now() and l.seller_deactivated_at is null`
+    : sql`lst.status = 'ACTIVE' and lst.current_expires_at > now() and lst.seller_deactivated_at is null`;
 }
 
 /** Promotion currently valid: time window is truth; lagging status flips cannot hide/extend. */
@@ -308,6 +311,7 @@ export interface DetailRow {
   public_id: string;
   status: string;
   current_expires_at: Date | null;
+  seller_deactivated_at: Date | null;
   category: string;
   brand: string | null;
   model: string | null;
@@ -342,7 +346,7 @@ export async function getPublicDetail(
   publicId: number,
 ): Promise<DetailRow | undefined> {
   const rows = await sql<DetailRow[]>`
-    select l.id, l.public_id::text as public_id, l.status, l.current_expires_at,
+    select l.id, l.public_id::text as public_id, l.status, l.current_expires_at, l.seller_deactivated_at,
            c.code as category, b.name as brand, m.name as model, l.year,
            l.price_minor::text as price_minor, l.currency, l.mileage, l.engine_cc, l.no_accident, l.not_repainted,
            ft.name_az as fuel_type, tr.name_az as transmission, bt.name_az as body_type,

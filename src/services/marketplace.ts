@@ -480,6 +480,12 @@ export async function publicDetail(
   if (row === undefined) {
     throw new ApiError("LISTING_NOT_FOUND", "Listing not found.");
   }
+  // O.12: a seller-deactivated listing is a NON-public state on the
+  // direct URL too — the uniform not-found path, never a new public
+  // state (SOLD/EXPIRED limited views stay exactly as they are).
+  if (row.seller_deactivated_at !== null) {
+    throw new ApiError("LISTING_NOT_FOUND", "Listing not found.");
+  }
   const timeValid = row.current_expires_at !== null && row.current_expires_at.getTime() > Date.now();
   let publicStatus: PublicDetailDto["status"];
   if (row.status === "ACTIVE" && timeValid) publicStatus = "ACTIVE";
