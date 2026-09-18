@@ -9,6 +9,11 @@ import {
   type OwnerCardRow,
 } from "@/repositories/my-listings";
 import { RESUBMITTABLE_STATUSES } from "@/services/listing-states";
+import {
+  deriveOwnerManagement,
+  type OwnerEditState,
+  type OwnerManagement,
+} from "@/lib/seller/management";
 
 /**
  * Seller-facing "My Listings" read model + the seller-safe moderation
@@ -24,6 +29,8 @@ export const MY_LISTINGS_FILTERS = {
   moderation: ["PENDING_MODERATION"],
   draft: ["DRAFT"],
   correction: ["CORRECTION_REQUIRED", "REJECTED"],
+  /** O.12: seller-deactivated listings (flag-based, any status). */
+  deactivated: null,
 } as const;
 
 export type MyListingsFilter = keyof typeof MY_LISTINGS_FILTERS;
@@ -64,6 +71,11 @@ export interface OwnerCardDto {
   premiumSatisfied: boolean;
   boostSatisfied: boolean;
   moderationFeedback: SellerModerationFeedbackDto | null;
+  /** O.12 seller lifecycle (additive). */
+  sellerDeactivatedAt: string | null;
+  reactivationRequested: boolean;
+  editRevision: { id: string; status: string; submittedAt: string | null } | null;
+  management: OwnerManagement;
 }
 
 function feedbackVisible(status: string): boolean {
@@ -129,6 +141,28 @@ async function toCardDto(row: OwnerCardRow): Promise<OwnerCardDto> {
     premiumSatisfied: row.premium_satisfied,
     boostSatisfied: row.boost_satisfied,
     moderationFeedback: feedback,
+    sellerDeactivatedAt: row.seller_deactivated_at?.toISOString() ?? null,
+    reactivationRequested: row.seller_reactivation_requested_at !== null,
+    editRevision:
+      row.edit_revision_id === null ||
+      row.edit_revision_status === "REJECTED" ||
+      row.edit_revision_status === "CANCELLED"
+        ? null
+        : {
+            id: row.edit_revision_id,
+            status: row.edit_revision_status!,
+            submittedAt: row.edit_revision_submitted_at?.toISOString() ?? null,
+          },
+    management: deriveOwnerManagement({
+      status: row.status,
+      currentExpiresAt: row.current_expires_at?.toISOString() ?? null,
+      sellerDeactivatedAt: row.seller_deactivated_at?.toISOString() ?? null,
+      reactivationRequested: row.seller_reactivation_requested_at !== null,
+      editStatus:
+        row.edit_revision_status === "REJECTED" || row.edit_revision_status === "CANCELLED"
+          ? null
+          : ((row.edit_revision_status as OwnerEditState) ?? null),
+    }),
   };
 }
 
@@ -136,11 +170,12 @@ export async function myListings(
   auth: AuthContext,
   filter: MyListingsFilter,
 ): Promise<OwnerCardDto[]> {
-  const rows = await listOwnerListings(
-    getSql(),
-    auth.user.id,
-    MY_LISTINGS_FILTERS[filter] === null ? null : [...MY_LISTINGS_FILTERS[filter]!],
-  );
+  const rows = await listOwnerListings(getSql(), auth.user.id, {
+    statuses: MY_LISTINGS_FILTERS[filter] === null ? null : [...MY_LISTINGS_FILTERS[filter]!],
+    // Deaktiv is a dedicated place to manage hidden listings; the
+    // Aktiv tab therefore never carries Deaktiv-classified cards.
+    deactivated: filter === "deactivated" ? "only" : filter === "active" ? "exclude" : undefined,
+  });
   return Promise.all(rows.map(toCardDto));
 }
 

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { formatDateAz, formatMileage, formatPriceMinor, vehicleTitle } from "@/lib/format";
 import { SELLER } from "@/lib/marketplace/labels";
-import { REASON_LABELS, statusPresentation } from "@/lib/seller/status";
+import { REASON_LABELS, statusPresentation, type StatusPresentation } from "@/lib/seller/status";
+import { ListingLifecycleActions } from "@/components/seller/listing-lifecycle-actions";
 import type { OwnerCardDto } from "@/services/my-listings";
 
 // Approved status chip recipe: borderless tint + dot (components.md).
@@ -13,9 +14,41 @@ const TONE_CLASSES: Record<string, string> = {
   danger: "bg-danger-soft text-danger",
 };
 
+/** O.12 secondary edit-lifecycle chip (09-copy.md; the primary status
+    pill stays authoritative — never demoted by a pending edit). */
+function editChip(listing: OwnerCardDto): { label: string; className: string } | null {
+  const m = listing.management;
+  if (m.editStatus === null || m.primary === "PRE_PUBLICATION") return null;
+  if (m.editStatus === "EDIT_DRAFT") {
+    return m.primary === "DEACTIVATED"
+      ? { label: SELLER.chipDeactivatedDraft, className: "bg-sunken text-slate-strong" }
+      : { label: SELLER.chipEditDraft, className: "bg-success-soft text-success" };
+  }
+  if (m.editStatus === "PENDING_MODERATION") {
+    return { label: SELLER.chipEditPending, className: "bg-sunken text-slate-strong" };
+  }
+  if (m.editStatus === "CORRECTION_REQUIRED") {
+    return { label: SELLER.chipEditCorrection, className: "bg-warning-soft text-warning" };
+  }
+  if (m.editStatus === "APPROVED" && m.primary === "EXPIRED") {
+    return { label: SELLER.chipEditApproved, className: "bg-success-soft text-success" };
+  }
+  return null;
+}
+
 /** Owner card: status-first presentation with a context action. */
 export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
-  const presentation = statusPresentation(listing.status);
+  const m = listing.management;
+  // O.12 sealed precedence drives the PRIMARY pill; effective expiry
+  // (deadline passed, job lagging) presents as EXPIRED, and Deaktiv
+  // gets its own presentation with no public link.
+  const presentation: StatusPresentation =
+    m.primary === "DEACTIVATED"
+      ? { label: SELLER.statusDeactivated, tone: "neutral", action: { kind: "none" } }
+      : m.effectiveExpired
+        ? statusPresentation("EXPIRED")
+        : statusPresentation(listing.status);
+  const chip = editChip(listing);
   const title = vehicleTitle(listing);
   const href =
     presentation.action.kind === "wizard"
@@ -48,6 +81,14 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
             <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
             {presentation.label}
           </span>
+          {chip !== null ? (
+            <span
+              className={`inline-flex items-center rounded-pill px-2 py-0.5 text-[10.5px] font-semibold ${chip.className}`}
+              data-testid="owner-edit-chip"
+            >
+              {chip.label}
+            </span>
+          ) : null}
           <span className="text-[11.5px] tracking-[0.01em] text-muted">
             {listing.imageCount} {SELLER.photosCount}
           </span>
@@ -72,6 +113,16 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
             ) : null}
           </p>
         ) : null}
+        {m.primary === "DEACTIVATED" ? (
+          <p className="text-xs text-muted" data-testid="owner-deactivated-meta">
+            {SELLER.deactivatedMeta}
+          </p>
+        ) : null}
+        {m.awaitingActivation ? (
+          <p className="mt-1 text-xs font-semibold text-slate-strong" data-testid="owner-awaiting-activation">
+            {SELLER.afterModeration}
+          </p>
+        ) : null}
         {listing.moderationFeedback !== null ? (
           <p className="mt-1 rounded-control bg-danger-soft px-2.5 py-1.5 text-xs leading-relaxed text-danger" data-testid="owner-feedback">
             <span className="font-semibold">{SELLER.moderationFeedback}: </span>
@@ -82,8 +133,9 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
           </p>
         ) : null}
       </div>
-      {href !== null && presentation.action.kind !== "none" ? (
+      {href !== null || m.canDeactivate || m.canReactivate ? (
         <div className="flex shrink-0 flex-col items-stretch justify-center gap-2">
+          {href !== null && presentation.action.kind !== "none" ? (
           <Link
             href={href}
             className="inline-flex min-h-12 items-center justify-center rounded-control border border-primary px-3 text-sm font-semibold tracking-[0.01em] text-primary transition-colors duration-150 hover:bg-primary-tint active:bg-primary-tint-pressed"
@@ -91,7 +143,8 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
           >
             {presentation.action.label}
           </Link>
-          {listing.status === "ACTIVE" ? (
+          ) : null}
+          {listing.status === "ACTIVE" && m.primary === "ACTIVE" ? (
             (() => {
               // O.9 post-ACTIVE handoff: a creation-time intent is
               // pending only while no same-type SUCCESS payment exists
@@ -116,6 +169,9 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
                 </Link>
               );
             })()
+          ) : null}
+          {m.canDeactivate || m.canReactivate ? (
+            <ListingLifecycleActions listingId={listing.id} revision={listing.revision} management={m} />
           ) : null}
         </div>
       ) : null}

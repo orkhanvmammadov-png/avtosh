@@ -141,12 +141,18 @@ describe("migration / schema integrity", () => {
       { column_name: "seller_deactivated_at", is_nullable: "YES" },
       { column_name: "seller_reactivation_requested_at", is_nullable: "YES" },
     ]);
-    const dirty = await sql<{ n: string }[]>`
-      select count(*)::text as n from listings
-      where (seller_deactivated_at is not null or seller_reactivation_requested_at is not null)
-        and owner_id <> ${ownerId}
+    // no-backfill contract, asserted hermetically (other test files now
+    // legitimately set these flags on their own fixtures): a row that
+    // never touches the columns gets NULL for both.
+    const fresh = await insertListing({});
+    const [defaults] = await sql<
+      { seller_deactivated_at: Date | null; seller_reactivation_requested_at: Date | null }[]
+    >`
+      select seller_deactivated_at, seller_reactivation_requested_at
+      from listings where id = ${fresh.id}
     `;
-    expect(Number(dirty[0].n)).toBe(0); // no backfill anywhere
+    expect(defaults.seller_deactivated_at).toBeNull();
+    expect(defaults.seller_reactivation_requested_at).toBeNull();
   });
 
   it("edit_revision_status enum has exactly the six sealed values", async () => {

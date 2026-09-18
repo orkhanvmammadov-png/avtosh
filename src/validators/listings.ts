@@ -101,6 +101,11 @@ export const submitListingSchema = z
   })
   .strict();
 
+/** O.12 seller lifecycle actions (deactivate/reactivate). */
+export const lifecycleActionSchema = z
+  .object({ expected_revision: z.number().int().min(1) })
+  .strict();
+
 export const resubmitListingSchema = submitListingSchema;
 
 export const myListingsQuerySchema = z

@@ -547,3 +547,42 @@ export async function insertTestFeature(
     await sql.end();
   }
 }
+
+/** O.12 Stage B: set the seller lifecycle flags directly (fixtures for
+    states the UI itself creates through deactivate/reactivate). */
+export async function setListingSellerLifecycle(
+  listingId: string,
+  options: { deactivated?: boolean; requested?: boolean },
+): Promise<void> {
+  const sql = db();
+  try {
+    await sql`
+      update listings
+      set seller_deactivated_at = ${options.deactivated === true ? sql`now()` : null},
+          seller_reactivation_requested_at = ${options.requested === true ? sql`now()` : null}
+      where id = ${listingId}
+    `;
+  } finally {
+    await sql.end();
+  }
+}
+
+/** O.12 Stage B: insert an edit revision fixture in a given status —
+    Stage C owns creating these through the UI. */
+export async function insertEditRevisionFixture(
+  listingId: string,
+  status: "EDIT_DRAFT" | "PENDING_MODERATION" | "CORRECTION_REQUIRED",
+): Promise<string> {
+  const sql = db();
+  try {
+    const [row] = await sql<{ id: string }[]>`
+      insert into listing_edit_revisions (listing_id, status, data, submitted_at)
+      values (${listingId}, ${status}::edit_revision_status, '{}'::jsonb,
+        ${status === "EDIT_DRAFT" ? null : sql`now()`})
+      returning id
+    `;
+    return row.id;
+  } finally {
+    await sql.end();
+  }
+}
