@@ -1,0 +1,4 @@
+# Component map
+REUSE (unchanged): O.10 listing card shell, status pill, .btnP/.btnS/ghost hierarchy, dialog + bottom-sheet patterns, toasts, AXIN 6-stage wizard + Review, autosave chips, O.11 equipment display + names, moderator queue table + decision/reason model, correction banner.
+NEW / ADDITIVE (5): secondary edit-status chip (card-level) · edit context strip (wizard header) · moderator queue type tag · diff row primitive (label / struck-old / → / tinted-new; boolean + scalar variants) · photo/equipment diff blocks (badged thumbs; +/− lists).
+No other new primitives. No duplicate wizard, no second moderation system.
