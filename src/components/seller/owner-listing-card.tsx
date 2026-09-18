@@ -21,7 +21,10 @@ function editChip(listing: OwnerCardDto): { label: string; className: string } |
   const m = listing.management;
   if (m.editStatus === null || m.primary === "PRE_PUBLICATION") return null;
   if (m.editStatus === "EDIT_DRAFT") {
-    return m.primary === "DEACTIVATED"
+    // 01-state-matrix.md: hidden listings (Deaktiv AND Müddəti bitib)
+    // carry "Redaktə tamamlanmayıb" — completing the edit is the path
+    // forward; the green saved-chip is the ACTIVE-card variant only.
+    return m.primary === "DEACTIVATED" || m.primary === "EXPIRED"
       ? { label: SELLER.chipDeactivatedDraft, className: "bg-sunken text-slate-strong" }
       : { label: SELLER.chipEditDraft, className: "bg-success-soft text-success" };
   }

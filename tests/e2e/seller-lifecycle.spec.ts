@@ -99,6 +99,8 @@ test("Deaktiv filter, edit chips, and real matrix-conform edit actions", async (
   await setListingSellerLifecycle(deactivated.id, { deactivated: true });
   const expiredDeactivated = await insertListingFixture(userId, { status: "EXPIRED", complete: true, images: 1 });
   await setListingSellerLifecycle(expiredDeactivated.id, { deactivated: true });
+  const expiredDraft = await insertListingFixture(userId, { status: "EXPIRED", complete: true, images: 1 });
+  await insertEditRevisionFixture(expiredDraft.id, "EDIT_DRAFT");
 
   await page.goto("/profil/elanlar");
   const cardFor = (id: string) => page.locator(`[data-testid="owner-listing-card"][data-listing-id="${id}"]`);
@@ -108,6 +110,11 @@ test("Deaktiv filter, edit chips, and real matrix-conform edit actions", async (
   await expect(cardFor(deactivated.id).getByTestId("owner-edit-chip")).toHaveText("Redaktə tamamlanmayıb");
   // expired + deactivated presents as EXPIRED (renewal path wins)
   await expect(cardFor(expiredDeactivated.id).getByTestId("owner-status")).toHaveText("Müddəti bitib");
+  // 01-state-matrix.md: EXPIRED + draft carries "Redaktə tamamlanmayıb"
+  // and hides the renewal CTA in favour of resuming the edit
+  await expect(cardFor(expiredDraft.id).getByTestId("owner-edit-chip")).toHaveText("Redaktə tamamlanmayıb");
+  await expect(cardFor(expiredDraft.id).getByTestId("owner-edit-link")).toHaveText("Redaktəyə davam et");
+  expect(await cardFor(expiredDraft.id).locator('a[href*="/yenile"]').count()).toBe(0);
 
   // Stage C: the edit actions are REAL and follow the sealed matrix —
   // an open draft resumes through the edit route (no dead links)
