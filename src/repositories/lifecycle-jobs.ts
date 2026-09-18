@@ -315,3 +315,94 @@ export async function markNotificationFailed(
     where id = ${id} and status = 'PROCESSING'
   `;
 }
+
+// --- O.12 image orphan cleanup ----------------------------------------------
+
+export interface CleanupEventRow {
+  id: string;
+  event_type: string;
+  attempt_count: number;
+  payload: { cleanup_candidate_paths?: string };
+}
+
+/** Outbox event types whose payloads may carry storage cleanup
+    CANDIDATES (cancel, seller staged-image removal, approval gallery
+    replacement, reject). */
+export const CLEANUP_EVENT_TYPES = [
+  "LISTING_EDIT_CANCELLED",
+  "LISTING_EDIT_IMAGE_REMOVED",
+  "LISTING_EDIT_APPROVED",
+  "LISTING_EDIT_REJECTED",
+] as const;
+
+/**
+ * Claim a bounded batch of candidate-bearing outbox events for
+ * processing. `for update skip locked` makes overlapping worker runs
+ * safe; the grace interval guarantees a freshly-emitted candidate is
+ * never deleted while its emitting flow could still be observed.
+ */
+export async function claimCleanupEvents(
+  sql: Sql,
+  input: { limit: number; graceSeconds: number },
+): Promise<CleanupEventRow[]> {
+  return sql<CleanupEventRow[]>`
+    update outbox_events
+    set status = 'PROCESSING', attempt_count = attempt_count + 1
+    where id in (
+      select id from outbox_events
+      where event_type in ${sql([...CLEANUP_EVENT_TYPES])}
+        and status = 'PENDING'
+        and available_at <= now()
+        and created_at <= now() - (${input.graceSeconds} || ' seconds')::interval
+        and coalesce(payload->>'cleanup_candidate_paths', '') <> ''
+      order by created_at asc
+      for update skip locked
+      limit ${input.limit}
+    )
+    returning id, event_type, attempt_count, payload
+  `;
+}
+
+/** The authoritative reference check AT EXECUTION TIME: an object is a
+    true orphan only when neither the approved gallery nor ANY staged
+    revision row (open, APPROVED history, or terminal history) points
+    at it. */
+export async function isImagePathReferenced(sql: Sql, storagePath: string): Promise<boolean> {
+  const rows = await sql<{ referenced: boolean }[]>`
+    select
+      exists (select 1 from listing_images where storage_path = ${storagePath})
+      or exists (select 1 from listing_edit_images where storage_path = ${storagePath})
+      as referenced
+  `;
+  return rows[0].referenced;
+}
+
+export async function markCleanupEventProcessed(sql: Sql, id: string): Promise<void> {
+  await sql`
+    update outbox_events
+    set status = 'PROCESSED', processed_at = now(), last_error = null
+    where id = ${id} and status = 'PROCESSING'
+  `;
+}
+
+export async function markCleanupEventRetry(
+  sql: Sql,
+  input: { id: string; retryAt: Date; error: string },
+): Promise<void> {
+  await sql`
+    update outbox_events
+    set status = 'PENDING', available_at = ${input.retryAt}, last_error = ${input.error}
+    where id = ${input.id} and status = 'PROCESSING'
+  `;
+}
+
+export async function markCleanupEventFailed(
+  sql: Sql,
+  input: { id: string; error: string },
+): Promise<void> {
+  await sql`
+    update outbox_events
+    set status = 'FAILED', last_error = ${input.error}
+    where id = ${input.id} and status = 'PROCESSING'
+  `;
+}
