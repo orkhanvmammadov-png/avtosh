@@ -335,7 +335,7 @@ const SUBMIT_REFERENCE_FIELDS: { key: string; group: string }[] = [
 
 /** Full completeness + catalog revalidation of the revision snapshot —
     the same business rules the NEW flow enforces at submission. */
-async function assertRevisionSubmittable(
+export async function assertRevisionSubmittable(
   tx: Sql,
   revision: EditRevisionRow,
   imageMin: number,

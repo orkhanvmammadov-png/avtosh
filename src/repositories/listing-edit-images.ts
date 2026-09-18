@@ -128,3 +128,33 @@ export async function setPrimaryEditImage(
     where id = ${imageId} and edit_revision_id = ${revisionId}
   `;
 }
+
+/**
+ * O.12 Stage D approval: the approved public gallery BECOMES the
+ * staged gallery in one atomic replace — same order, primary and
+ * metadata; no partial state (single transaction). Staged rows remain
+ * untouched as moderation history; storage objects are never touched
+ * here. Returns the replaced (old approved) storage paths so the
+ * caller can emit reference-checked cleanup candidates.
+ */
+export async function replaceListingImagesFromStaged(
+  sql: Sql,
+  input: { listingId: string; revisionId: string },
+): Promise<{ removedPaths: string[]; insertedCount: number }> {
+  const removed = await sql<{ storage_path: string }[]>`
+    delete from listing_images where listing_id = ${input.listingId}
+    returning storage_path
+  `;
+  const inserted = await sql<{ id: string }[]>`
+    insert into listing_images
+      (listing_id, storage_path, sort_order, is_primary, width, height, mime_type, file_size_bytes)
+    select ${input.listingId}, storage_path, sort_order, is_primary, width, height, mime_type, file_size_bytes
+    from listing_edit_images
+    where edit_revision_id = ${input.revisionId}
+    returning id
+  `;
+  return {
+    removedPaths: removed.map((row) => row.storage_path),
+    insertedCount: inserted.length,
+  };
+}

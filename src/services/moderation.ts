@@ -6,6 +6,8 @@ import { moderationConfig } from "@/lib/config/moderation";
 import { getSql, withTransaction, type Sql } from "@/lib/server/db/client";
 import { getStorageProvider } from "@/providers/storage/factory";
 import { listListingImages } from "@/repositories/listing-images";
+import { getOpenEditRevision } from "@/repositories/listing-edit-revisions";
+import { getEditReviewFor } from "@/services/moderation-edit";
 import { insertOutboxEvent, insertStatusHistory } from "@/repositories/listing-publications";
 import { insertModerationAudit } from "@/repositories/moderation-audit";
 import { getListingFeatureIds } from "@/repositories/listings";
@@ -52,6 +54,8 @@ export interface ClaimDto {
 export interface QueueItemDto {
   id: string;
   publicId: string;
+  /** O.12: what awaits review — NEW listing or an edit revision. */
+  type: "NEW_LISTING" | "LISTING_EDIT";
   category: string;
   brandName: string | null;
   modelName: string | null;
@@ -139,6 +143,7 @@ export async function getModerationQueue(input: {
     items.push({
       id: row.id,
       publicId: row.public_id,
+      type: row.moderation_type,
       category: row.category_code,
       brandName: row.brand_name,
       modelName: row.model_name,
@@ -174,8 +179,10 @@ export async function getModerationQueue(input: {
   const last = page[page.length - 1];
   return {
     items,
+    // keyset continues from the union tiebreaker (listing id for NEW
+    // rows — byte-identical cursors to the pre-O.12 queue)
     nextCursor: rows.length > input.limit && last !== undefined
-      ? encodeCursor(last.submitted_at_cursor, last.id)
+      ? encodeCursor(last.submitted_at_cursor, last.sort_id)
       : null,
   };
 }
@@ -238,6 +245,9 @@ export async function getModerationDetail(listingId: string): Promise<Record<str
     images,
     reviews: reviews.map(toReviewDto),
     claim: toClaimDto(claim),
+    // O.12: server-computed changed-first comparison when a pending
+    // edit revision awaits review (null otherwise)
+    editReview: await getEditReviewFor(listingId),
     createdAt: row.created_at.toISOString(),
   };
 }
@@ -252,9 +262,15 @@ export async function claimListing(auth: AuthContext, listingId: string): Promis
       throw new ApiError("LISTING_NOT_FOUND", "Listing not found.");
     }
     if (listing.status !== "PENDING_MODERATION") {
-      throw new ApiError("MODERATION_INVALID_STATE", "Listing is not awaiting moderation.", {
-        details: { status: listing.status },
-      });
+      // O.12: the SAME claim (still keyed by listing_id) also
+      // serializes LISTING_EDIT reviews — a pending edit revision makes
+      // the listing claimable while its status stays ACTIVE/EXPIRED.
+      const pendingEdit = await getOpenEditRevision(tx, listingId);
+      if (pendingEdit === undefined || pendingEdit.status !== "PENDING_MODERATION") {
+        throw new ApiError("MODERATION_INVALID_STATE", "Listing is not awaiting moderation.", {
+          details: { status: listing.status },
+        });
+      }
     }
     const expiresAt = new Date(Date.now() + claimTtlSeconds * 1000);
     const existing = await getUnreleasedClaim(tx, listingId);

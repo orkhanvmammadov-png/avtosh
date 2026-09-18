@@ -100,7 +100,9 @@ export async function listOwnerListings(
     left join lateral (
       select mr.decision::text as decision, mr.reason_code, mr.note, mr.reviewed_at
       from moderation_reviews mr
-      where mr.listing_id = l.id
+      -- listing-level feedback only: O.12 edit-revision reviews are
+      -- edit-scoped and surface inside the edit flow, never here
+      where mr.listing_id = l.id and mr.edit_revision_id is null
       order by mr.reviewed_at desc, mr.id desc
       limit 1
     ) r on true
@@ -140,7 +142,7 @@ export async function findLatestReviewForListing(
   >`
     select decision::text as decision, reason_code, note, reviewed_at
     from moderation_reviews
-    where listing_id = ${listingId}
+    where listing_id = ${listingId} and edit_revision_id is null
     order by reviewed_at desc, id desc
     limit 1
   `;

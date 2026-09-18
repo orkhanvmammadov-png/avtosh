@@ -133,6 +133,55 @@ export async function submitEditRevisionRow(
   return rows[0];
 }
 
+/**
+ * O.12 Stage D approval scalar copy: ONLY sealed seller-editable
+ * columns arrive in `set` (built by the service) — lifecycle,
+ * publication-identity, payment and promotion columns are never part
+ * of it. Bumps listings.revision under the listing's optimistic guard.
+ */
+export async function applyApprovedEditContent(
+  sql: Sql,
+  input: { listingId: string; expectedListingRevision: number; set: Record<string, unknown> },
+): Promise<number | undefined> {
+  const rows = await sql<{ revision: number }[]>`
+    update listings
+    set ${sql(input.set)}, revision = revision + 1
+    where id = ${input.listingId}
+      and revision = ${input.expectedListingRevision}
+      and deleted_at is null
+    returning revision
+  `;
+  return rows[0]?.revision;
+}
+
+/**
+ * O.12 Stage D moderator decisions on a PENDING revision. All three
+ * transitions are guarded by the revision's own counter (stale-review
+ * protection) and the PENDING_MODERATION source state. The counter is
+ * NOT bumped (pure state transition — the reviewed content is exactly
+ * what was decided); decided_at marks terminal outcomes and the
+ * correction handback time.
+ */
+export async function decideEditRevisionRow(
+  sql: Sql,
+  input: {
+    revisionId: string;
+    expectedRevision: number;
+    toStatus: "APPROVED" | "REJECTED" | "CORRECTION_REQUIRED";
+  },
+): Promise<EditRevisionRow | undefined> {
+  const rows = await sql<EditRevisionRow[]>`
+    update listing_edit_revisions
+    set status = ${input.toStatus}::edit_revision_status,
+        decided_at = now()
+    where id = ${input.revisionId}
+      and revision = ${input.expectedRevision}
+      and status = 'PENDING_MODERATION'
+    returning *
+  `;
+  return rows[0];
+}
+
 /** Terminal transition to CANCELLED (allowed source states guarded by
     the service). */
 export async function cancelEditRevision(

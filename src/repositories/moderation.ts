@@ -21,6 +21,11 @@ export interface QueueRow {
   primary_image_path: string | null;
   claim_moderator_id: string | null;
   claim_expires_at: Date | null;
+  /** O.12: what awaits moderation for this row. */
+  moderation_type: "NEW_LISTING" | "LISTING_EDIT";
+  /** Keyset tiebreaker: listing id (NEW) or revision id (EDIT) —
+      unique across the union. */
+  sort_id: string;
 }
 
 export interface ModerationListingRow {
@@ -80,6 +85,9 @@ export interface ReviewRow {
   reason_code: string | null;
   note: string | null;
   reviewed_at: Date;
+  /** O.12: set only for edit-revision reviews (Stage A columns). */
+  edit_revision_id: string | null;
+  edit_revision_no: number | null;
 }
 
 export interface LockedListingRow {
@@ -94,37 +102,61 @@ export async function listModerationQueue(
   sql: Sql,
   input: { limit: number; after: { submittedAt: string; id: string } | null },
 ): Promise<QueueRow[]> {
+  // O.12: ONE deterministic merged queue over both moderation sources,
+  // ordered by moderation submission time with a unique uuid
+  // tiebreaker (listing id for NEW rows — identical ordering and
+  // cursors as before; revision id for EDIT rows). Keyset condition
+  // applies to the UNION as a whole, so pagination can never starve or
+  // duplicate either source. ::text::timestamptz keeps the cursor a
+  // TEXT parameter (a direct ::timestamptz cast serializes through
+  // Date and silently truncates microseconds, repeating boundary rows).
   const cursorClause =
     input.after === null
       ? sql``
-      // ::text::timestamptz keeps the cursor a TEXT parameter: a direct
-      // ::timestamptz cast makes postgres.js serialize it through Date,
-      // silently truncating microseconds and repeating boundary rows.
-      : sql`and (l.submitted_at, l.id) > (${input.after.submittedAt}::text::timestamptz, ${input.after.id}::uuid)`;
+      : sql`where (q.submitted_at, q.sort_id) > (${input.after.submittedAt}::text::timestamptz, ${input.after.id}::uuid)`;
   return sql<QueueRow[]>`
-    select l.id, l.public_id::text as public_id, c.code as category_code,
-           b.name as brand_name, m.name as model_name, l.year,
-           l.price_minor::text as price_minor, ci.name_az as city_name,
-           l.submitted_at, l.submitted_at::text as submitted_at_cursor, l.revision,
+    with q as (
+      select l.id, l.id as sort_id, 'NEW_LISTING' as moderation_type,
+             l.submitted_at, l.revision,
+             l.public_id, l.category_id, l.brand_id, l.model_id, l.city_id,
+             l.year, l.price_minor, l.owner_id
+      from listings l
+      where l.status = 'PENDING_MODERATION'
+        -- Queue ordering/SLA is defined by submitted_at; a pending row
+        -- without it violates the submission invariant and is excluded
+        -- rather than crashing the queue (it can never be decided here).
+        and l.submitted_at is not null
+      union all
+      select l.id, er.id as sort_id, 'LISTING_EDIT' as moderation_type,
+             er.submitted_at, er.revision,
+             l.public_id, l.category_id, l.brand_id, l.model_id, l.city_id,
+             l.year, l.price_minor, l.owner_id
+      from listing_edit_revisions er
+      join listings l on l.id = er.listing_id
+      where er.status = 'PENDING_MODERATION'
+        and er.submitted_at is not null
+        and l.deleted_at is null
+        and l.status <> 'DELETED'
+    )
+    select q.id, q.sort_id, q.moderation_type,
+           q.public_id::text as public_id, c.code as category_code,
+           b.name as brand_name, m.name as model_name, q.year,
+           q.price_minor::text as price_minor, ci.name_az as city_name,
+           q.submitted_at, q.submitted_at::text as submitted_at_cursor, q.revision,
            u.id as owner_id, u.phone_e164 as owner_phone, u.display_name as owner_display_name,
            (select li.storage_path from listing_images li
-              where li.listing_id = l.id and li.is_primary limit 1) as primary_image_path,
+              where li.listing_id = q.id and li.is_primary limit 1) as primary_image_path,
            mc.moderator_id as claim_moderator_id, mc.expires_at as claim_expires_at
-    from listings l
-    join categories c on c.id = l.category_id
-    join users u on u.id = l.owner_id
-    left join brands b on b.id = l.brand_id
-    left join models m on m.id = l.model_id
-    left join cities ci on ci.id = l.city_id
+    from q
+    join categories c on c.id = q.category_id
+    join users u on u.id = q.owner_id
+    left join brands b on b.id = q.brand_id
+    left join models m on m.id = q.model_id
+    left join cities ci on ci.id = q.city_id
     left join moderation_claims mc
-      on mc.listing_id = l.id and mc.released_at is null and mc.expires_at > now()
-    where l.status = 'PENDING_MODERATION'
-      -- Queue ordering/SLA is defined by submitted_at; a pending row
-      -- without it violates the submission invariant and is excluded
-      -- rather than crashing the queue (it can never be decided here).
-      and l.submitted_at is not null
+      on mc.listing_id = q.id and mc.released_at is null and mc.expires_at > now()
     ${cursorClause}
-    order by l.submitted_at asc, l.id asc
+    order by q.submitted_at asc, q.sort_id asc
     limit ${input.limit}
   `;
 }
@@ -232,16 +264,22 @@ export async function insertReview(
     decision: ReviewRow["decision"];
     reasonCode: string | null;
     note: string | null;
+    /** O.12: WHICH edit revision was decided + its own counter at
+        decision time (never overloads listing_revision). */
+    editRevisionId?: string | null;
+    editRevisionNo?: number | null;
   },
 ): Promise<ReviewRow> {
   const rows = await sql<ReviewRow[]>`
     insert into moderation_reviews
-      (listing_id, moderator_id, listing_revision, decision, reason_code, note)
+      (listing_id, moderator_id, listing_revision, decision, reason_code, note,
+       edit_revision_id, edit_revision_no)
     values
       (${input.listingId}, ${input.moderatorId}, ${input.listingRevision},
-       ${input.decision}::moderation_decision, ${input.reasonCode}, ${input.note})
+       ${input.decision}::moderation_decision, ${input.reasonCode}, ${input.note},
+       ${input.editRevisionId ?? null}, ${input.editRevisionNo ?? null})
     returning id, listing_id, moderator_id, listing_revision, decision,
-              reason_code, note, reviewed_at
+              reason_code, note, reviewed_at, edit_revision_id, edit_revision_no
   `;
   return rows[0];
 }
@@ -249,14 +287,15 @@ export async function insertReview(
 export async function listReviews(sql: Sql, listingId: string): Promise<ReviewRow[]> {
   return sql<ReviewRow[]>`
     select id, listing_id, moderator_id, listing_revision, decision,
-           reason_code, note, reviewed_at
+           reason_code, note, reviewed_at, edit_revision_id, edit_revision_no
     from moderation_reviews
     where listing_id = ${listingId}
     order by reviewed_at desc, id desc
   `;
 }
 
-/** Existing identical decision (idempotent retry detection). */
+/** Existing identical decision (idempotent retry detection). NEW-listing
+    reviews only — edit reviews match through findMatchingEditReview. */
 export async function findMatchingReview(
   sql: Sql,
   input: {
@@ -268,11 +307,36 @@ export async function findMatchingReview(
 ): Promise<ReviewRow | undefined> {
   const rows = await sql<ReviewRow[]>`
     select id, listing_id, moderator_id, listing_revision, decision,
-           reason_code, note, reviewed_at
+           reason_code, note, reviewed_at, edit_revision_id, edit_revision_no
     from moderation_reviews
     where listing_id = ${input.listingId}
       and moderator_id = ${input.moderatorId}
       and listing_revision = ${input.listingRevision}
+      and decision = ${input.decision}::moderation_decision
+      and edit_revision_id is null
+    order by reviewed_at desc
+    limit 1
+  `;
+  return rows[0];
+}
+
+/** O.12: identical edit decision (idempotent retry detection). */
+export async function findMatchingEditReview(
+  sql: Sql,
+  input: {
+    editRevisionId: string;
+    moderatorId: string;
+    editRevisionNo: number;
+    decision: ReviewRow["decision"];
+  },
+): Promise<ReviewRow | undefined> {
+  const rows = await sql<ReviewRow[]>`
+    select id, listing_id, moderator_id, listing_revision, decision,
+           reason_code, note, reviewed_at, edit_revision_id, edit_revision_no
+    from moderation_reviews
+    where edit_revision_id = ${input.editRevisionId}
+      and moderator_id = ${input.moderatorId}
+      and edit_revision_no = ${input.editRevisionNo}
       and decision = ${input.decision}::moderation_decision
     order by reviewed_at desc
     limit 1

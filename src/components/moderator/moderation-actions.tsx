@@ -32,6 +32,7 @@ export function ModerationActions({
   claimMine,
   claimOther,
   claimExpiresAt,
+  editRevisionNo = null,
 }: {
   listingId: string;
   status: string;
@@ -39,6 +40,10 @@ export function ModerationActions({
   claimMine: boolean;
   claimOther: boolean;
   claimExpiresAt: string | null;
+  /** O.12: non-null when a PENDING edit revision awaits review — the
+      decisions then address the EDIT endpoints with the edit revision's
+      own counter. Same claim, same verbs, same confirmation flow. */
+  editRevisionNo?: number | null;
 }) {
   // The portal recovers via FULL page reloads; a click on a freshly
   // loaded page must never land before React's handlers exist.
@@ -55,7 +60,15 @@ export function ModerationActions({
 
   const base = `/api/v1/moderator/listings/${listingId}`;
   const isPending = status === "PENDING_MODERATION";
+  const editPending = editRevisionNo !== null;
+  const reviewPending = isPending || editPending;
   const isActive = status === "ACTIVE";
+
+  const EDIT_DONE: Record<string, string> = {
+    approve: STAFF.editApprovedDone,
+    reject: STAFF.editRejectedDone,
+    "request-correction": STAFF.editCorrectionDone,
+  };
 
   function handleError(error: unknown) {
     if (error instanceof PublicApiError) {
@@ -91,12 +104,17 @@ export function ModerationActions({
     setBusy(true);
     setMessage(null);
     try {
-      const body: Record<string, unknown> = { expected_revision: revision };
+      // O.12: edit-revision decisions address the edit endpoints with
+      // the EDIT revision's own counter (suspend stays listing-level)
+      const isEditDecision = editPending && kind !== "suspend";
+      const body: Record<string, unknown> = isEditDecision
+        ? { expected_edit_revision: editRevisionNo }
+        : { expected_revision: revision };
       if (ACTION_META[kind].needsReason) {
         body.reason_code = reasonCode;
         if (note.trim().length > 0) body.note = note.trim();
       }
-      await publicFetch(`${base}/${kind}`, {
+      await publicFetch(isEditDecision ? `${base}/edit/${kind}` : `${base}/${kind}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
@@ -105,7 +123,7 @@ export function ModerationActions({
       // panel stays until the moderator explicitly moves on, so the
       // outcome is always user-observable (an immediate RSC refresh
       // here raced subsequent interactions and could strand the UI).
-      setDone(ACTION_META[kind].done);
+      setDone(isEditDecision ? EDIT_DONE[kind] : ACTION_META[kind].done);
       setPendingAction(null);
     } catch (error) {
       handleError(error);
@@ -157,7 +175,7 @@ export function ModerationActions({
 
   return (
     <div className="space-y-4" data-testid="moderation-actions">
-      {isPending ? (
+      {reviewPending ? (
         <div aria-live="polite" data-testid="claim-state" data-claim={claimMine ? "mine" : claimOther ? "other" : "free"}>
           {claimMine ? (
             <p className="rounded-staff bg-success-soft px-3 py-2 text-sm font-semibold text-success">
@@ -181,9 +199,9 @@ export function ModerationActions({
         </div>
       ) : null}
 
-      {(isPending && claimMine) || isActive ? (
+      {(reviewPending && claimMine) || isActive ? (
         <div className="flex flex-wrap gap-2" data-testid="decision-buttons">
-          {isPending ? (
+          {reviewPending && claimMine ? (
             <>
               <Button onClick={() => setPendingAction("approve")} disabled={busy || !hydrated} data-testid="action-approve">
                 {STAFF.approve}

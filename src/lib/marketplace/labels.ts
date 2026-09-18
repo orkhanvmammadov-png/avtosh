@@ -426,6 +426,27 @@ export const STAFF = {
   logout: "Çıxış",
   roleModerator: "Moderator",
   roleAdmin: "Admin",
+  // O.12 Stage D — edit moderation (06-moderator-diff.md / 09-copy.md)
+  tagNewListing: "YENİ ELAN",
+  tagListingEdit: "ELAN REDAKTƏSİ",
+  editReviewTitle: "Dəyişikliklərin müqayisəsi",
+  editReviewLegend: "Mövcud elan → Təklif olunan dəyişiklik",
+  diffAdded: "Əlavə edildi",
+  diffRemoved: "Silindi",
+  diffNewPrimary: "Yeni əsas şəkil",
+  diffBefore: "Əvvəl",
+  diffAfter: "Sonra",
+  diffUnchanged: "Digər məlumatlar (dəyişməyib)",
+  diffYes: "Bəli",
+  diffNo: "Yox",
+  diffReordered: "Şəkillərin sırası dəyişib",
+  editApprovedDone: "Dəyişikliklər təsdiqləndi.",
+  editRejectedDone: "Dəyişikliklər rədd edildi.",
+  editCorrectionDone: "Düzəliş tələbi satıcıya göndərildi.",
+  editCtxDeactivated:
+    "Elan deaktivdir — təsdiqdən sonra yalnız aktivləşdirmə şərtləri ödənərsə yayımlanacaq.",
+  editCtxExpired:
+    "Elanın müddəti bitib — təsdiq məzmunu yeniləyəcək, elan yenilənənədək yayımlanmayacaq.",
 } as const;
 
 /** Admin panel strings (Phase 4.15). */
