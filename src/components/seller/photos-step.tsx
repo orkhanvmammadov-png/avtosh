@@ -4,14 +4,7 @@ import { useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { PublicApiError } from "@/lib/marketplace/public-api";
 import { SELLER } from "@/lib/marketplace/labels";
-import {
-  confirmUpload,
-  deleteImage,
-  reorderImages,
-  requestUploadUrl,
-  setPrimaryImage,
-  uploadToSignedUrl,
-} from "@/lib/seller/owner-api";
+import { uploadToSignedUrl } from "@/lib/seller/owner-api";
 import type { ListingEditor } from "@/components/seller/use-listing-editor";
 
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
@@ -78,10 +71,10 @@ export function PhotosStep({ editor }: { editor: ListingEditor }) {
 
   async function runUpload(key: number, file: File): Promise<void> {
     try {
-      const issued = await requestUploadUrl(dto.id, file);
+      const issued = await editor.api.requestUploadUrl(dto.id, file);
       await uploadToSignedUrl(issued.upload_url, issued.upload_token, file);
       patchUpload(key, { state: "processing" });
-      await editor.runExclusive(() => confirmUpload(dto.id, issued.upload_id));
+      await editor.runExclusive(() => editor.api.confirmUpload(dto.id, issued.upload_id));
       dropUpload(key);
     } catch (error) {
       patchUpload(key, { state: "error", message: uploadErrorMessage(error) });
@@ -150,7 +143,7 @@ export function PhotosStep({ editor }: { editor: ListingEditor }) {
     const target = index + direction;
     if (index < 0 || target < 0 || target >= ids.length) return;
     [ids[index], ids[target]] = [ids[target], ids[index]];
-    void imageOp(imageId, () => reorderImages(dto.id, ids));
+    void imageOp(imageId, () => editor.api.reorderImages(dto.id, ids));
   }
 
   /** Desktop drag reorder — persisted through the same endpoint. */
@@ -163,7 +156,7 @@ export function PhotosStep({ editor }: { editor: ListingEditor }) {
     const at = ids.indexOf(targetId);
     if (at === -1) return;
     ids.splice(at, 0, sourceId);
-    void imageOp(sourceId, () => reorderImages(dto.id, ids));
+    void imageOp(sourceId, () => editor.api.reorderImages(dto.id, ids));
   }
 
   const tileBase = "relative aspect-[4/3] overflow-hidden rounded-lg";
@@ -260,7 +253,7 @@ export function PhotosStep({ editor }: { editor: ListingEditor }) {
               aria-label={`${SELLER.deletePhoto} — ${index + 1}`}
               className={`${overlayButton} absolute right-1.5 top-1.5 text-danger`}
               disabled={busyImageId !== null}
-              onClick={() => void imageOp(image.id, () => deleteImage(dto.id, image.id))}
+              onClick={() => void imageOp(image.id, () => editor.api.deleteImage(dto.id, image.id))}
               data-testid="image-delete"
             >
               <X size={14} aria-hidden="true" />
@@ -291,7 +284,7 @@ export function PhotosStep({ editor }: { editor: ListingEditor }) {
                   type="button"
                   className="ml-auto inline-flex h-8 items-center rounded-full bg-white/[.92] px-2 text-[10px] font-bold uppercase tracking-[0.03em] text-[#147A4E] shadow-sm transition-colors duration-150 hover:bg-white disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1"
                   disabled={busyImageId !== null}
-                  onClick={() => void imageOp(image.id, () => setPrimaryImage(dto.id, image.id))}
+                  onClick={() => void imageOp(image.id, () => editor.api.setPrimaryImage(dto.id, image.id))}
                   data-testid="image-make-primary"
                 >
                   {SELLER.makePrimary}

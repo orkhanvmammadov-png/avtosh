@@ -38,13 +38,26 @@ export interface OwnerCardRow {
   review_reason_code: string | null;
   review_note: string | null;
   review_reviewed_at: Date | null;
+  seller_deactivated_at: Date | null;
+  seller_reactivation_requested_at: Date | null;
+  edit_revision_id: string | null;
+  edit_revision_status: string | null;
+  edit_revision_submitted_at: Date | null;
+}
+
+export interface OwnerListFilter {
+  statuses: string[] | null;
+  /** O.12: "only" narrows to seller-deactivated rows; "exclude" hides
+      them (the Aktiv tab must not carry Deaktiv-classified cards). */
+  deactivated?: "only" | "exclude";
 }
 
 export async function listOwnerListings(
   sql: Sql,
   ownerId: string,
-  statuses: string[] | null,
+  filter: OwnerListFilter,
 ): Promise<OwnerCardRow[]> {
+  const statuses = filter.statuses;
   return sql<OwnerCardRow[]>`
     select
       l.id, l.public_id::text as public_id, l.status, l.revision,
@@ -73,7 +86,10 @@ export async function listOwnerListings(
       exists (select 1 from payments p where p.listing_id = l.id
         and p.type = 'BOOST' and p.status = 'SUCCESS') as boost_satisfied,
       r.decision as review_decision, r.reason_code as review_reason_code,
-      r.note as review_note, r.reviewed_at as review_reviewed_at
+      r.note as review_note, r.reviewed_at as review_reviewed_at,
+      l.seller_deactivated_at, l.seller_reactivation_requested_at,
+      er.id as edit_revision_id, er.status as edit_revision_status,
+      er.submitted_at as edit_revision_submitted_at
     from listings l
     join categories c on c.id = l.category_id
     left join brands b on b.id = l.brand_id
@@ -84,13 +100,28 @@ export async function listOwnerListings(
     left join lateral (
       select mr.decision::text as decision, mr.reason_code, mr.note, mr.reviewed_at
       from moderation_reviews mr
-      where mr.listing_id = l.id
+      -- listing-level feedback only: O.12 edit-revision reviews are
+      -- edit-scoped and surface inside the edit flow, never here
+      where mr.listing_id = l.id and mr.edit_revision_id is null
       order by mr.reviewed_at desc, mr.id desc
       limit 1
     ) r on true
+    left join lateral (
+      -- the OPEN revision when one exists; otherwise the latest
+      -- terminal one (the service keeps only APPROVED from terminals —
+      -- the EXPIRED + "Dəyişiklik təsdiqlənib" awaiting-renewal chip)
+      select rev.id, rev.status::text as status, rev.submitted_at
+      from listing_edit_revisions rev
+      where rev.listing_id = l.id
+      order by (rev.status in ('EDIT_DRAFT', 'PENDING_MODERATION', 'CORRECTION_REQUIRED')) desc,
+               rev.created_at desc
+      limit 1
+    ) er on true
     where l.owner_id = ${ownerId}
       and l.status <> 'DELETED'
       ${statuses === null ? sql`` : sql`and l.status = any(${statuses}::listing_status[])`}
+      ${filter.deactivated === "only" ? sql`and l.seller_deactivated_at is not null` : sql``}
+      ${filter.deactivated === "exclude" ? sql`and l.seller_deactivated_at is null` : sql``}
     order by l.updated_at desc, l.id desc
     limit 200
   `;
@@ -111,7 +142,7 @@ export async function findLatestReviewForListing(
   >`
     select decision::text as decision, reason_code, note, reviewed_at
     from moderation_reviews
-    where listing_id = ${listingId}
+    where listing_id = ${listingId} and edit_revision_id is null
     order by reviewed_at desc, id desc
     limit 1
   `;

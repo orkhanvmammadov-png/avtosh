@@ -26,6 +26,7 @@ const FILTER_LABELS: Record<MyListingsFilter, string> = {
   moderation: SELLER.filterModeration,
   draft: SELLER.filterDraft,
   correction: SELLER.filterCorrection,
+  deactivated: SELLER.filterDeactivated,
 };
 
 /** My Listings — owner read model only (never public search). */

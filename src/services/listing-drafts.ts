@@ -1,15 +1,7 @@
 import type { AuthContext } from "@/auth/current-user";
-import { normalizePhoneE164 } from "@/auth/phone";
 import { ApiError } from "@/lib/api/errors";
 import { getSql, withTransaction } from "@/lib/server/db/client";
-import {
-  findActiveBrandInCategory,
-  findActiveCategoryByCode,
-  findActiveCityById,
-  findActiveModelInBrandCategory,
-  findActiveReferenceOptionForCategory,
-  filterActiveFeatureIdsForCategory,
-} from "@/repositories/catalog";
+import { findActiveCategoryByCode } from "@/repositories/catalog";
 import {
   listListingImages,
 } from "@/repositories/listing-images";
@@ -24,6 +16,7 @@ import {
 } from "@/repositories/listings";
 import { findPackageOfType } from "@/repositories/promotions";
 import { toOwnerListingDto, type OwnerListingDto } from "@/services/listing-dto";
+import { resolveSellerContentPatch } from "@/services/listing-patch";
 import { isSellerEditable } from "@/services/listing-states";
 import type { DraftPatchInput } from "@/validators/listings";
 
@@ -82,28 +75,35 @@ export async function getOwnedListingDto(
   return buildOwnerListingDto(listing);
 }
 
-interface ReferenceFieldSpec {
-  patchKey: keyof DraftPatchInput;
-  column: string;
-  group: string;
-}
-
-const REFERENCE_FIELDS: ReferenceFieldSpec[] = [
-  { patchKey: "fuel_type_id", column: "fuel_type_id", group: "FUEL_TYPE" },
-  { patchKey: "transmission_id", column: "transmission_id", group: "TRANSMISSION" },
-  { patchKey: "body_type_id", column: "body_type_id", group: "BODY_TYPE" },
-  { patchKey: "drive_type_id", column: "drive_type_id", group: "DRIVE_TYPE" },
-  {
-    patchKey: "motorcycle_type_id",
-    column: "motorcycle_type_id",
-    group: "MOTORCYCLE_TYPE",
-  },
-  { patchKey: "color_id", column: "color_id", group: "COLOR" },
-];
-
 function invalidSelection(message: string): ApiError {
   return new ApiError("LISTING_INVALID_CATALOG_SELECTION", message);
 }
+
+/** PATCH-key → listing column for the shared content resolution
+    (category resolves to category_id; contact_phone normalizes into
+    contact_phone_e164; everything else maps 1:1). */
+const PATCH_KEY_COLUMNS: Record<string, string> = {
+  brand_id: "brand_id",
+  model_id: "model_id",
+  fuel_type_id: "fuel_type_id",
+  transmission_id: "transmission_id",
+  body_type_id: "body_type_id",
+  drive_type_id: "drive_type_id",
+  motorcycle_type_id: "motorcycle_type_id",
+  color_id: "color_id",
+  city_id: "city_id",
+  year: "year",
+  price_minor: "price_minor",
+  mileage: "mileage",
+  engine_cc: "engine_cc",
+  credit_available: "credit_available",
+  barter_available: "barter_available",
+  no_accident: "no_accident",
+  not_repainted: "not_repainted",
+  description: "description",
+  contact_phone: "contact_phone_e164",
+  seller_name: "seller_name",
+};
 
 export async function updateDraft(
   auth: AuthContext,
@@ -118,150 +118,25 @@ export async function updateDraft(
     );
   }
 
-  // Resolve the target category (it may change on a draft). Changing
-  // it deterministically clears dependent fields server-side (brand,
-  // model, category-scoped option selections, incompatible features)
-  // unless the same request supplies valid replacements.
-  let targetCategoryId = listing.category_id;
+  // Shared content resolution (identical semantics with the O.12 edit
+  // PATCH): catalog validation + dependent clearing in PATCH-key space,
+  // mapped to listing columns here.
+  const resolved = await resolveSellerContentPatch(
+    {
+      categoryId: listing.category_id,
+      categoryCode: listing.category_code,
+      brandId: listing.brand_id,
+    },
+    patch,
+  );
+  const { targetCategoryId, categoryChanged } = resolved;
   const set: Record<string, unknown> = {};
-  let categoryChanged = false;
-  if (patch.category !== undefined && patch.category !== listing.category_code) {
-    const category = await findActiveCategoryByCode(patch.category);
-    if (category === undefined) {
-      throw invalidSelection("Unknown or inactive category.");
-    }
-    targetCategoryId = category.id;
-    categoryChanged = true;
-    set.category_id = category.id;
-    set.brand_id = null;
-    set.model_id = null;
-    set.body_type_id = null;
-    set.motorcycle_type_id = null;
-  }
-
-  // Brand: validate against the target category.
-  let effectiveBrandId = categoryChanged ? null : listing.brand_id;
-  if (patch.brand_id !== undefined) {
-    if (patch.brand_id === null) {
-      set.brand_id = null;
-      set.model_id = null;
-      effectiveBrandId = null;
-    } else {
-      const brand = await findActiveBrandInCategory(
-        patch.brand_id,
-        targetCategoryId,
-      );
-      if (brand === undefined) {
-        throw invalidSelection(
-          "Brand is unknown, inactive, or not available in the category.",
-        );
-      }
-      if (patch.brand_id !== listing.brand_id) {
-        // Brand change invalidates the previously chosen model.
-        set.model_id = null;
-      }
-      set.brand_id = patch.brand_id;
-      effectiveBrandId = patch.brand_id;
-    }
-  }
-
-  // Model: requires a valid effective brand in the target category.
-  if (patch.model_id !== undefined) {
-    if (patch.model_id === null) {
-      set.model_id = null;
-    } else {
-      if (effectiveBrandId === null) {
-        throw invalidSelection("A brand must be selected before a model.");
-      }
-      const model = await findActiveModelInBrandCategory(
-        patch.model_id,
-        effectiveBrandId,
-        targetCategoryId,
-      );
-      if (model === undefined) {
-        throw invalidSelection(
-          "Model is unknown, inactive, or does not belong to the brand and category.",
-        );
-      }
-      set.model_id = patch.model_id;
-    }
-  }
-
-  for (const field of REFERENCE_FIELDS) {
-    const value = patch[field.patchKey];
-    if (value === undefined) {
+  for (const [key, value] of Object.entries(resolved.changes)) {
+    if (key === "category") {
+      set.category_id = targetCategoryId;
       continue;
     }
-    if (value === null) {
-      set[field.column] = null;
-      continue;
-    }
-    const option = await findActiveReferenceOptionForCategory(
-      value as string,
-      field.group,
-      targetCategoryId,
-    );
-    if (option === undefined) {
-      throw invalidSelection(
-        `Invalid ${field.group} selection for this category.`,
-      );
-    }
-    set[field.column] = value;
-  }
-
-  if (patch.city_id !== undefined) {
-    if (patch.city_id === null) {
-      set.city_id = null;
-    } else {
-      const city = await findActiveCityById(patch.city_id);
-      if (city === undefined) {
-        throw invalidSelection("Unknown or inactive city.");
-      }
-      set.city_id = patch.city_id;
-    }
-  }
-
-  if (patch.feature_ids !== undefined && patch.feature_ids.length > 0) {
-    const valid = await filterActiveFeatureIdsForCategory(
-      patch.feature_ids,
-      targetCategoryId,
-    );
-    if (valid.length !== patch.feature_ids.length) {
-      throw invalidSelection(
-        "One or more features are unknown, inactive, or not valid for this category.",
-      );
-    }
-  }
-
-  if (patch.year !== undefined) set.year = patch.year;
-  if (patch.price_minor !== undefined) set.price_minor = patch.price_minor;
-  if (patch.mileage !== undefined) set.mileage = patch.mileage;
-  if (patch.engine_cc !== undefined) set.engine_cc = patch.engine_cc;
-  if (patch.credit_available !== undefined)
-    set.credit_available = patch.credit_available;
-  if (patch.barter_available !== undefined)
-    set.barter_available = patch.barter_available;
-  if (patch.no_accident !== undefined) set.no_accident = patch.no_accident;
-  if (patch.not_repainted !== undefined) set.not_repainted = patch.not_repainted;
-  if (patch.description !== undefined) set.description = patch.description;
-  if (patch.contact_phone !== undefined) {
-    if (patch.contact_phone === null) {
-      set.contact_phone_e164 = null;
-    } else {
-      const normalized = normalizePhoneE164(patch.contact_phone);
-      if (normalized === null) {
-        throw new ApiError("VALIDATION_ERROR", "Invalid contact phone number.", {
-          details: [{ parameter: "contact_phone", message: "Invalid phone number" }],
-        });
-      }
-      set.contact_phone_e164 = normalized;
-    }
-  }
-  if (patch.seller_name !== undefined) {
-    // Listing-level public seller name only — users.display_name is
-    // never mutated from the seller flow.
-    const trimmed = patch.seller_name?.trim() ?? "";
-    set.seller_name = trimmed === "" ? null : trimmed;
+    set[PATCH_KEY_COLUMNS[key]] = value;
   }
   // Promotion intent preferences: package must exist and match the
   // field's type. is_active is NOT required here (see repository doc);

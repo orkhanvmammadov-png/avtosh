@@ -31,6 +31,7 @@ import {
 } from "@/repositories/promotions";
 import { insertListingPeriod, nextPeriodNumber } from "@/repositories/moderation";
 import { findRenewalPeriodByPayment, lockListingForRenewal } from "@/repositories/renewals";
+import { tryFinalizeSellerReactivationById } from "@/services/listing-lifecycle";
 import { buildHppRedirect } from "@/providers/payments/kapital-provider";
 import {
   getPaymentProvider,
@@ -511,6 +512,13 @@ async function fulfillRenewal(tx: Tx, payment: LockedPaymentRowLike): Promise<vo
       toStatus: "ACTIVE",
       reasonCode: "RENEWAL",
     });
+    // O.12: shared lifecycle post-condition — the central reactivation
+    // finalizer resolves a recorded seller activation intent now that
+    // the listing is ACTIVE and time-valid. The payment core knows no
+    // edit/moderation logic; the finalizer re-checks its own gates
+    // (request, deactivated, ACTIVE, time-valid, no open revision) and
+    // is a no-op otherwise. Runs inside this same transaction.
+    await tryFinalizeSellerReactivationById(tx, payment.listing_id);
   } else {
     // paid time is never lost, but a non-EXPIRED status (e.g. an
     // operations transition raced the payment) is not overridden

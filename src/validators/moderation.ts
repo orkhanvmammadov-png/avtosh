@@ -21,3 +21,17 @@ export const decisionWithReasonSchema = z
     note: z.string().trim().min(1).max(MODERATION_NOTE_MAX_LENGTH).optional(),
   })
   .strict();
+
+/** O.12 edit-revision decisions: addressed by the EDIT revision's own
+    counter (never listings.revision). */
+export const editApproveSchema = z
+  .object({ expected_edit_revision: z.number().int().min(1) })
+  .strict();
+
+export const editDecisionWithReasonSchema = z
+  .object({
+    expected_edit_revision: z.number().int().min(1),
+    reason_code: z.enum(MODERATION_REASON_CODES),
+    note: z.string().trim().min(1).max(MODERATION_NOTE_MAX_LENGTH).optional(),
+  })
+  .strict();

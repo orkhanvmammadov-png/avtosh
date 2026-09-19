@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { formatDateAz, formatMileage, formatPriceMinor, vehicleTitle } from "@/lib/format";
 import { SELLER } from "@/lib/marketplace/labels";
-import { REASON_LABELS, statusPresentation } from "@/lib/seller/status";
+import { REASON_LABELS, statusPresentation, type StatusPresentation } from "@/lib/seller/status";
+import { EditEntryButton } from "@/components/seller/edit-entry-button";
+import { ListingLifecycleActions } from "@/components/seller/listing-lifecycle-actions";
 import type { OwnerCardDto } from "@/services/my-listings";
 
 // Approved status chip recipe: borderless tint + dot (components.md).
@@ -13,18 +15,82 @@ const TONE_CLASSES: Record<string, string> = {
   danger: "bg-danger-soft text-danger",
 };
 
+/** O.12 secondary edit-lifecycle chip (09-copy.md; the primary status
+    pill stays authoritative — never demoted by a pending edit). */
+function editChip(listing: OwnerCardDto): { label: string; className: string } | null {
+  const m = listing.management;
+  if (m.editStatus === null || m.primary === "PRE_PUBLICATION") return null;
+  if (m.editStatus === "EDIT_DRAFT") {
+    // 01-state-matrix.md: hidden listings (Deaktiv AND Müddəti bitib)
+    // carry "Redaktə tamamlanmayıb" — completing the edit is the path
+    // forward; the green saved-chip is the ACTIVE-card variant only.
+    return m.primary === "DEACTIVATED" || m.primary === "EXPIRED"
+      ? { label: SELLER.chipDeactivatedDraft, className: "bg-sunken text-slate-strong" }
+      : { label: SELLER.chipEditDraft, className: "bg-success-soft text-success" };
+  }
+  if (m.editStatus === "PENDING_MODERATION") {
+    return { label: SELLER.chipEditPending, className: "bg-sunken text-slate-strong" };
+  }
+  if (m.editStatus === "CORRECTION_REQUIRED") {
+    return { label: SELLER.chipEditCorrection, className: "bg-warning-soft text-warning" };
+  }
+  if (m.editStatus === "APPROVED" && m.primary === "EXPIRED") {
+    return { label: SELLER.chipEditApproved, className: "bg-success-soft text-success" };
+  }
+  return null;
+}
+
 /** Owner card: status-first presentation with a context action. */
 export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
-  const presentation = statusPresentation(listing.status);
+  const m = listing.management;
+  // O.12 sealed precedence drives the PRIMARY pill; effective expiry
+  // (deadline passed, job lagging) presents as EXPIRED, and Deaktiv
+  // gets its own presentation with no public link.
+  const presentation: StatusPresentation =
+    m.primary === "DEACTIVATED"
+      ? { label: SELLER.statusDeactivated, tone: "neutral", action: { kind: "none" } }
+      : m.effectiveExpired
+        ? statusPresentation("EXPIRED")
+        : statusPresentation(listing.status);
+  const chip = editChip(listing);
   const title = vehicleTitle(listing);
-  const href =
-    presentation.action.kind === "wizard"
+  // O.12: expired cards derive their renewal affordance from the
+  // server capability (sealed order edit → moderation → renewal hides
+  // the CTA while an edit is open); other statuses keep the existing
+  // presentation-driven action.
+  const expired = m.primary === "EXPIRED";
+  const href = expired
+    ? m.renewal === "RENEW" || m.renewal === "RENEW_ACTIVATE"
+      ? `/profil/elanlar/${listing.id}/yenile`
+      : null
+    : presentation.action.kind === "wizard"
       ? `/elan-yerlesdir/${listing.id}`
       : presentation.action.kind === "public"
         ? `/elan/${listing.publicId}`
         : presentation.action.kind === "renew"
           ? `/profil/elanlar/${listing.id}/yenile`
           : null;
+  const actionLabel =
+    expired && m.renewal === "RENEW_ACTIVATE"
+      ? SELLER.actionRenewActivate
+      : presentation.action.kind === "none"
+        ? null
+        : presentation.action.label;
+
+  // O.12 edit affordance (ONE per card): EDIT starts via the explicit
+  // create-or-get button; CONTINUE/FIX resume, VIEW opens read-only.
+  const editLabel =
+    m.editAction === "CONTINUE"
+      ? SELLER.actionContinueEdit
+      : m.editAction === "VIEW"
+        ? SELLER.actionViewEdit
+        : m.editAction === "FIX"
+          ? SELLER.actionFix
+          : null;
+  // one green primary per card: resuming/fixing an edit is the primary
+  // next step wherever no promote CTA exists (deactivated/expired)
+  const editIsPrimary =
+    m.primary !== "ACTIVE" && (m.editAction === "CONTINUE" || m.editAction === "FIX");
 
   return (
     <article
@@ -48,6 +114,14 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
             <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
             {presentation.label}
           </span>
+          {chip !== null ? (
+            <span
+              className={`inline-flex items-center rounded-pill px-2 py-0.5 text-[10.5px] font-semibold ${chip.className}`}
+              data-testid="owner-edit-chip"
+            >
+              {chip.label}
+            </span>
+          ) : null}
           <span className="text-[11.5px] tracking-[0.01em] text-muted">
             {listing.imageCount} {SELLER.photosCount}
           </span>
@@ -72,6 +146,21 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
             ) : null}
           </p>
         ) : null}
+        {m.primary === "DEACTIVATED" ? (
+          <p className="text-xs text-muted" data-testid="owner-deactivated-meta">
+            {SELLER.deactivatedMeta}
+          </p>
+        ) : null}
+        {m.awaitingActivation ? (
+          <p className="mt-1 text-xs font-semibold text-slate-strong" data-testid="owner-awaiting-activation">
+            {SELLER.afterModeration}
+          </p>
+        ) : null}
+        {expired && m.editStatus === "PENDING_MODERATION" ? (
+          <p className="mt-1 text-xs text-muted" data-testid="owner-renewal-hint">
+            {SELLER.expiredPendingHint}
+          </p>
+        ) : null}
         {listing.moderationFeedback !== null ? (
           <p className="mt-1 rounded-control bg-danger-soft px-2.5 py-1.5 text-xs leading-relaxed text-danger" data-testid="owner-feedback">
             <span className="font-semibold">{SELLER.moderationFeedback}: </span>
@@ -82,16 +171,34 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
           </p>
         ) : null}
       </div>
-      {href !== null && presentation.action.kind !== "none" ? (
+      {href !== null || m.editAction !== null || m.canDeactivate || m.canReactivate ? (
         <div className="flex shrink-0 flex-col items-stretch justify-center gap-2">
+          {href !== null && presentation.action.kind !== "none" ? (
           <Link
             href={href}
             className="inline-flex min-h-12 items-center justify-center rounded-control border border-primary px-3 text-sm font-semibold tracking-[0.01em] text-primary transition-colors duration-150 hover:bg-primary-tint active:bg-primary-tint-pressed"
             data-testid="owner-action"
           >
-            {presentation.action.label}
+            {actionLabel}
           </Link>
-          {listing.status === "ACTIVE" ? (
+          ) : null}
+          {m.editAction === "EDIT" ? (
+            <EditEntryButton listingId={listing.id} primary={false} />
+          ) : editLabel !== null ? (
+            <Link
+              href={`/profil/elanlar/${listing.id}/redakte`}
+              className={
+                editIsPrimary
+                  ? "inline-flex min-h-12 items-center justify-center rounded-control bg-primary px-3 text-sm font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed"
+                  : "inline-flex min-h-12 items-center justify-center rounded-control border border-primary px-3 text-sm font-semibold tracking-[0.01em] text-primary transition-colors duration-150 hover:bg-primary-tint active:bg-primary-tint-pressed"
+              }
+              data-testid="owner-edit-link"
+              data-edit-action={m.editAction ?? undefined}
+            >
+              {editLabel}
+            </Link>
+          ) : null}
+          {listing.status === "ACTIVE" && m.primary === "ACTIVE" ? (
             (() => {
               // O.9 post-ACTIVE handoff: a creation-time intent is
               // pending only while no same-type SUCCESS payment exists
@@ -116,6 +223,9 @@ export function OwnerListingCard({ listing }: { listing: OwnerCardDto }) {
                 </Link>
               );
             })()
+          ) : null}
+          {m.canDeactivate || m.canReactivate ? (
+            <ListingLifecycleActions listingId={listing.id} revision={listing.revision} management={m} />
           ) : null}
         </div>
       ) : null}

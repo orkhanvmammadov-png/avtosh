@@ -4,6 +4,9 @@ import { STAFF } from "@/lib/marketplace/labels";
 export interface QueueCardItem {
   id: string;
   publicId: string;
+  /** O.12: NEW_LISTING or LISTING_EDIT (rendered as an approved tag —
+      internal enum names never reach the screen). */
+  type: "NEW_LISTING" | "LISTING_EDIT";
   category: string;
   brandName: string | null;
   modelName: string | null;
@@ -51,6 +54,17 @@ export function QueueCard({ item }: { item: QueueCardItem }) {
         )}
       </div>
       <div className="min-w-0 flex-1">
+        {/* O.12 type tag (06-moderator-diff.md): 8.5/600 caps; wraps
+            above the title at narrow widths by nature of the flow */}
+        <span
+          className={`mb-0.5 inline-flex items-center rounded-[3px] px-1.5 py-0.5 text-[8.5px] font-semibold uppercase tracking-[0.06em] ${
+            item.type === "LISTING_EDIT" ? "bg-navy text-[#2FAE74]" : "bg-sunken text-slate-strong"
+          }`}
+          data-testid="queue-type-tag"
+          data-type={item.type}
+        >
+          {item.type === "LISTING_EDIT" ? STAFF.tagListingEdit : STAFF.tagNewListing}
+        </span>
         <p className="truncate text-[13px] font-semibold text-ink">{title}</p>
         <p className="text-xs text-muted">
           {item.category === "MOTORCYCLE" ? "Motosiklet" : "Avtomobil"}

@@ -57,8 +57,15 @@ export interface OwnerListingDto {
   updatedAt: string;
 }
 
+/** Structural subset shared by listing_images and the O.12 staged
+    listing_edit_images rows (identical physical image columns). */
+export type ImageDtoSourceRow = Pick<
+  ListingImageRow,
+  "id" | "storage_path" | "sort_order" | "is_primary" | "width" | "height" | "mime_type"
+>;
+
 export async function toListingImageDto(
-  row: ListingImageRow,
+  row: ImageDtoSourceRow,
 ): Promise<ListingImageDto> {
   const config = listingImageConfig();
   const url = await getStorageProvider()

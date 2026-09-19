@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { EditReviewDiff } from "@/components/moderator/edit-review-diff";
 import { ModerationActions } from "@/components/moderator/moderation-actions";
 import { chipFor, LISTING_STATUS_CHIPS } from "@/components/ui/status-chip";
 import { isApiError } from "@/lib/api/errors";
@@ -121,6 +122,10 @@ export default async function ModerationReviewPage({
 
       <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-5">
+          {/* O.12: changed-first comparison ABOVE the current-content
+              sections when an edit revision awaits review */}
+          {detail.editReview !== null ? <EditReviewDiff review={detail.editReview} /> : null}
+
           <section aria-label={STAFF.images} className="rounded-staff border border-line bg-raised p-3">
             <h2 className="mb-2 text-sm font-bold text-ink">{STAFF.images}</h2>
             {detail.images.length === 0 ? (
@@ -213,6 +218,7 @@ export default async function ModerationReviewPage({
             claimMine={claimMine}
             claimOther={claimOther}
             claimExpiresAt={claimMine ? detail.claim!.expiresAt : null}
+            editRevisionNo={detail.editReview?.editRevisionNo ?? null}
           />
         </div>
       </div>

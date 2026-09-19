@@ -1,5 +1,9 @@
+import type { EditReviewDto } from "@/services/moderation-edit";
+
 /** Typed view of the moderation detail DTO (service returns a plain record). */
 export interface ModerationDetailView {
+  /** O.12: pending edit-revision comparison, or null. */
+  editReview: EditReviewDto | null;
   id: string;
   publicId: string;
   status: string;

@@ -1,6 +1,9 @@
 import { getSql, withTransaction } from "@/lib/server/db/client";
 import { startJobRun } from "@/lib/jobs/log";
+import { listingImageConfig } from "@/lib/config/listing-images";
+import { getStorageProvider } from "@/providers/storage/factory";
 import {
+  claimCleanupEvents,
   claimDueNotifications,
   deferNotification,
   expireListingsBatch,
@@ -8,6 +11,10 @@ import {
   markNotificationFailed,
   markNotificationSent,
   promotionHousekeepingBatch,
+  isImagePathReferenced,
+  markCleanupEventFailed,
+  markCleanupEventProcessed,
+  markCleanupEventRetry,
   reminderEligibility,
   scheduleExpiryReminders,
   scheduleNotificationRetry,
@@ -229,4 +236,94 @@ export async function runPaymentReconciliation(): Promise<
 function envInt(name: string, fallback: number): number {
   const value = Number(process.env[name]);
   return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+// --- O.12 image orphan cleanup ----------------------------------------------
+
+const CLEANUP_BATCH = 25;
+const CLEANUP_MAX_BATCHES = 8;
+const CLEANUP_MAX_ATTEMPTS = 5;
+const CLEANUP_RETRY_BASE_SECONDS = 600;
+
+export interface ImageCleanupSummary {
+  events: number;
+  deleted: number;
+  retained: number;
+  retried: number;
+  failed: number;
+}
+
+/**
+ * O.12 reference-checking storage-orphan cleanup. Candidates arrive as
+ * outbox events from cancel / seller staged-image removal / approval
+ * gallery replacement — they are HINTS only. An object is deleted only
+ * when, AT EXECUTION TIME, it is referenced by neither listing_images
+ * nor listing_edit_images (retained history rows are genuine
+ * references) AND the grace interval has passed. Deletion failure
+ * never touches business data: the event returns to PENDING with
+ * backoff (FAILED after the attempt budget). Idempotent under
+ * duplicated events and overlapping runs (skip-locked claiming +
+ * re-check + idempotent provider deletes).
+ */
+export async function runImageCleanup(
+  options: { graceSeconds?: number } = {},
+): Promise<ImageCleanupSummary> {
+  const log = startJobRun("cleanup-images");
+  const started = Date.now();
+  const graceSeconds =
+    options.graceSeconds ?? envInt("IMAGE_CLEANUP_GRACE_SECONDS", 86_400);
+  const config = listingImageConfig();
+  const storage = getStorageProvider();
+  const sql = getSql();
+  const summary: ImageCleanupSummary = { events: 0, deleted: 0, retained: 0, retried: 0, failed: 0 };
+
+  for (let batch = 0; batch < CLEANUP_MAX_BATCHES; batch += 1) {
+    const events = await withTransaction(async (tx) =>
+      claimCleanupEvents(tx, { limit: CLEANUP_BATCH, graceSeconds }),
+    );
+    if (events.length === 0) break;
+    for (const event of events) {
+      summary.events += 1;
+      const paths = (event.payload.cleanup_candidate_paths ?? "")
+        .split(",")
+        .map((path) => path.trim())
+        .filter((path) => path.length > 0);
+      let failure: string | null = null;
+      for (const path of paths) {
+        // authoritative re-check NOW — never trust the event payload alone
+        if (await isImagePathReferenced(sql, path)) {
+          summary.retained += 1;
+          log.event("candidate_retained", { event_id: event.id, path });
+          continue;
+        }
+        try {
+          await storage.deleteObject(config.imagesBucket, path);
+          summary.deleted += 1;
+          log.event("object_deleted", { event_id: event.id, path });
+        } catch (error) {
+          failure = error instanceof Error ? error.message : "storage delete failed";
+          log.event("delete_failed", { event_id: event.id, path, error: failure });
+        }
+      }
+      if (failure === null) {
+        await markCleanupEventProcessed(sql, event.id);
+      } else if (event.attempt_count >= CLEANUP_MAX_ATTEMPTS) {
+        summary.failed += 1;
+        await markCleanupEventFailed(sql, { id: event.id, error: failure });
+      } else {
+        summary.retried += 1;
+        await markCleanupEventRetry(sql, {
+          id: event.id,
+          retryAt: new Date(
+            Date.now() + CLEANUP_RETRY_BASE_SECONDS * 1000 * event.attempt_count,
+          ),
+          error: failure,
+        });
+      }
+    }
+    if (events.length < CLEANUP_BATCH) break;
+  }
+
+  log.event("finished", { ...summary, duration_ms: Date.now() - started });
+  return summary;
 }
