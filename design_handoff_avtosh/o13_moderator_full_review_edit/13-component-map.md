@@ -1,0 +1,3 @@
+# Component map
+REUSE: existing moderator review sections + queue (O.12 type tags) · O.12 changed-first diff rows + photo badges · decision panel + confirmation/reason model · seller field controls (numeric, selects, chips) · O.11 equipment selector (desktop + mobile) · gallery thumbnail controls · dialog/bottom-sheet primitives · status chips · existing history list styling · conflict pattern.
+NEW / ADDITIVE (5 only): ModeratorEditToggle (Redaktə et ↔ edit mode swap) · ModeratorAdjustmentBar (saved chip + attribution + savedAt) · SellerVsModeratorDiffRow (2-way and 3-way variants) · ModeratorPhotoPlan (remove/restore/reorder/primary, no upload) · AdjustmentAttribution (takeover card). No second design system; no expansion without necessity.
