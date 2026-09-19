@@ -19,7 +19,7 @@ G. Every adjustment save emits append-only attribution/audit: adjustment id, adj
 H. Claim takeover never erases previous moderator authorship.
 
 ## Sources
-Design source: design_files/AVTOSH Seller Flow.dc.html — section "5 — O.13 MODERATOR FULL REVIEW & EDIT" (all prior sections sealed). References: references/{new,edit,photos,equipment,takeover,mobile}/ — 13 PNGs, visual aids; markdown is authoritative.
+Design source: design_files/AVTOSH Seller Flow.dc.html — section "5 — O.13 MODERATOR FULL REVIEW & EDIT" (all prior sections sealed). References: references/{new,edit,takeover,mobile}/ — 11 PNGs, visual aids; photo-plan and equipment states are embedded in the edit-mode references (no separate photos/equipment folders); markdown is authoritative.
 
 ## Files
 01-full-review-ia · 02-edit-mode · 03-new-adjustment · 04-listing-edit-adjustment · 05-equipment · 06-photos · 07-takeover-conflicts · 08-decisions-history · 09-responsive · 10-accessibility · 11-copy-contract · 12-api-state-contracts · 13-component-map · 14-visual-delta-non-goals
