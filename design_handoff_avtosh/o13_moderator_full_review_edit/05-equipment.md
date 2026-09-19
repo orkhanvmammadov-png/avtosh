@@ -1,0 +1,4 @@
+# Equipment
+Review: full seller/proposed selection grouped by sealed O.11 groups (group headers + ✓ items); LISTING_EDIT shows the full proposed set, with seller-delta annotations available in the summary.
+Edit: O.11 grouped/searchable selector reused (search, disclosures, counts). Moderator may check (add existing catalog equipment) or uncheck (remove). Moderator-changed items carry inline markers: "çıxarıldı" (red tint) on removed-but-visible rows, "əlavə edildi" (green tint) on additions — visible before save.
+No taxonomy changes, no new items, no group edits. Counts derive from the working selection.

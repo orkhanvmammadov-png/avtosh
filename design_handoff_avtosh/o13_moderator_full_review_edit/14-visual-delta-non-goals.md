@@ -1,0 +1,7 @@
+# Visual delta
+BEFORE: moderator review = read-only detail + O.12 seller-edit diff; no moderator content editing; equipment under-covered.
+AFTER: full-coverage read-first review (all seller fields incl. full O.11 equipment + unmasked authorized contact) · explicit edit mode with private working adjustment · Yadda saxla / Dəyişiklikləri ləğv et · saved-adjustment chip + attribution · NEW two-way and EDIT three-way changed-first comparisons · photo plan (no upload) · claim-takeover and conflict states · decision gating + adjusted-approve confirmation · compact multi-actor history. Queue, verbs, public UI, seller UI: unchanged.
+# Sealed non-goals
+No moderator photo upload · no payment editing · no promotion editing · no lifecycle editing · no user/admin management · no seller notification (WhatsApp/in-app) for adjusted fields · no AI correction · no bulk moderation editor · no full version-history product · no public UI redesign · no seller UI redesign.
+# Closed questions (do not reopen)
+Seller notification = NO · discarded adjustments = history only · snapshot timing = first save (NEW and EDIT) · photo upload = NO · decision verbs unchanged · takeover work preserved · unsaved never silently approved · seller original always preserved.
