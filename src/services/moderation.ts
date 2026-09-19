@@ -31,6 +31,7 @@ import {
   type ReviewRow,
 } from "@/repositories/moderation";
 import { toListingImageDto, type ListingImageDto } from "@/services/listing-dto";
+import { buildFeatureGroups } from "@/services/moderation-content";
 
 /**
  * Moderation service: oldest-first queue, soft claims, and the three
@@ -242,6 +243,9 @@ export async function getModerationDetail(listingId: string): Promise<Record<str
       status: row.owner_status,
     },
     featureIds,
+    // O.13 Stage A: full equipment resolved + grouped server-side
+    // (O.11 groups) — the review UI renders names, never ids
+    featureGroups: await buildFeatureGroups(sql, featureIds),
     images,
     reviews: reviews.map(toReviewDto),
     claim: toClaimDto(claim),

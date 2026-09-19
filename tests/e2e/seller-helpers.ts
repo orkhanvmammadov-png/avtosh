@@ -149,6 +149,21 @@ export async function consumeFreePublications(ownerId: string, count: number): P
   }
 }
 
+/** O.13 Stage A — attaches O.11 catalog features (by stable code) to a
+    fixture listing so moderation full-review equipment is real data. */
+export async function addListingFeatures(listingId: string, codes: string[]): Promise<void> {
+  const sql = db();
+  try {
+    await sql`
+      insert into listing_features (listing_id, feature_id)
+      select ${listingId}, f.id from features f where f.code in ${sql(codes)}
+      on conflict do nothing
+    `;
+  } finally {
+    await sql.end();
+  }
+}
+
 /** Simulates "another window" bumping the listing revision. */
 export async function bumpListingRevision(listingId: string): Promise<void> {
   const sql = db();

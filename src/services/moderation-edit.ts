@@ -32,8 +32,13 @@ import {
   type ClaimRow,
   type ReviewRow,
 } from "@/repositories/moderation";
-import { getListingFeatureIds, replaceListingFeatures } from "@/repositories/listings";
+import { getListingFeatureIds, listFeatureRowsByIds, replaceListingFeatures } from "@/repositories/listings";
 import { findActiveCategoryByCode } from "@/repositories/catalog";
+import { toListingImageDto, type ListingImageDto } from "@/services/listing-dto";
+import {
+  buildFeatureGroupsFromRows,
+  type ModerationContentDto,
+} from "@/services/moderation-content";
 import { tryFinalizeSellerReactivation } from "@/services/listing-lifecycle";
 import { assertRevisionSubmittable } from "@/services/listing-edit";
 
@@ -80,6 +85,11 @@ export interface EditReviewDto {
   photosReordered: boolean;
   /** Unchanged context values for the collapsed "Digər məlumatlar". */
   unchanged: { field: string; value: string }[];
+  /** O.13 Stage A: the COMPLETE seller-proposed listing content
+      (labels resolved, full grouped equipment, full staged gallery
+      with order/primary) — the moderator inspects the whole proposed
+      listing, never only the diff. */
+  sellerSubmitted: ModerationContentDto;
 }
 
 const YES = "Bəli";
@@ -213,52 +223,72 @@ export async function buildEditReview(
     changes.push({ field, oldValue, newValue });
   };
 
+  // O.13 Stage A: every proposed value is resolved ONCE and reused by
+  // both the changed-first diff and the full sellerSubmitted read model
   const proposedCategory = dataString(data, "category") ?? listing.category_code;
+  const proposed = {
+    brandName: await names.of("brands", dataString(data, "brand_id")),
+    modelName: await names.of("models", dataString(data, "model_id")),
+    year: dataNumber(data, "year"),
+    priceMinor: dataNumber(data, "price_minor"),
+    mileage: dataNumber(data, "mileage"),
+    engineCc: dataNumber(data, "engine_cc"),
+    fuelType: await names.of("reference_options", dataString(data, "fuel_type_id")),
+    transmission: await names.of("reference_options", dataString(data, "transmission_id")),
+    bodyType: await names.of("reference_options", dataString(data, "body_type_id")),
+    driveType: await names.of("reference_options", dataString(data, "drive_type_id")),
+    motorcycleType: await names.of("reference_options", dataString(data, "motorcycle_type_id")),
+    color: await names.of("reference_options", dataString(data, "color_id")),
+    cityName: await names.of("cities", dataString(data, "city_id")),
+    creditAvailable: data.credit_available === true,
+    barterAvailable: data.barter_available === true,
+    noAccident: data.no_accident === true,
+    notRepainted: data.not_repainted === true,
+    description: dataString(data, "description"),
+    sellerName: dataString(data, "seller_name"),
+    contactPhone: dataString(data, "contact_phone"),
+  };
+
   consider(
     "category",
     listing.category_code === "MOTORCYCLE" ? "Motosiklet" : "Avtomobil",
     proposedCategory === "MOTORCYCLE" ? "Motosiklet" : "Avtomobil",
   );
-  consider("brand", listing.brand_name, await names.of("brands", dataString(data, "brand_id")));
-  consider("model", listing.model_name, await names.of("models", dataString(data, "model_id")));
-  consider("year", listing.year === null ? null : String(listing.year), (() => {
-    const y = dataNumber(data, "year");
-    return y === null ? null : String(y);
-  })());
+  consider("brand", listing.brand_name, proposed.brandName);
+  consider("model", listing.model_name, proposed.modelName);
+  consider(
+    "year",
+    listing.year === null ? null : String(listing.year),
+    proposed.year === null ? null : String(proposed.year),
+  );
   consider(
     "price",
     formatAzn(listing.price_minor === null ? null : Number(listing.price_minor)),
-    formatAzn(dataNumber(data, "price_minor")),
+    formatAzn(proposed.priceMinor),
   );
   consider(
     "mileage",
     listing.mileage === null ? null : `${listing.mileage} km`,
-    (() => {
-      const m = dataNumber(data, "mileage");
-      return m === null ? null : `${m} km`;
-    })(),
+    proposed.mileage === null ? null : `${proposed.mileage} km`,
   );
   consider(
     "engine_cc",
     listing.engine_cc === null ? null : `${listing.engine_cc} sm³`,
-    (() => {
-      const cc = dataNumber(data, "engine_cc");
-      return cc === null ? null : `${cc} sm³`;
-    })(),
+    proposed.engineCc === null ? null : `${proposed.engineCc} sm³`,
   );
-  consider("fuel_type", listing.fuel_type, await names.of("reference_options", dataString(data, "fuel_type_id")));
-  consider("transmission", listing.transmission, await names.of("reference_options", dataString(data, "transmission_id")));
-  consider("body_type", listing.body_type, await names.of("reference_options", dataString(data, "body_type_id")));
-  consider("drive_type", listing.drive_type, await names.of("reference_options", dataString(data, "drive_type_id")));
-  consider("motorcycle_type", listing.motorcycle_type, await names.of("reference_options", dataString(data, "motorcycle_type_id")));
-  consider("color", listing.color, await names.of("reference_options", dataString(data, "color_id")));
-  consider("city", listing.city_name, await names.of("cities", dataString(data, "city_id")));
-  consider("credit", listing.credit_available ? YES : NO, data.credit_available === true ? YES : NO);
-  consider("barter", listing.barter_available ? YES : NO, data.barter_available === true ? YES : NO);
-  consider("no_accident", listing.no_accident === true ? YES : NO, data.no_accident === true ? YES : NO);
-  consider("not_repainted", listing.not_repainted === true ? YES : NO, data.not_repainted === true ? YES : NO);
-  consider("seller_name", listing.seller_name, dataString(data, "seller_name"));
-  consider("contact_phone", listing.contact_phone_e164, dataString(data, "contact_phone"));
+  consider("fuel_type", listing.fuel_type, proposed.fuelType);
+  consider("transmission", listing.transmission, proposed.transmission);
+  consider("body_type", listing.body_type, proposed.bodyType);
+  consider("drive_type", listing.drive_type, proposed.driveType);
+  consider("motorcycle_type", listing.motorcycle_type, proposed.motorcycleType);
+  consider("color", listing.color, proposed.color);
+  consider("city", listing.city_name, proposed.cityName);
+  consider("credit", listing.credit_available ? YES : NO, proposed.creditAvailable ? YES : NO);
+  consider("barter", listing.barter_available ? YES : NO, proposed.barterAvailable ? YES : NO);
+  consider("no_accident", listing.no_accident === true ? YES : NO, proposed.noAccident ? YES : NO);
+  consider("not_repainted", listing.not_repainted === true ? YES : NO, proposed.notRepainted ? YES : NO);
+  consider("seller_name", listing.seller_name, proposed.sellerName);
+  consider("contact_phone", listing.contact_phone_e164, proposed.contactPhone);
 
   // description: readable before/after blocks — never a scalar row
   const oldDescription = listing.description;
@@ -266,23 +296,29 @@ export async function buildEditReview(
   const descriptionChange =
     oldDescription === newDescription ? null : { before: oldDescription, after: newDescription };
 
-  // equipment by stable feature identity (order-independent)
+  // equipment by stable feature identity (order-independent); ONE
+  // batch name/group lookup over both sides feeds the +/− diff AND the
+  // full grouped proposed set (O.13 Stage A — no per-feature queries)
   const approvedFeatures = await getListingFeatureIds(sql, listing.id);
   const proposedFeatures = dataFeatureIds(data);
   const approvedSet = new Set(approvedFeatures);
   const proposedSet = new Set(proposedFeatures);
+  const featureRows = await listFeatureRowsByIds(sql, [
+    ...new Set([...approvedFeatures, ...proposedFeatures]),
+  ]);
+  const featureNames = new Map(featureRows.map((row) => [row.id, row.name_az]));
   const equipmentAdded: string[] = [];
   const equipmentRemoved: string[] = [];
   for (const id of proposedFeatures) {
     if (!approvedSet.has(id)) {
-      const name = await names.of("features", id);
-      if (name !== null) equipmentAdded.push(name);
+      const name = featureNames.get(id);
+      if (name !== undefined) equipmentAdded.push(name);
     }
   }
   for (const id of approvedFeatures) {
     if (!proposedSet.has(id)) {
-      const name = await names.of("features", id);
-      if (name !== null) equipmentRemoved.push(name);
+      const name = featureNames.get(id);
+      if (name !== undefined) equipmentRemoved.push(name);
     }
   }
 
@@ -290,6 +326,11 @@ export async function buildEditReview(
   // (staged snapshot copies have new row ids by design)
   const approvedImages = await listListingImages(sql, listing.id);
   const stagedImages = await listEditRevisionImages(sql, revision.id);
+  // full proposed gallery signed ONCE — the badge diff reuses the URLs
+  const stagedDtos: ListingImageDto[] = [];
+  for (const img of stagedImages) {
+    stagedDtos.push(await toListingImageDto(img));
+  }
   const approvedPaths = approvedImages.map((img: ListingImageRow) => img.storage_path);
   const stagedPaths = stagedImages.map((img: EditImageRow) => img.storage_path);
   const approvedPathSet = new Set(approvedPaths);
@@ -299,9 +340,9 @@ export async function buildEditReview(
   const primaryChanged = oldPrimary !== newPrimary;
 
   const photoDiff: PhotoDiffItemDto[] = [];
-  for (const img of stagedImages) {
+  for (const [index, img] of stagedImages.entries()) {
     photoDiff.push({
-      url: await signImage(img.storage_path),
+      url: stagedDtos[index].url,
       isPrimary: img.is_primary,
       badge: !approvedPathSet.has(img.storage_path)
         ? "ADDED"
@@ -338,6 +379,36 @@ export async function buildEditReview(
     photoDiff,
     photosReordered,
     unchanged,
+    sellerSubmitted: {
+      category: proposedCategory,
+      brandName: proposed.brandName,
+      modelName: proposed.modelName,
+      year: proposed.year,
+      priceMinor: proposed.priceMinor,
+      currency: listing.currency,
+      mileage: proposed.mileage,
+      engineCc: proposed.engineCc,
+      fuelType: proposed.fuelType,
+      transmission: proposed.transmission,
+      bodyType: proposed.bodyType,
+      driveType: proposed.driveType,
+      motorcycleType: proposed.motorcycleType,
+      color: proposed.color,
+      cityName: proposed.cityName,
+      creditAvailable: proposed.creditAvailable,
+      barterAvailable: proposed.barterAvailable,
+      // positive-claim semantics (true or null) match the approved
+      // content the swap would write — absence is never a negative
+      noAccident: proposed.noAccident ? true : null,
+      notRepainted: proposed.notRepainted ? true : null,
+      description: proposed.description,
+      sellerName: proposed.sellerName,
+      contactPhone: proposed.contactPhone,
+      featureGroups: buildFeatureGroupsFromRows(
+        featureRows.filter((row) => proposedSet.has(row.id)),
+      ),
+      images: stagedDtos,
+    },
   };
 }
 

@@ -1,7 +1,10 @@
 import type { EditReviewDto } from "@/services/moderation-edit";
+import type { ModerationFeatureGroupDto } from "@/services/moderation-content";
 
 /** Typed view of the moderation detail DTO (service returns a plain record). */
 export interface ModerationDetailView {
+  /** O.13 Stage A: full grouped equipment of the listing content. */
+  featureGroups: ModerationFeatureGroupDto[];
   /** O.12: pending edit-revision comparison, or null. */
   editReview: EditReviewDto | null;
   id: string;

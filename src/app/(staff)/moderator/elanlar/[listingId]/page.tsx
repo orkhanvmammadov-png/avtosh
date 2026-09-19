@@ -1,9 +1,13 @@
 import { notFound } from "next/navigation";
 import { EditReviewDiff } from "@/components/moderator/edit-review-diff";
+import {
+  FullReviewSections,
+  type FullReviewContent,
+} from "@/components/moderator/full-review-sections";
 import { ModerationActions } from "@/components/moderator/moderation-actions";
 import { chipFor, LISTING_STATUS_CHIPS } from "@/components/ui/status-chip";
 import { isApiError } from "@/lib/api/errors";
-import { formatDateAz, formatMileage, formatPriceMinor, vehicleTitle } from "@/lib/format";
+import { formatDateAz, formatPriceMinor, vehicleTitle } from "@/lib/format";
 import { STAFF } from "@/lib/marketplace/labels";
 import { requireStaffPage } from "@/lib/moderator/staff-page";
 import type { ModerationDetailView } from "@/lib/moderator/types";
@@ -75,25 +79,41 @@ export default async function ModerationReviewPage({
   const claimMine = detail.claim !== null && detail.claim.moderatorId === auth.user.id;
   const claimOther = detail.claim !== null && !claimMine;
 
-  const specs: [string, string | null][] = [
-    ["Kateqoriya", detail.category === "MOTORCYCLE" ? "Motosiklet" : "Avtomobil"],
-    ["Yürüş", detail.mileage === null ? null : formatMileage(detail.mileage)],
-    ["Mühərrik", detail.engineCc === null ? null : `${detail.engineCc} sm³`],
-    ["Yanacaq", detail.fuelType],
-    ["Sürətlər qutusu", detail.transmission],
-    ["Ban növü", detail.bodyType],
-    ["Ötürücü", detail.driveType],
-    ["Moto növü", detail.motorcycleType],
-    ["Rəng", detail.color],
-    ["Şəhər", detail.cityName],
-    ["Vuruğu yoxdur", detail.noAccident === true ? "Qeyd edilib" : "Qeyd edilməyib"],
-    ["Rənglənməyib", detail.notRepainted === true ? "Qeyd edilib" : "Qeyd edilməyib"],
-    ["Kredit", detail.creditAvailable ? "Var" : "Yoxdur"],
-    ["Barter", detail.barterAvailable ? "Var" : "Yoxdur"],
-    ["Satıcının adı (elanda)", detail.sellerName],
-    [STAFF.contactField, detail.contactPhone],
+  // O.13 Stage A: ONE normalized content view feeds the structured
+  // full-review sections — for NEW it is the submitted listing content,
+  // for LISTING_EDIT it doubles as the "Mövcud elan" (current approved)
+  // layer under the proposed content.
+  const listingContent: FullReviewContent = {
+    category: detail.category,
+    brandName: detail.brand?.name ?? null,
+    modelName: detail.model?.name ?? null,
+    year: detail.year,
+    priceMinor: detail.priceMinor,
+    currency: detail.currency,
+    mileage: detail.mileage,
+    engineCc: detail.engineCc,
+    fuelType: detail.fuelType,
+    transmission: detail.transmission,
+    bodyType: detail.bodyType,
+    driveType: detail.driveType,
+    motorcycleType: detail.motorcycleType,
+    color: detail.color,
+    cityName: detail.cityName,
+    creditAvailable: detail.creditAvailable,
+    barterAvailable: detail.barterAvailable,
+    noAccident: detail.noAccident,
+    notRepainted: detail.notRepainted,
+    description: detail.description,
+    sellerName: detail.sellerName,
+    contactPhone: detail.contactPhone,
+    featureGroups: detail.featureGroups,
+    images: detail.images,
+  };
+  // Account identity + submission time stay in Satıcı / Əlaqə —
+  // subject-level context, never proposed content.
+  const contactExtras = (submittedAt: string | null): [string, string | null][] => [
     [STAFF.seller, `${detail.seller.displayName ?? "—"} · ${detail.seller.phoneMasked}`],
-    [STAFF.submittedAt, detail.submittedAt === null ? null : formatDateTime(detail.submittedAt)],
+    [STAFF.submittedAt, submittedAt === null ? null : formatDateTime(submittedAt)],
   ];
 
   const chipSpec = chipFor(LISTING_STATUS_CHIPS, detail.status);
@@ -122,67 +142,46 @@ export default async function ModerationReviewPage({
 
       <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-5">
-          {/* O.12: changed-first comparison ABOVE the current-content
-              sections when an edit revision awaits review */}
-          {detail.editReview !== null ? <EditReviewDiff review={detail.editReview} /> : null}
-
-          <section aria-label={STAFF.images} className="rounded-staff border border-line bg-raised p-3">
-            <h2 className="mb-2 text-sm font-bold text-ink">{STAFF.images}</h2>
-            {detail.images.length === 0 ? (
-              <p className="text-sm text-muted">{STAFF.noImage}</p>
-            ) : (
-              <ul className="grid grid-cols-2 gap-2 md:grid-cols-3" data-testid="moderation-gallery">
-                {detail.images.map((image, index) => (
-                  <li key={image.id} className="relative overflow-hidden rounded-staff bg-sunken">
-                    {image.url !== null ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
-                      <img
-                        src={image.url}
-                        alt={`${title} — ${index + 1}`}
-                        className="aspect-vehicle w-full object-cover text-transparent"
-                        loading={index < 3 ? "eager" : "lazy"}
-                      />
-                    ) : (
-                      <div
-                        className="flex aspect-vehicle w-full items-center justify-center text-xs text-slate-strong"
-                        data-testid="gallery-image-fallback"
-                      >
-                        {STAFF.noImage}
-                      </div>
-                    )}
-                    {image.isPrimary ? (
-                      <span className="absolute left-1.5 top-1.5 rounded-[3px] bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] text-white">
-                        {STAFF.primaryTag}
-                      </span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section aria-label={STAFF.specs} className="rounded-staff border border-line bg-raised p-4">
-            <h2 className="text-sm font-bold text-ink">{STAFF.specs}</h2>
-            <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2" data-testid="review-specs">
-              {specs
-                .filter(([, value]) => value !== null)
-                .map(([label, value]) => (
-                  <div key={label} className="flex justify-between gap-4 border-b border-line py-1.5 text-sm">
-                    <dt className="text-slate-strong">{label}</dt>
-                    <dd className="text-right font-medium text-ink">{value}</dd>
-                  </div>
-                ))}
-            </dl>
-          </section>
-
-          {detail.description !== null ? (
-            <section aria-label={STAFF.descriptionTitle} className="rounded-staff border border-line bg-raised p-4">
-              <h2 className="text-sm font-bold text-ink">{STAFF.descriptionTitle}</h2>
-              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink" data-testid="review-description">
-                {detail.description}
-              </p>
-            </section>
-          ) : null}
+          {detail.editReview !== null ? (
+            <>
+              {/* O.12: changed-first comparison stays FIRST … */}
+              <EditReviewDiff review={detail.editReview} />
+              {/* … then O.13 Stage A: the COMPLETE proposed listing —
+                  the moderator never infers unchanged values from the
+                  old listing … */}
+              <FullReviewSections
+                content={detail.editReview.sellerSubmitted}
+                testId="edit-full-data"
+                layerNote={STAFF.layerProposed}
+                contactExtras={contactExtras(detail.editReview.submittedAt)}
+                galleryAlt={title}
+              />
+              {/* … with the full current approved layer collapsed below */}
+              <details
+                className="rounded-staff border border-line bg-raised p-4"
+                data-testid="edit-current-data"
+              >
+                <summary className="cursor-pointer text-sm font-bold text-ink">
+                  {STAFF.layerCurrent}
+                </summary>
+                <div className="mt-3">
+                  <FullReviewSections
+                    content={listingContent}
+                    testId="edit-current-sections"
+                    heading={null}
+                    galleryAlt={title}
+                  />
+                </div>
+              </details>
+            </>
+          ) : (
+            <FullReviewSections
+              content={listingContent}
+              testId="review-specs"
+              contactExtras={contactExtras(detail.submittedAt)}
+              galleryAlt={title}
+            />
+          )}
 
           <section aria-label={STAFF.history} className="rounded-staff border border-line bg-raised p-4">
             <h2 className="text-sm font-bold text-ink">{STAFF.history}</h2>

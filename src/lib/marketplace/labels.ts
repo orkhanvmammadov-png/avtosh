@@ -447,6 +447,17 @@ export const STAFF = {
     "Elan deaktivdir — təsdiqdən sonra yalnız aktivləşdirmə şərtləri ödənərsə yayımlanacaq.",
   editCtxExpired:
     "Elanın müddəti bitib — təsdiq məzmunu yeniləyəcək, elan yenilənənədək yayımlanmayacaq.",
+  // O.13 Stage A — full review read model (11-copy-contract + approved IA)
+  fullData: "Elanın bütün məlumatları",
+  layerCurrent: "Mövcud elan",
+  layerProposed: "Təklif olunan dəyişiklik",
+  secVehicleCar: "Avtomobil məlumatları",
+  secVehicleMoto: "Motosiklet məlumatları",
+  secSales: "Satış məlumatları",
+  secCondition: "Vəziyyət",
+  secEquipment: "Təchizat",
+  secSellerContact: "Satıcı / Əlaqə",
+  equipmentEmpty: "Təchizat seçilməyib",
 } as const;
 
 /** Admin panel strings (Phase 4.15). */
