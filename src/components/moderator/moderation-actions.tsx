@@ -93,6 +93,15 @@ export function ModerationActions({
       if (error.code === "MODERATION_INVALID_STATE") return setConflict("decided");
       if (error.code === "MODERATION_CLAIMED_BY_OTHER") return setConflict("claim");
       if (error.code === "MODERATION_CLAIM_REQUIRED") return setMessage(STAFF.claimRequired);
+      // O.13: an adjusted approval refused for content reasons tells
+      // the moderator exactly what to do, never a generic failure
+      if (
+        error.code === "LISTING_INCOMPLETE" ||
+        error.code === "LISTING_INVALID_CATALOG_SELECTION" ||
+        error.code === "LISTING_INSUFFICIENT_IMAGES"
+      ) {
+        return setMessage(STAFF.decisionAdjustmentInvalid);
+      }
     }
     setMessage(STAFF.actionFailed);
   }

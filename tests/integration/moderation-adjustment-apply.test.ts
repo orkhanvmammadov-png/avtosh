@@ -64,6 +64,9 @@ async function newUser(opts: { roles?: string[] } = {}): Promise<Session> {
 async function insertListing(spec: {
   status: "PENDING_MODERATION" | "ACTIVE";
   images?: number;
+  /** Owner-UAT regression shape: legacy-era submissions predate the
+      seller_name requirement and are still plainly approvable. */
+  sellerName?: string | null;
 }): Promise<{ id: string; publicId: number; revision: number; imageIds: string[]; imagePaths: string[] }> {
   const sql = getSql();
   const active = spec.status === "ACTIVE";
@@ -72,7 +75,8 @@ async function insertListing(spec: {
       mileage, credit_available, barter_available, description, contact_phone_e164, seller_name,
       status, submitted_at, published_at, current_expires_at)
     values (${seller.userId}, ${carCat}, ${brand}, ${model}, ${city}, 2021, 2500000,
-      50000, false, false, 'O13C satıcı təsviri', ${CONTACT}, 'O13C Satıcı',
+      50000, false, false, 'O13C satıcı təsviri', ${CONTACT},
+      ${spec.sellerName === undefined ? "O13C Satıcı" : spec.sellerName},
       ${spec.status}::listing_status, now() - interval '2 days',
       ${active ? sql`now() - interval '1 day'` : null},
       ${active ? sql`now() + interval '20 days'` : null})
@@ -352,6 +356,64 @@ describe("NEW adjusted approval", () => {
       select status from outbox_events where id = ${event.id}
     `;
     expect(eventStatus).toBe("PROCESSED"); // retained, not retried forever
+  });
+
+  it("Owner-UAT regression: a legacy submission without seller_name approves with an adjustment exactly like the plain path", async () => {
+    // fails on 5221db3 with 400 LISTING_INCOMPLETE {missing: seller_name}
+    const listing = await insertListing({ status: "PENDING_MODERATION", sellerName: null });
+    await claim(mod1, listing.id);
+    // full content-type matrix in one working copy: scalar + equipment + photo
+    const save = await saveAdjustment(mod1, listing.id, {
+      expected_listing_revision: listing.revision,
+      expected_adjustment_revision: null,
+      content: { price_minor: 2750000, feature_ids: [featA, featB] },
+      image_plan: planFor(listing.imageIds, {
+        0: { primary: false },
+        1: { primary: true },
+        3: { removed: true },
+      }),
+    });
+    expect(save.status).toBe(200);
+    const approve = await decideNew(approveRoute as Route, "approve", mod1, listing.id, {
+      expected_revision: listing.revision,
+      expected_adjustment_revision: 1,
+    });
+    expect(approve.status).toBe(200);
+    const state = await listingState(listing.id);
+    expect(state.status).toBe("ACTIVE");
+    expect(state.price_minor).toBe("2750000");
+    expect(state.features).toEqual([featA, featB].sort());
+    expect(state.images).toHaveLength(3);
+    // the field the seller never submitted stays absent — no invented content
+    const [{ seller_name }] = await getSql()<{ seller_name: string | null }[]>`
+      select seller_name from listings where id = ${listing.id}
+    `;
+    expect(seller_name).toBeNull();
+  });
+
+  it("still refuses an adjustment that DEGRADES submitted required content", async () => {
+    const listing = await insertListing({ status: "PENDING_MODERATION" }); // has seller_name
+    await claim(mod1, listing.id);
+    const save = await saveAdjustment(mod1, listing.id, {
+      expected_listing_revision: listing.revision,
+      expected_adjustment_revision: null,
+      content: { seller_name: null },
+      image_plan: planFor(listing.imageIds),
+    });
+    expect(save.status).toBe(200);
+    const approve = await decideNew(approveRoute as Route, "approve", mod1, listing.id, {
+      expected_revision: listing.revision,
+      expected_adjustment_revision: 1,
+    });
+    expect(approve.status).toBe(400);
+    expect(approve.body.error?.code).toBe("LISTING_INCOMPLETE");
+    // refused approval leaves everything intact: still pending, OPEN
+    const state = await listingState(listing.id);
+    expect(state.status).toBe("PENDING_MODERATION");
+    const [adj] = await getSql()<{ status: string }[]>`
+      select status from moderation_adjustments where listing_id = ${listing.id}
+    `;
+    expect(adj.status).toBe("OPEN");
   });
 
   it("blocks stale/mismatched adjustment views and lost claims with typed conflicts", async () => {

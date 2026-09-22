@@ -502,6 +502,8 @@ export const STAFF = {
     "Moderator düzəlişləri tətbiq olunmayacaq. Satıcı düzəliş sorğusunu alacaq; saxlanılmış moderator düzəlişi tarixçəyə köçürüləcək.",
   rejectWithAdj:
     "Moderator düzəlişləri tətbiq olunmayacaq. Rədd mövcud qaydalarla icra olunacaq; düzəliş yalnız tarixçədə qalacaq.",
+  decisionAdjustmentInvalid:
+    "Moderator düzəlişi natamamdır və ya etibarsız seçim ehtiva edir — redaktəyə qayıdıb düzəldin.",
 } as const;
 
 /** Admin panel strings (Phase 4.15). */

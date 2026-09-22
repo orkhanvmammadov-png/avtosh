@@ -313,7 +313,9 @@ export async function updateEditRevision(
   return buildEditView(getSql(), listing, updated);
 }
 
-const SUBMIT_REQUIRED_FIELDS: { key: string; code: string }[] = [
+/** Sealed submit-time required-field list — the single source of truth
+    (also consumed by the O.13 adjusted-approval relative check). */
+export const SUBMIT_REQUIRED_FIELDS: { key: string; code: string }[] = [
   { key: "brand_id", code: "brand" },
   { key: "model_id", code: "model" },
   { key: "year", code: "year" },
@@ -324,7 +326,7 @@ const SUBMIT_REQUIRED_FIELDS: { key: string; code: string }[] = [
   { key: "seller_name", code: "seller_name" },
 ];
 
-const SUBMIT_REFERENCE_FIELDS: { key: string; group: string }[] = [
+export const SUBMIT_REFERENCE_FIELDS: { key: string; group: string }[] = [
   { key: "fuel_type_id", group: "FUEL_TYPE" },
   { key: "transmission_id", group: "TRANSMISSION" },
   { key: "body_type_id", group: "BODY_TYPE" },

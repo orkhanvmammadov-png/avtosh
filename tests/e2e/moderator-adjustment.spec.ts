@@ -362,3 +362,35 @@ test("Journey 3 — reject with adjustment applies nothing (O.13.5C)", async ({ 
   expect(snapshot.status).toBe("REJECTED");
   expect(snapshot.price).toBe("2500000");
 });
+
+test("Owner journey — legacy submission without seller_name: save → Təsdiqlə succeeds (O.13.5C regression)", async ({ page }, { project }) => {
+  // fails on 5221db3: approve returned 400 LISTING_INCOMPLETE
+  // {missing: seller_name} behind the generic "Əməliyyat alınmadı"
+  const { userId } = await loginAsStub(project.name, 191);
+  const fixture = await insertListingFixture(userId, {
+    status: "PENDING_MODERATION", complete: true, images: 3,
+  });
+  const sql = postgres(seed().databaseUrl, { prepare: false, max: 1 });
+  await sql`update listings set seller_name = null where id = ${fixture.id}`;
+  await sql.end();
+
+  await loginAs(page.context(), testPhone(project.name, 192), { roles: ["MODERATOR"] });
+  await claimOnDetail(page, fixture.id);
+  await page.getByTestId("adjustment-edit").click();
+  await page.getByTestId("adj-price").fill("27500");
+  await page.getByTestId("adjustment-save").click();
+  // SERVER saved state — then decide with no shortcut in between
+  await expect(page.getByTestId("adjustment-chip")).toBeVisible();
+  await page.getByTestId("action-approve").click();
+  await expect(page.getByTestId("adjusted-decision-note")).toContainText(
+    "Moderator düzəlişləri ilə təsdiqlənəcək",
+  );
+  await page.getByTestId("decision-submit").click();
+  await expect(page.getByTestId("decision-done")).toContainText("təsdiqləndi");
+
+  const snapshot = await listingSnapshot(fixture.id);
+  expect(snapshot.status).toBe("ACTIVE");
+  expect(snapshot.price).toBe("2750000");
+  await page.goto(`/elan/${fixture.publicId}`);
+  await expect(page.getByTestId("detail-price")).toContainText("27 500");
+});

@@ -3,7 +3,14 @@ import { ApiError } from "@/lib/api/errors";
 import { listingImageConfig } from "@/lib/config/listing-images";
 import { getSql, withTransaction, type Sql } from "@/lib/server/db/client";
 import { getStorageProvider } from "@/providers/storage/factory";
-import { findActiveCategoryByCode, filterActiveFeatureIdsForCategory } from "@/repositories/catalog";
+import {
+  findActiveBrandInCategory,
+  findActiveCategoryByCode,
+  findActiveCityById,
+  findActiveModelInBrandCategory,
+  findActiveReferenceOptionForCategory,
+  filterActiveFeatureIdsForCategory,
+} from "@/repositories/catalog";
 import { listListingImages } from "@/repositories/listing-images";
 import {
   listEditRevisionImages,
@@ -28,7 +35,7 @@ import {
 } from "@/repositories/moderation-adjustments";
 import { insertModerationAudit } from "@/repositories/moderation-audit";
 import { applyApprovedEditContent } from "@/repositories/listing-edit-revisions";
-import { assertContentSubmittable } from "@/services/listing-edit";
+import { SUBMIT_REFERENCE_FIELDS, SUBMIT_REQUIRED_FIELDS } from "@/services/listing-edit";
 import { approvedContentSet } from "@/services/moderation-edit";
 import { formatMileage, formatPriceMinor } from "@/lib/format";
 import { buildEditSnapshot } from "@/services/listing-lifecycle";
@@ -447,6 +454,75 @@ async function auditSave(
 
 // --- Stage C: NEW decision integration --------------------------------------
 
+const missingValue = (data: Record<string, unknown>, key: string): boolean =>
+  data[key] === null || data[key] === undefined || data[key] === "";
+
+/**
+ * Adjusted-approval revalidation (Owner-UAT fix). Two rules:
+ *
+ * 1. RELATIVE completeness — the moderator may never degrade the
+ *    submission: a sealed required field present in the FROZEN
+ *    submitted_data must still be present in adjusted_data. A field
+ *    the seller never submitted (legacy-era pending listings, e.g.
+ *    pre-O.9 rows without seller_name) does NOT block, because the
+ *    plain no-adjustment approval path would approve that submission
+ *    unchanged — adjusted approval must never be stricter than the
+ *    sealed approval baseline for content the moderator did not touch.
+ * 2. Catalog validity of every PRESENT adjusted value: category,
+ *    brand-in-category, model-in-brand+category, city, reference
+ *    options and features must all still be valid today.
+ */
+export async function assertAdjustedContentApprovable(
+  submitted: Record<string, unknown>,
+  adjusted: Record<string, unknown>,
+): Promise<void> {
+  const degraded = SUBMIT_REQUIRED_FIELDS.filter(
+    (field) => missingValue(adjusted, field.key) && !missingValue(submitted, field.key),
+  ).map((field) => field.code);
+  if (degraded.length > 0) {
+    throw new ApiError("LISTING_INCOMPLETE", "The adjustment removed required content.", {
+      details: { missing: degraded },
+    });
+  }
+  const invalid = (field: string): ApiError =>
+    new ApiError(
+      "LISTING_INVALID_CATALOG_SELECTION",
+      "A selected catalog value is no longer valid.",
+      { details: { field } },
+    );
+  const categoryCode = dataString(adjusted, "category");
+  if (categoryCode === null) throw invalid("category");
+  const category = await findActiveCategoryByCode(categoryCode);
+  if (category === undefined) throw invalid("category");
+  const brandId = dataString(adjusted, "brand_id");
+  if (brandId !== null && (await findActiveBrandInCategory(brandId, category.id)) === undefined) {
+    throw invalid("brand");
+  }
+  const modelId = dataString(adjusted, "model_id");
+  if (modelId !== null) {
+    if (brandId === null) throw invalid("model");
+    if ((await findActiveModelInBrandCategory(modelId, brandId, category.id)) === undefined) {
+      throw invalid("model");
+    }
+  }
+  const cityId = dataString(adjusted, "city_id");
+  if (cityId !== null && (await findActiveCityById(cityId)) === undefined) {
+    throw invalid("city");
+  }
+  for (const ref of SUBMIT_REFERENCE_FIELDS) {
+    const value = dataString(adjusted, ref.key);
+    if (value === null) continue;
+    if ((await findActiveReferenceOptionForCategory(value, ref.group, category.id)) === undefined) {
+      throw invalid(ref.group.toLowerCase());
+    }
+  }
+  const featureIds = dataFeatureIds(adjusted);
+  if (featureIds.length > 0) {
+    const valid = await filterActiveFeatureIdsForCategory(featureIds, category.id);
+    if (valid.length !== featureIds.length) throw invalid("features");
+  }
+}
+
 /**
  * O.13 Stage C — applies a saved OPEN adjustment as the approved NEW
  * content, inside the caller's approval transaction (listing already
@@ -473,9 +549,11 @@ export async function applyAdjustmentOnNewApproval(
   if (settings === null) {
     throw new ApiError("LISTING_CONFIGURATION_ERROR", "Listing settings are not configured.");
   }
-  // full server-side revalidation: the SAME completeness/catalog rules
-  // as seller submission + the frozen-snapshot image-plan rules
-  await assertContentSubmittable(adjustment.adjusted_data);
+  // full server-side revalidation: relative completeness against the
+  // frozen submission (never stricter than the sealed no-adjustment
+  // approval baseline) + today's catalog validity of every present
+  // value + the frozen-snapshot image-plan rules
+  await assertAdjustedContentApprovable(adjustment.submitted_data, adjustment.adjusted_data);
   const plan = normalizeImagePlan(
     [...adjustment.image_plan]
       .sort((a, b) => a.sort_order - b.sort_order)
