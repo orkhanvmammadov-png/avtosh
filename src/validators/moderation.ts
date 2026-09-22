@@ -11,7 +11,12 @@ export const moderationQueueQuerySchema = z.object({
 });
 
 export const approveSchema = z
-  .object({ expected_revision: z.number().int().min(1) })
+  .object({
+    expected_revision: z.number().int().min(1),
+    /** O.13 Stage C: required to match when an OPEN adjustment exists
+        (the server refuses otherwise); absent for plain decisions. */
+    expected_adjustment_revision: z.number().int().min(1).optional(),
+  })
   .strict();
 
 /** Reject / correction: controlled reason code + bounded plain-text note. */
@@ -20,6 +25,7 @@ export const decisionWithReasonSchema = z
     expected_revision: z.number().int().min(1),
     reason_code: z.enum(MODERATION_REASON_CODES),
     note: z.string().trim().min(1).max(MODERATION_NOTE_MAX_LENGTH).optional(),
+    expected_adjustment_revision: z.number().int().min(1).optional(),
   })
   .strict();
 

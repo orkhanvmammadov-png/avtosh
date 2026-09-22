@@ -496,6 +496,12 @@ export const STAFF = {
   decisionsBlockedUnsaved: "Saxlanmamış dəyişikliklər var — qərarlar bağlıdır.",
   historyAdjSaved: "Moderator düzəlişi saxladı",
   historyAdjDiscarded: "Moderator düzəlişi sildi",
+  // O.13 Stage C — adjusted NEW decisions (sealed 11-copy-contract)
+  approveWithAdj: "Moderator düzəlişləri ilə təsdiqlənəcək",
+  correctionWithAdj:
+    "Moderator düzəlişləri tətbiq olunmayacaq. Satıcı düzəliş sorğusunu alacaq; saxlanılmış moderator düzəlişi tarixçəyə köçürüləcək.",
+  rejectWithAdj:
+    "Moderator düzəlişləri tətbiq olunmayacaq. Rədd mövcud qaydalarla icra olunacaq; düzəliş yalnız tarixçədə qalacaq.",
 } as const;
 
 /** Admin panel strings (Phase 4.15). */

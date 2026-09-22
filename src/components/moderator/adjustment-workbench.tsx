@@ -934,13 +934,32 @@ export function ModerationWorkbench({
     }
   }
 
-  // Stage B decision safety: LOCKED whenever an OPEN adjustment exists
-  // (server refuses too) or the editor is open (unsaved protection).
+  // O.13 Stage C: NEW decisions are adjustment-aware and UNLOCKED; the
+  // Stage B lock remains only for the editor's unsaved state and for
+  // LISTING_EDIT adjustments (their final semantics arrive in Stage D —
+  // the server refuses those decisions independently).
+  const newAdjustment = adjustment !== null && adjustment.editRevisionId === null;
   const lockedReason = editing
     ? STAFF.decisionsBlockedUnsaved
-    : adjustment !== null
+    : adjustment !== null && adjustment.editRevisionId !== null
       ? STAFF.decisionsBlockedAdjustment
       : null;
+  // concise changed-area labels for the sealed adjusted-approval
+  // confirmation (server-resolved changes drive it)
+  const adjustmentSummary = newAdjustment
+    ? [
+        ...adjustment.changes.map((change) => FIELD_LABELS[change.field] ?? change.field),
+        ...(adjustment.descriptionChange !== null ? [FIELD_LABELS.description] : []),
+        ...(adjustment.equipmentAdded.length > 0 || adjustment.equipmentRemoved.length > 0
+          ? [STAFF.secEquipment]
+          : []),
+        ...(adjustment.photoSummary.removedCount > 0 ||
+        adjustment.photoSummary.primaryChanged ||
+        adjustment.photoSummary.reordered
+          ? [STAFF.images]
+          : []),
+      ]
+    : [];
 
   return (
     <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
@@ -1022,6 +1041,8 @@ export function ModerationWorkbench({
           claimExpiresAt={claimExpiresAt}
           editRevisionNo={editRevisionNo}
           lockedReason={lockedReason}
+          adjustmentRevision={newAdjustment ? adjustment.revision : null}
+          adjustmentSummary={adjustmentSummary}
         />
       </div>
 

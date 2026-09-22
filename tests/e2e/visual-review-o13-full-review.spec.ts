@@ -154,4 +154,30 @@ test.describe("O.13.5A full review visual artifacts", () => {
     await expect(page.getByTestId("takeover-card")).toBeVisible();
     await page.screenshot({ path: `${OUT}/o13b-takeover-1440.png`, fullPage: true });
   });
+
+  test("O.13.5C adjusted decision confirmations at 1440/390", async ({ page, context }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "captures set explicit viewports");
+    // the rival moderator holds the claim over the OPEN NEW adjustment
+    await loginAs(context, RIVAL_PHONE, { roles: ["MODERATOR"] });
+    for (const [width, height] of [
+      [1440, 900],
+      [390, 844],
+    ] as const) {
+      await page.setViewportSize({ width, height });
+      await page.goto(`/moderator/elanlar/${adjListingId}`);
+      for (const [action, name] of [
+        ["action-approve", "approve"],
+        ["action-correction", "correction"],
+        ["action-reject", "reject"],
+      ] as const) {
+        await page.getByTestId(action).click();
+        await expect(page.getByTestId("adjusted-decision-note")).toBeVisible();
+        await page.screenshot({
+          path: `${OUT}/o13c-${name}-confirm-${width}.png`,
+          fullPage: width === 390,
+        });
+        await page.getByTestId("decision-cancel").click();
+      }
+    }
+  });
 });

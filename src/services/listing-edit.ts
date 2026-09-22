@@ -340,7 +340,28 @@ export async function assertRevisionSubmittable(
   revision: EditRevisionRow,
   imageMin: number,
 ): Promise<void> {
-  const data = revision.data;
+  await assertContentSubmittable(revision.data);
+  const confirmed = await countEditImages(tx, revision.id);
+  if (confirmed < imageMin) {
+    throw new ApiError(
+      "LISTING_INSUFFICIENT_IMAGES",
+      `At least ${imageMin} images are required.`,
+      { details: { required: imageMin, confirmed } },
+    );
+  }
+  if ((await countPrimaryEditImages(tx, revision.id)) !== 1) {
+    throw new ApiError("LISTING_INSUFFICIENT_IMAGES", "A primary image is required.", {
+      details: { required: imageMin, confirmed, primary: false },
+    });
+  }
+}
+
+/** The content half of the submit rules (required fields + catalog
+    validity), shared verbatim with the O.13 adjusted-approval
+    revalidation — image counts stay with each caller's own source. */
+export async function assertContentSubmittable(
+  data: Record<string, unknown>,
+): Promise<void> {
   const missing = SUBMIT_REQUIRED_FIELDS.filter(
     (f) => data[f.key] === null || data[f.key] === undefined || data[f.key] === "",
   ).map((f) => f.code);
@@ -381,19 +402,6 @@ export async function assertRevisionSubmittable(
   if (featureIds.length > 0) {
     const valid = await filterActiveFeatureIdsForCategory(featureIds, category.id);
     if (valid.length !== featureIds.length) throw invalid("features");
-  }
-  const confirmed = await countEditImages(tx, revision.id);
-  if (confirmed < imageMin) {
-    throw new ApiError(
-      "LISTING_INSUFFICIENT_IMAGES",
-      `At least ${imageMin} images are required.`,
-      { details: { required: imageMin, confirmed } },
-    );
-  }
-  if ((await countPrimaryEditImages(tx, revision.id)) !== 1) {
-    throw new ApiError("LISTING_INSUFFICIENT_IMAGES", "A primary image is required.", {
-      details: { required: imageMin, confirmed, primary: false },
-    });
   }
 }
 

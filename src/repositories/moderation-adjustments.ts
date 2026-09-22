@@ -150,6 +150,78 @@ export async function updateAdjustmentWorkingState(
   return rows[0];
 }
 
+/** O.13 Stage C — terminal APPLIED transition (adjusted approval).
+    Guarded by the adjustment's own counter + OPEN status; the frozen
+    submitted_* and the applied adjusted_data/image_plan are retained
+    forever as audit history. */
+export async function applyAdjustmentRow(
+  sql: Sql,
+  input: { adjustmentId: string; expectedRevision: number },
+): Promise<AdjustmentRow | undefined> {
+  const rows = await sql<AdjustmentRow[]>`
+    update moderation_adjustments
+    set status = 'APPLIED',
+        applied_at = now(),
+        updated_at = now()
+    where id = ${input.adjustmentId}
+      and revision = ${input.expectedRevision}
+      and status = 'OPEN'
+    returning *
+  `;
+  return rows[0];
+}
+
+/**
+ * O.13 Stage C — materialize the saved image plan into the final
+ * approved gallery. The kept sources ARE the live NEW-submission
+ * listing_images rows (frozen source_id = row id), so this is a
+ * delete-removed + rewrite-kept operation in plan order; metadata is
+ * copied from the existing rows (never from client input). Returns
+ * undefined when any kept source no longer exists (subject changed
+ * underneath — caller aborts the transaction).
+ */
+export async function materializeImagePlanForListing(
+  sql: Sql,
+  input: {
+    listingId: string;
+    kept: { sourceId: string; isPrimary: boolean }[];
+  },
+): Promise<{ removedPaths: string[] } | undefined> {
+  const existing = await sql<
+    { id: string; storage_path: string; width: number | null; height: number | null; mime_type: string; file_size_bytes: string }[]
+  >`
+    select id, storage_path, width, height, mime_type, file_size_bytes
+    from listing_images where listing_id = ${input.listingId}
+  `;
+  const byId = new Map(existing.map((row) => [row.id, row]));
+  if (input.kept.some((entry) => !byId.has(entry.sourceId))) {
+    return undefined;
+  }
+  const keptIds = new Set(input.kept.map((entry) => entry.sourceId));
+  // a path that survives in the final gallery is never a candidate,
+  // even when a removed duplicate row shared it
+  const keptPaths = new Set(
+    existing.filter((row) => keptIds.has(row.id)).map((row) => row.storage_path),
+  );
+  const removedPaths = existing
+    .filter((row) => !keptIds.has(row.id) && !keptPaths.has(row.storage_path))
+    .map((row) => row.storage_path);
+  // same materialization discipline as the O.12 staged swap: rewrite
+  // the gallery atomically inside the approval transaction
+  await sql`delete from listing_images where listing_id = ${input.listingId}`;
+  for (const [index, entry] of input.kept.entries()) {
+    const source = byId.get(entry.sourceId)!;
+    await sql`
+      insert into listing_images
+        (listing_id, storage_path, sort_order, is_primary, width, height, mime_type, file_size_bytes)
+      values
+        (${input.listingId}, ${source.storage_path}, ${index}, ${entry.isPrimary},
+         ${source.width}, ${source.height}, ${source.mime_type}, ${source.file_size_bytes})
+    `;
+  }
+  return { removedPaths };
+}
+
 /** Terminal discard: retained forever, never revived by mutation. */
 export async function discardAdjustmentRow(
   sql: Sql,

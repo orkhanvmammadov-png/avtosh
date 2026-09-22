@@ -34,6 +34,8 @@ export function ModerationActions({
   claimExpiresAt,
   editRevisionNo = null,
   lockedReason = null,
+  adjustmentRevision = null,
+  adjustmentSummary = [],
 }: {
   listingId: string;
   status: string;
@@ -46,9 +48,15 @@ export function ModerationActions({
       own counter. Same claim, same verbs, same confirmation flow. */
   editRevisionNo?: number | null;
   /** O.13 Stage B: non-null renders the queue decisions disabled with
-      a visible reason (open adjustment / unsaved edit) — the server
+      a visible reason (EDIT adjustment / unsaved edit) — the server
       refuses these decisions independently. */
   lockedReason?: string | null;
+  /** O.13 Stage C: the OPEN NEW adjustment's own revision — sent with
+      every NEW decision so a newer save blocks a stale decision; null
+      when no NEW adjustment exists. */
+  adjustmentRevision?: number | null;
+  /** Concise changed-area labels for the adjusted-approval confirmation. */
+  adjustmentSummary?: string[];
 }) {
   // The portal recovers via FULL page reloads; a click on a freshly
   // loaded page must never land before React's handlers exist.
@@ -78,6 +86,10 @@ export function ModerationActions({
   function handleError(error: unknown) {
     if (error instanceof PublicApiError) {
       if (error.code === "LISTING_REVISION_CONFLICT") return setConflict("stale");
+      // O.13 Stage C: a newer adjustment save or a changed moderation
+      // pass invalidates this decision view — same reload recovery
+      if (error.code === "MODERATION_ADJUSTMENT_CONFLICT") return setConflict("stale");
+      if (error.code === "MODERATION_SUBJECT_CHANGED") return setConflict("stale");
       if (error.code === "MODERATION_INVALID_STATE") return setConflict("decided");
       if (error.code === "MODERATION_CLAIMED_BY_OTHER") return setConflict("claim");
       if (error.code === "MODERATION_CLAIM_REQUIRED") return setMessage(STAFF.claimRequired);
@@ -115,6 +127,11 @@ export function ModerationActions({
       const body: Record<string, unknown> = isEditDecision
         ? { expected_edit_revision: editRevisionNo }
         : { expected_revision: revision };
+      // O.13 Stage C: a NEW decision over a saved adjustment must name
+      // the exact adjustment version it reviewed
+      if (adjustmentRevision !== null && !isEditDecision && kind !== "suspend") {
+        body.expected_adjustment_revision = adjustmentRevision;
+      }
       if (ACTION_META[kind].needsReason) {
         body.reason_code = reasonCode;
         if (note.trim().length > 0) body.note = note.trim();
@@ -262,6 +279,22 @@ export function ModerationActions({
           <h3 className="text-sm font-bold text-ink">
             {STAFF.confirmAction}: {ACTION_META[pendingAction].label}
           </h3>
+          {/* O.13 Stage C: sealed adjusted-decision copy (NEW only) */}
+          {adjustmentRevision !== null && !editPending && pendingAction !== "suspend" ? (
+            <p
+              className={`mt-2 rounded-staff px-3 py-2 text-xs leading-relaxed ${
+                pendingAction === "approve" ? "bg-info-soft text-info" : "bg-warning-soft text-warning"
+              }`}
+              data-testid="adjusted-decision-note"
+            >
+              {pendingAction === "approve" ? STAFF.approveWithAdj : null}
+              {pendingAction === "approve" && adjustmentSummary.length > 0
+                ? `: ${adjustmentSummary.join(" · ")}`
+                : null}
+              {pendingAction === "request-correction" ? STAFF.correctionWithAdj : null}
+              {pendingAction === "reject" ? STAFF.rejectWithAdj : null}
+            </p>
+          ) : null}
           {ACTION_META[pendingAction].needsReason ? (
             <div className="mt-3 space-y-3">
               <label className="block text-xs font-medium text-slate-strong" htmlFor="decision-reason">

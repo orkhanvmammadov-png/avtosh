@@ -318,21 +318,22 @@ describe("NEW first save — frozen snapshot, no seller-artifact mutation", () =
     expect(adjustment.equipmentAdded).toEqual(["O13B Avadanlıq B"]);
     expect(adjustment.photoSummary.primaryChanged).toBe(true);
 
-    // Stage B decision safety: every queue decision is refused
+    // Stage C decision safety: a decision that does not name the saved
+    // adjustment version can never silently run over the submission
     const approve = await api(approveRoute as Route, "POST", `${MOD}/${listing.id}/approve`, {
       body: { expected_revision: listing.revision },
       cookie: mod1.cookie,
       params: { listingId: listing.id },
     });
     expect(approve.status).toBe(409);
-    expect(approve.body.error?.code).toBe("MODERATION_ADJUSTMENT_PENDING");
+    expect(approve.body.error?.code).toBe("MODERATION_ADJUSTMENT_CONFLICT");
     const reject = await api(rejectRoute as Route, "POST", `${MOD}/${listing.id}/reject`, {
       body: { expected_revision: listing.revision, reason_code: "MISLEADING_INFO" },
       cookie: mod1.cookie,
       params: { listingId: listing.id },
     });
     expect(reject.status).toBe(409);
-    expect(reject.body.error?.code).toBe("MODERATION_ADJUSTMENT_PENDING");
+    expect(reject.body.error?.code).toBe("MODERATION_ADJUSTMENT_CONFLICT");
   });
 
   it("update saves bump ONLY the adjustment's own counter; stale counters and stale subjects are typed conflicts", async () => {

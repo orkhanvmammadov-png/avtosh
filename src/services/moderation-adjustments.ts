@@ -10,21 +10,26 @@ import {
   lockOpenEditRevision,
 } from "@/repositories/listing-edit-revisions";
 import { lockListingForLifecycle } from "@/repositories/listing-lifecycle";
-import { getSubmissionSettings } from "@/repositories/listing-publications";
-import { getListingFeatureIds, listFeatureRowsByIds } from "@/repositories/listings";
+import { getSubmissionSettings, insertOutboxEvent } from "@/repositories/listing-publications";
+import { getListingFeatureIds, listFeatureRowsByIds, replaceListingFeatures } from "@/repositories/listings";
 import {
+  applyAdjustmentRow,
   discardAdjustmentRow,
   findDiscardedAdjustment,
   getOpenAdjustment,
   insertAdjustment,
   listAdjustmentAuditEvents,
   lockOpenAdjustment,
+  materializeImagePlanForListing,
   updateAdjustmentWorkingState,
   type AdjustmentRow,
   type ImagePlanRowEntry,
   type SubmittedImageSnapshot,
 } from "@/repositories/moderation-adjustments";
 import { insertModerationAudit } from "@/repositories/moderation-audit";
+import { applyApprovedEditContent } from "@/repositories/listing-edit-revisions";
+import { assertContentSubmittable } from "@/services/listing-edit";
+import { approvedContentSet } from "@/services/moderation-edit";
 import { formatMileage, formatPriceMinor } from "@/lib/format";
 import { buildEditSnapshot } from "@/services/listing-lifecycle";
 import { resolveSellerContentPatch, type SellerContentPatch } from "@/services/listing-patch";
@@ -436,6 +441,146 @@ async function auditSave(
       adjustment_revision: row.revision,
       edit_revision_id: row.edit_revision_id,
       changed_fields: changedFields.join(","),
+    },
+  });
+}
+
+// --- Stage C: NEW decision integration --------------------------------------
+
+/**
+ * O.13 Stage C — applies a saved OPEN adjustment as the approved NEW
+ * content, inside the caller's approval transaction (listing already
+ * locked, adjustment already locked after it, claim verified, subject
+ * + adjustment revision verified by the caller). The adjustment is
+ * INPUT to approval: adjusted_data and image_plan are revalidated
+ * server-side, the sealed allowlisted column mapping writes the
+ * scalars (one deterministic listings.revision bump), features and the
+ * gallery are replaced atomically, the adjustment becomes terminal
+ * APPLIED, and append-only audit + a cleanup-carrying outbox event are
+ * emitted. Frozen submitted_* are never touched. Any throw rolls the
+ * whole approval back — the adjustment then remains OPEN.
+ */
+export async function applyAdjustmentOnNewApproval(
+  tx: Sql,
+  input: {
+    listing: { id: string; owner_id: string; revision: number };
+    adjustment: AdjustmentRow;
+    moderatorId: string;
+  },
+): Promise<{ newListingRevision: number; cleanupPaths: string[] }> {
+  const { listing, adjustment } = input;
+  const settings = await getSubmissionSettings(tx);
+  if (settings === null) {
+    throw new ApiError("LISTING_CONFIGURATION_ERROR", "Listing settings are not configured.");
+  }
+  // full server-side revalidation: the SAME completeness/catalog rules
+  // as seller submission + the frozen-snapshot image-plan rules
+  await assertContentSubmittable(adjustment.adjusted_data);
+  const plan = normalizeImagePlan(
+    [...adjustment.image_plan]
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((entry) => ({
+        source_id: entry.source_id,
+        removed: entry.removed,
+        is_primary: entry.is_primary,
+      })),
+    adjustment.submitted_images,
+    settings.imageMin,
+  );
+
+  // sealed allowlisted scalar mapping + ONE guarded revision bump
+  const set = await approvedContentSet(tx, adjustment.adjusted_data);
+  const newListingRevision = await applyApprovedEditContent(tx, {
+    listingId: listing.id,
+    expectedListingRevision: listing.revision,
+    set,
+  });
+  if (newListingRevision === undefined) {
+    throw new ApiError("MODERATION_INVALID_STATE", "Listing changed during approval.");
+  }
+  await replaceListingFeatures(tx, listing.id, dataFeatureIds(adjustment.adjusted_data));
+  const materialized = await materializeImagePlanForListing(tx, {
+    listingId: listing.id,
+    kept: plan
+      .filter((entry) => !entry.removed)
+      .map((entry) => ({ sourceId: entry.source_id, isPrimary: entry.is_primary })),
+  });
+  if (materialized === undefined) {
+    throw new ApiError("MODERATION_SUBJECT_CHANGED", "The submitted gallery changed during approval.");
+  }
+
+  const applied = await applyAdjustmentRow(tx, {
+    adjustmentId: adjustment.id,
+    expectedRevision: adjustment.revision,
+  });
+  if (applied === undefined) {
+    throw new ApiError("MODERATION_ADJUSTMENT_CONFLICT", "The adjustment changed during approval.");
+  }
+
+  await insertModerationAudit(tx, {
+    actorUserId: input.moderatorId,
+    action: "MODERATION_ADJUSTMENT_APPLIED",
+    entityId: listing.id,
+    afterData: {
+      adjustment_id: adjustment.id,
+      adjustment_revision: adjustment.revision,
+      submitted_listing_revision: adjustment.submitted_listing_revision,
+      new_listing_revision: newListingRevision,
+      removed_image_count: materialized.removedPaths.length,
+    },
+  });
+  // reference-safe cleanup intake (worker claims this event type):
+  // ONLY images removed from the final approved set become candidates;
+  // the frozen submitted_images snapshot is metadata-only history by
+  // the sealed O.13.2 rule and never blocks nor demands storage
+  await insertOutboxEvent(tx, {
+    eventType: "MODERATION_ADJUSTMENT_APPLIED",
+    aggregateId: listing.id,
+    payload: {
+      listing_id: listing.id,
+      owner_id: listing.owner_id,
+      moderator_id: input.moderatorId,
+      adjustment_id: adjustment.id,
+      adjustment_revision: adjustment.revision,
+      submitted_listing_revision: adjustment.submitted_listing_revision,
+      cleanup_candidate_paths: materialized.removedPaths.join(","),
+    },
+  });
+  return { newListingRevision, cleanupPaths: materialized.removedPaths };
+}
+
+/**
+ * O.13 Stage C — sealed correction/reject behavior over a saved OPEN
+ * adjustment (NEW): nothing is applied, the seller lifecycle continues
+ * unchanged, and the adjustment becomes terminal DISCARDED (retained;
+ * original authorship preserved in the append-only event). The next
+ * seller pass starts clean — a terminal row can never re-attach.
+ */
+export async function discardAdjustmentOnDecision(
+  tx: Sql,
+  input: {
+    listingId: string;
+    adjustment: AdjustmentRow;
+    actorUserId: string;
+    decision: string;
+  },
+): Promise<void> {
+  const discarded = await discardAdjustmentRow(tx, {
+    adjustmentId: input.adjustment.id,
+    expectedRevision: input.adjustment.revision,
+  });
+  if (discarded === undefined) {
+    throw new ApiError("MODERATION_ADJUSTMENT_CONFLICT", "The adjustment changed during the decision.");
+  }
+  await insertModerationAudit(tx, {
+    actorUserId: input.actorUserId,
+    action: "MODERATION_ADJUSTMENT_DISCARDED",
+    entityId: input.listingId,
+    afterData: {
+      adjustment_id: discarded.id,
+      adjustment_revision: discarded.revision,
+      last_saved_by: input.adjustment.moderator_id,
+      decision: input.decision,
     },
   });
 }

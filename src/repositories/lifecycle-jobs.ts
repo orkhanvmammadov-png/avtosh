@@ -333,6 +333,12 @@ export const CLEANUP_EVENT_TYPES = [
   "LISTING_EDIT_IMAGE_REMOVED",
   "LISTING_EDIT_APPROVED",
   "LISTING_EDIT_REJECTED",
+  // O.13 Stage C: adjusted NEW approval — candidates are the images the
+  // moderator's plan removed from the final approved gallery. The
+  // frozen submitted_images snapshot is metadata-only history (sealed
+  // O.13.2 rule): it never blocks the reference check, which continues
+  // to protect every LIVE gallery (listing_images, listing_edit_images).
+  "MODERATION_ADJUSTMENT_APPLIED",
 ] as const;
 
 /**

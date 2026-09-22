@@ -7,9 +7,13 @@ import { getSql, withTransaction, type Sql } from "@/lib/server/db/client";
 import { getStorageProvider } from "@/providers/storage/factory";
 import { listListingImages } from "@/repositories/listing-images";
 import { getOpenEditRevision } from "@/repositories/listing-edit-revisions";
-import { getOpenAdjustment, listAdjustmentAuditEvents } from "@/repositories/moderation-adjustments";
+import { listAdjustmentAuditEvents, lockOpenAdjustment } from "@/repositories/moderation-adjustments";
 import { approvedSide, getEditReviewFor } from "@/services/moderation-edit";
-import { getAdjustmentViewFor } from "@/services/moderation-adjustments";
+import {
+  applyAdjustmentOnNewApproval,
+  discardAdjustmentOnDecision,
+  getAdjustmentViewFor,
+} from "@/services/moderation-adjustments";
 import { buildEditSnapshot } from "@/services/listing-lifecycle";
 import { getSubmissionSettings, insertOutboxEvent, insertStatusHistory } from "@/repositories/listing-publications";
 import { insertModerationAudit } from "@/repositories/moderation-audit";
@@ -373,7 +377,16 @@ async function requireOwnedLiveClaim(tx: Sql, listingId: string, moderatorId: st
 async function decide(
   auth: AuthContext,
   listingId: string,
-  input: { expectedRevision: number; decision: Decision; reasonCode: string | null; note: string | null },
+  input: {
+    expectedRevision: number;
+    decision: Decision;
+    reasonCode: string | null;
+    note: string | null;
+    /** O.13 Stage C: which adjustment version the moderator decided —
+        REQUIRED to match when an OPEN adjustment exists (a newer save
+        by another moderator blocks a stale decision). */
+    expectedAdjustmentRevision?: number;
+  },
 ): Promise<DecisionResultDto> {
   return withTransaction(async (tx) => {
     const listing = await lockListingForModeration(tx, listingId);
@@ -412,16 +425,40 @@ async function decide(
       );
     }
     const claim = await requireOwnedLiveClaim(tx, listingId, auth.user.id);
-    // O.13 Stage B safety: with a saved OPEN moderator adjustment the
-    // old approval path must not silently decide against the seller
-    // submission. Adjusted decisions arrive in Stage C/D; until then
-    // this is a typed refusal (no-adjustment decisions are unchanged).
-    const openAdjustment = await getOpenAdjustment(tx, listingId);
+    // O.13 Stage C — adjustment-aware NEW decisions. Sealed lock order:
+    // listing (held) → adjustment. With NO open adjustment the whole
+    // path below is byte-identical to the pre-O.13 behavior.
+    const openAdjustment = await lockOpenAdjustment(tx, listingId);
     if (openAdjustment !== undefined) {
+      if (openAdjustment.edit_revision_id !== null) {
+        // impossible by construction for a PENDING listing; defensive —
+        // EDIT-subject adjustments stay Stage-B-blocked until Stage D
+        throw new ApiError(
+          "MODERATION_ADJUSTMENT_PENDING",
+          "A saved moderator adjustment exists; adjusted decisions are not enabled yet.",
+          { details: { adjustment_id: openAdjustment.id } },
+        );
+      }
+      if (openAdjustment.submitted_listing_revision !== listing.revision) {
+        throw new ApiError(
+          "MODERATION_SUBJECT_CHANGED",
+          "The saved adjustment belongs to a previous moderation pass.",
+          { details: { adjustment_id: openAdjustment.id } },
+        );
+      }
+      if (input.expectedAdjustmentRevision !== openAdjustment.revision) {
+        throw new ApiError(
+          "MODERATION_ADJUSTMENT_CONFLICT",
+          "The adjustment changed since it was reviewed. Reload and re-review.",
+          { details: { current_revision: openAdjustment.revision } },
+        );
+      }
+    } else if (input.expectedAdjustmentRevision !== undefined) {
+      // the client decided over an adjustment that no longer exists
       throw new ApiError(
-        "MODERATION_ADJUSTMENT_PENDING",
-        "A saved moderator adjustment exists; adjusted decisions are not enabled yet.",
-        { details: { adjustment_id: openAdjustment.id } },
+        "MODERATION_ADJUSTMENT_CONFLICT",
+        "The adjustment no longer exists. Reload and re-review.",
+        { details: { current_revision: null } },
       );
     }
 
@@ -432,12 +469,27 @@ async function decide(
       decision: input.decision,
       reasonCode: input.reasonCode,
       note: input.note,
+      adjustmentId: openAdjustment?.id ?? null,
+      adjustmentRevision: openAdjustment?.revision ?? null,
     });
 
     let activation: DecisionResultDto["activation"] = null;
     let toStatus: "ACTIVE" | "REJECTED" | "CORRECTION_REQUIRED";
     let eventType: string;
     if (input.decision === "APPROVED") {
+      // adjusted approval: the saved moderator content becomes the
+      // approved content FIRST (atomically, one revision bump), then
+      // the unchanged activation lifecycle runs against the new
+      // revision. Without an adjustment nothing here changes.
+      let activationExpectedRevision = listing.revision;
+      if (openAdjustment !== undefined) {
+        const applied = await applyAdjustmentOnNewApproval(tx, {
+          listing: { id: listing.id, owner_id: listing.owner_id, revision: listing.revision },
+          adjustment: openAdjustment,
+          moderatorId: auth.user.id,
+        });
+        activationExpectedRevision = applied.newListingRevision;
+      }
       const validityDays = await getValidityDays(tx);
       if (validityDays === null) {
         throw new ApiError("LISTING_CONFIGURATION_ERROR", "Listing validity is not configured.");
@@ -454,7 +506,7 @@ async function decide(
       });
       const ok = await activateListing(tx, {
         listingId,
-        expectedRevision: listing.revision,
+        expectedRevision: activationExpectedRevision,
         activatedAt,
         expiresAt,
       });
@@ -475,6 +527,17 @@ async function decide(
         toStatus,
       });
       if (!ok) throw new ApiError("MODERATION_INVALID_STATE", "Listing changed during decision.");
+      if (openAdjustment !== undefined) {
+        // sealed NEW behavior: correction/reject apply NOTHING — seller
+        // content is untouched, the adjustment becomes terminal
+        // DISCARDED (retained history; the next pass starts clean)
+        await discardAdjustmentOnDecision(tx, {
+          listingId,
+          adjustment: openAdjustment,
+          actorUserId: auth.user.id,
+          decision: input.decision,
+        });
+      }
     }
 
     await insertStatusHistory(tx, {
@@ -528,14 +591,30 @@ async function currentActivation(
       };
 }
 
-export function approveListing(auth: AuthContext, listingId: string, expectedRevision: number) {
-  return decide(auth, listingId, { expectedRevision, decision: "APPROVED", reasonCode: null, note: null });
+export function approveListing(
+  auth: AuthContext,
+  listingId: string,
+  expectedRevision: number,
+  expectedAdjustmentRevision?: number,
+) {
+  return decide(auth, listingId, {
+    expectedRevision,
+    decision: "APPROVED",
+    reasonCode: null,
+    note: null,
+    expectedAdjustmentRevision,
+  });
 }
 
 export function rejectListing(
   auth: AuthContext,
   listingId: string,
-  input: { expectedRevision: number; reasonCode: string; note: string | null },
+  input: {
+    expectedRevision: number;
+    reasonCode: string;
+    note: string | null;
+    expectedAdjustmentRevision?: number;
+  },
 ) {
   return decide(auth, listingId, { ...input, decision: "REJECTED" });
 }
@@ -543,7 +622,12 @@ export function rejectListing(
 export function requestCorrection(
   auth: AuthContext,
   listingId: string,
-  input: { expectedRevision: number; reasonCode: string; note: string | null },
+  input: {
+    expectedRevision: number;
+    reasonCode: string;
+    note: string | null;
+    expectedAdjustmentRevision?: number;
+  },
 ) {
   return decide(auth, listingId, { ...input, decision: "CORRECTION_REQUESTED" });
 }

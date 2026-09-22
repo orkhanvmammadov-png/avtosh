@@ -88,6 +88,9 @@ export interface ReviewRow {
   /** O.12: set only for edit-revision reviews (Stage A columns). */
   edit_revision_id: string | null;
   edit_revision_no: number | null;
+  /** O.13 Stage C: EXACTLY which adjustment version was decided. */
+  adjustment_id: string | null;
+  adjustment_revision: number | null;
 }
 
 export interface LockedListingRow {
@@ -268,27 +271,28 @@ export async function insertReview(
         decision time (never overloads listing_revision). */
     editRevisionId?: string | null;
     editRevisionNo?: number | null;
+    /** O.13: WHICH adjustment version the decision was made over. */
+    adjustmentId?: string | null;
+    adjustmentRevision?: number | null;
   },
 ): Promise<ReviewRow> {
   const rows = await sql<ReviewRow[]>`
     insert into moderation_reviews
       (listing_id, moderator_id, listing_revision, decision, reason_code, note,
-       edit_revision_id, edit_revision_no)
+       edit_revision_id, edit_revision_no, adjustment_id, adjustment_revision)
     values
       (${input.listingId}, ${input.moderatorId}, ${input.listingRevision},
        ${input.decision}::moderation_decision, ${input.reasonCode}, ${input.note},
-       ${input.editRevisionId ?? null}, ${input.editRevisionNo ?? null})
-    returning id, listing_id, moderator_id, listing_revision, decision,
-              reason_code, note, reviewed_at, edit_revision_id, edit_revision_no
+       ${input.editRevisionId ?? null}, ${input.editRevisionNo ?? null},
+       ${input.adjustmentId ?? null}, ${input.adjustmentRevision ?? null})
+    returning *
   `;
   return rows[0];
 }
 
 export async function listReviews(sql: Sql, listingId: string): Promise<ReviewRow[]> {
   return sql<ReviewRow[]>`
-    select id, listing_id, moderator_id, listing_revision, decision,
-           reason_code, note, reviewed_at, edit_revision_id, edit_revision_no
-    from moderation_reviews
+    select * from moderation_reviews
     where listing_id = ${listingId}
     order by reviewed_at desc, id desc
   `;
@@ -306,9 +310,7 @@ export async function findMatchingReview(
   },
 ): Promise<ReviewRow | undefined> {
   const rows = await sql<ReviewRow[]>`
-    select id, listing_id, moderator_id, listing_revision, decision,
-           reason_code, note, reviewed_at, edit_revision_id, edit_revision_no
-    from moderation_reviews
+    select * from moderation_reviews
     where listing_id = ${input.listingId}
       and moderator_id = ${input.moderatorId}
       and listing_revision = ${input.listingRevision}
@@ -331,9 +333,7 @@ export async function findMatchingEditReview(
   },
 ): Promise<ReviewRow | undefined> {
   const rows = await sql<ReviewRow[]>`
-    select id, listing_id, moderator_id, listing_revision, decision,
-           reason_code, note, reviewed_at, edit_revision_id, edit_revision_no
-    from moderation_reviews
+    select * from moderation_reviews
     where edit_revision_id = ${input.editRevisionId}
       and moderator_id = ${input.moderatorId}
       and edit_revision_no = ${input.editRevisionNo}

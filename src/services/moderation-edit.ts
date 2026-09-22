@@ -478,8 +478,10 @@ function toResult(
 }
 
 /** Sealed seller-editable column set the approval copy writes — and
-    NOTHING else (no lifecycle/publication/payment/promotion columns). */
-async function approvedContentSet(
+    NOTHING else (no lifecycle/publication/payment/promotion columns).
+    Exported for the O.13 adjusted NEW approval — the SAME allowlisted
+    mapping, never a generic spread. */
+export async function approvedContentSet(
   tx: Sql,
   data: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {

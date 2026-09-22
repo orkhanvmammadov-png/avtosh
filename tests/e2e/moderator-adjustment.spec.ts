@@ -134,9 +134,9 @@ test("NEW: claim → edit → save → reload survives; seller submission untouc
   await expect(page.getByTestId("adjustment-photo-summary")).toContainText("Yeni əsas şəkil");
   await expect(page.getByTestId("adjustment-history")).toContainText("Moderator düzəlişi saxladı");
 
-  // Stage B decision lock (server refuses too — UI is honest about it)
-  await expect(page.getByTestId("decisions-locked")).toBeVisible();
-  await expect(page.getByTestId("action-approve")).toBeDisabled();
+  // O.13.5C: NEW decisions are adjustment-aware and UNLOCKED
+  await expect(page.getByTestId("decisions-locked")).toHaveCount(0);
+  await expect(page.getByTestId("action-approve")).toBeEnabled();
 
   // reload → saved adjustment survives; continue prefills the working copy
   await page.reload();
@@ -167,12 +167,31 @@ test("NEW: claim → edit → save → reload survives; seller submission untouc
   await page.getByTestId("unsaved-discard").click();
   await expect(page.getByTestId("adjustment-chip")).toBeVisible();
 
-  // seller submission is untouched evidence
+  // seller submission is untouched evidence while the adjustment is open
   const snapshot = await listingSnapshot(fixture.id);
   expect(snapshot.status).toBe("PENDING_MODERATION");
   expect(snapshot.price).toBe("2500000");
   expect(snapshot.features).toBe(1);
   expect(snapshot.images).toBe(4);
+
+  // Journey 1 finale (O.13.5C): approve WITH the adjustment — sealed
+  // confirmation copy + changed summary, then the adjusted content is
+  // the public approved listing
+  await page.getByTestId("action-approve").click();
+  const note = page.getByTestId("adjusted-decision-note");
+  await expect(note).toContainText("Moderator düzəlişləri ilə təsdiqlənəcək");
+  await expect(note).toContainText("Qiymət");
+  await page.getByTestId("decision-submit").click();
+  await expect(page.getByTestId("decision-done")).toContainText("təsdiqləndi");
+  const applied = await listingSnapshot(fixture.id);
+  expect(applied.status).toBe("ACTIVE");
+  expect(applied.price).toBe("2350000");
+  expect(applied.images).toBe(3); // removed plan image excluded
+  await page.goto(`/elan/${fixture.publicId}`);
+  await expect(page.getByTestId("detail-price")).toContainText("23 500");
+  await expect(page.getByTestId("listing-detail")).toContainText(
+    "Moderator tərəfindən düzəldilmiş təsvir",
+  );
 });
 
 test("LISTING_EDIT: moderator save leaves the seller proposal and the public listing unchanged (O.13.5B)", async ({ page, context }, { project }) => {
@@ -204,6 +223,9 @@ test("LISTING_EDIT: moderator save leaves the seller proposal and the public lis
   await page.getByTestId("adj-price").fill("27000");
   await page.getByTestId("adjustment-save").click();
   await expect(page.getByTestId("adjustment-chip")).toBeVisible();
+  // O.13.5C Journey 4 guard: EDIT adjusted decisions stay Stage-B-locked
+  await expect(page.getByTestId("decisions-locked")).toBeVisible();
+  await expect(page.getByTestId("action-approve")).toBeDisabled();
   await expect(page.getByTestId("adjustment-change-price")).toContainText("26 500 AZN");
   await expect(page.getByTestId("adjustment-change-price")).toContainText("27 000 AZN");
   // O.12 seller diff stays intact beside the moderator layer
@@ -240,7 +262,6 @@ test("takeover: B inherits A's saved adjustment with attribution and discards it
   const takeover = page.getByTestId("takeover-card");
   await expect(takeover).toContainText("saxlanılmış moderator düzəlişi var");
   await expect(takeover.getByTestId("takeover-attribution")).toContainText("Saxlayan moderator");
-  await expect(page.getByTestId("decisions-locked")).toBeVisible();
 
   // Davam et opens A's working copy for B
   await takeover.getByTestId("takeover-continue").click();
@@ -268,5 +289,76 @@ test("takeover: B inherits A's saved adjustment with attribution and discards it
   // the seller submission never moved
   const snapshot = await listingSnapshot(fixture.id);
   expect(snapshot.status).toBe("PENDING_MODERATION");
+  expect(snapshot.price).toBe("2500000");
+});
+
+test("Journey 2 — correction with adjustment applies nothing; the next pass starts clean (O.13.5C)", async ({ page }, { project }) => {
+  const { userId } = await loginAsStub(project.name, 187);
+  const fixture = await insertListingFixture(userId, {
+    status: "PENDING_MODERATION", complete: true, images: 3,
+  });
+  await loginAs(page.context(), testPhone(project.name, 188), { roles: ["MODERATOR"] });
+  await claimOnDetail(page, fixture.id);
+  await page.getByTestId("adjustment-edit").click();
+  await page.getByTestId("adj-price").fill("23000");
+  await page.getByTestId("adjustment-save").click();
+  await expect(page.getByTestId("adjustment-chip")).toBeVisible();
+
+  // sealed non-apply confirmation copy
+  await page.getByTestId("action-correction").click();
+  await expect(page.getByTestId("adjusted-decision-note")).toContainText(
+    "Moderator düzəlişləri tətbiq olunmayacaq",
+  );
+  await expect(page.getByTestId("adjusted-decision-note")).toContainText("tarixçəyə köçürüləcək");
+  await page.getByTestId("decision-reason").selectOption("INVALID_PHOTOS");
+  await page.getByTestId("decision-note").fill("Şəkilləri yeniləyin.");
+  await page.getByTestId("decision-submit").click();
+  await expect(page.getByTestId("decision-done")).toContainText("Düzəliş tələbi");
+
+  // seller content untouched; adjustment terminal in history
+  const snapshot = await listingSnapshot(fixture.id);
+  expect(snapshot.status).toBe("CORRECTION_REQUIRED");
+  expect(snapshot.price).toBe("2500000");
+  await page.goto(`/moderator/elanlar/${fixture.id}`);
+  await expect(page.getByTestId("adjustment-chip")).toHaveCount(0);
+  await expect(page.getByTestId("adjustment-history")).toContainText("Moderator düzəlişi sildi");
+
+  // seller resubmission (same transition as the real resubmit flow)
+  // opens a CLEAN pass — no old adjustment re-attaches
+  const sql = postgres(seed().databaseUrl, { prepare: false, max: 1 });
+  await sql`update listings set status = 'PENDING_MODERATION', submitted_at = now() where id = ${fixture.id}`;
+  await sql.end();
+  await page.goto(`/moderator/elanlar/${fixture.id}`);
+  await expect(page.getByTestId("adjustment-chip")).toHaveCount(0);
+  await expect(page.getByTestId("takeover-card")).toHaveCount(0);
+  // a fresh claim on the clean pass offers a clean Redaktə et entry
+  await claimOnDetail(page, fixture.id);
+  await expect(page.getByTestId("adjustment-edit")).toBeVisible();
+  await expect(page.getByTestId("adjustment-chip")).toHaveCount(0);
+});
+
+test("Journey 3 — reject with adjustment applies nothing (O.13.5C)", async ({ page }, { project }) => {
+  const { userId } = await loginAsStub(project.name, 189);
+  const fixture = await insertListingFixture(userId, {
+    status: "PENDING_MODERATION", complete: true, images: 3,
+  });
+  await loginAs(page.context(), testPhone(project.name, 190), { roles: ["MODERATOR"] });
+  await claimOnDetail(page, fixture.id);
+  await page.getByTestId("adjustment-edit").click();
+  await page.getByTestId("adj-price").fill("22000");
+  await page.getByTestId("adjustment-save").click();
+  await expect(page.getByTestId("adjustment-chip")).toBeVisible();
+
+  await page.getByTestId("action-reject").click();
+  await expect(page.getByTestId("adjusted-decision-note")).toContainText(
+    "Moderator düzəlişləri tətbiq olunmayacaq",
+  );
+  await expect(page.getByTestId("adjusted-decision-note")).toContainText("yalnız tarixçədə qalacaq");
+  await page.getByTestId("decision-reason").selectOption("PROHIBITED_ITEM");
+  await page.getByTestId("decision-submit").click();
+  await expect(page.getByTestId("decision-done")).toContainText("rədd edildi");
+
+  const snapshot = await listingSnapshot(fixture.id);
+  expect(snapshot.status).toBe("REJECTED");
   expect(snapshot.price).toBe("2500000");
 });
