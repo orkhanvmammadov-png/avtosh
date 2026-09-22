@@ -4,7 +4,7 @@ import {
   FullReviewSections,
   type FullReviewContent,
 } from "@/components/moderator/full-review-sections";
-import { ModerationActions } from "@/components/moderator/moderation-actions";
+import { ModerationWorkbench } from "@/components/moderator/adjustment-workbench";
 import { chipFor, LISTING_STATUS_CHIPS } from "@/components/ui/status-chip";
 import { isApiError } from "@/lib/api/errors";
 import { formatDateAz, formatPriceMinor, vehicleTitle } from "@/lib/format";
@@ -140,8 +140,30 @@ export default async function ModerationReviewPage({
         </div>
       </header>
 
-      <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div className="min-w-0 space-y-5">
+      <ModerationWorkbench
+        listingId={detail.id}
+        status={detail.status}
+        revision={detail.revision}
+        claimMine={claimMine}
+        claimOther={claimOther}
+        claimExpiresAt={claimMine ? detail.claim!.expiresAt : null}
+        editRevisionNo={detail.editReview?.editRevisionNo ?? null}
+        currentUserId={auth.user.id}
+        subject={detail.adjustmentContext?.subject ?? null}
+        baseContent={detail.adjustmentContext?.baseContent ?? null}
+        baseImages={(detail.editReview !== null
+          ? detail.editReview.sellerSubmitted.images
+          : detail.images
+        ).map((image) => ({
+          sourceId: image.id,
+          url: image.url,
+          sortOrder: image.sortOrder,
+          isPrimary: image.isPrimary,
+        }))}
+        imageMin={detail.adjustmentContext?.imageMin ?? 3}
+        adjustment={detail.adjustment}
+      >
+        <>
           {detail.editReview !== null ? (
             <>
               {/* O.12: changed-first comparison stays FIRST … */}
@@ -185,6 +207,25 @@ export default async function ModerationReviewPage({
 
           <section aria-label={STAFF.history} className="rounded-staff border border-line bg-raised p-4">
             <h2 className="text-sm font-bold text-ink">{STAFF.history}</h2>
+            {/* O.13 Stage B: append-only adjustment lineage (actor +
+                timestamp) — survives discard, proves multi-moderator
+                authorship without a version-control UI */}
+            {detail.adjustmentEvents.length > 0 ? (
+              <ul className="mt-3 space-y-2 border-l-2 border-line pl-4" data-testid="adjustment-history">
+                {detail.adjustmentEvents.map((event, index) => (
+                  <li key={index} className="relative text-sm">
+                    <span aria-hidden="true" className="absolute -left-[23px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-raised bg-info" />
+                    <p className="font-semibold text-ink">
+                      {event.action === "MODERATION_ADJUSTMENT_DISCARDED"
+                        ? STAFF.historyAdjDiscarded
+                        : STAFF.historyAdjSaved}
+                      {event.actorName !== null ? ` — ${event.actorName}` : ""}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted">{formatDateTime(event.at)}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             {detail.reviews.length === 0 ? (
               <p className="mt-2 text-sm text-muted" data-testid="history-empty">{STAFF.historyEmpty}</p>
             ) : (
@@ -207,20 +248,8 @@ export default async function ModerationReviewPage({
               </ul>
             )}
           </section>
-        </div>
-
-        <div className="lg:sticky lg:top-16 lg:self-start">
-          <ModerationActions
-            listingId={detail.id}
-            status={detail.status}
-            revision={detail.revision}
-            claimMine={claimMine}
-            claimOther={claimOther}
-            claimExpiresAt={claimMine ? detail.claim!.expiresAt : null}
-            editRevisionNo={detail.editReview?.editRevisionNo ?? null}
-          />
-        </div>
-      </div>
+        </>
+      </ModerationWorkbench>
     </div>
   );
 }

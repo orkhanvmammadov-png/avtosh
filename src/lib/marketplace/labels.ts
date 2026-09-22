@@ -458,6 +458,44 @@ export const STAFF = {
   secEquipment: "Təchizat",
   secSellerContact: "Satıcı / Əlaqə",
   equipmentEmpty: "Təchizat seçilməyib",
+  // O.13 Stage B — moderator edit foundation (11-copy-contract)
+  editEnter: "Redaktə et",
+  editSave: "Yadda saxla",
+  editCancel: "Dəyişiklikləri ləğv et",
+  adjSaved: "Moderator düzəlişi saxlanılıb",
+  adjSavedBy: "Saxlayan moderator",
+  layerSeller: "Seller tərəfindən daxil edilib",
+  layerModerator: "Moderator düzəlişi",
+  editContextStrip:
+    "Moderator redaktə rejimi — dəyişikliklər satıcının müraciətini dəyişmir və dərc olunmur",
+  depResetWarning: "Model, ban növü və təchizat seçimləri sıfırlanacaq",
+  equipMarkerAdded: "əlavə edildi",
+  equipMarkerRemoved: "çıxarıldı",
+  photoPrimary: "Əsas şəkil",
+  photoRemove: "Şəkli çıxar",
+  photoRestore: "Geri qaytar",
+  photoSetPrimary: "Əsas şəkil et",
+  photoMoveUp: "Yuxarı",
+  photoMoveDown: "Aşağı",
+  photoMinError: "Ən azı 3 şəkil qalmalıdır — yadda saxlamaq mümkün deyil",
+  takeoverContinue: "Davam et",
+  takeoverDiscard: "Düzəlişi sil",
+  takeoverBanner: "Bu elanda saxlanılmış moderator düzəlişi var.",
+  takeoverNote: "Claim artıq sizindir — bu, əvvəlki moderatorun saxlanılmış işidir.",
+  takeoverDiscardConfirm: (name: string): string =>
+    `${name}-ın saxlanılmış düzəlişi silinəcək və tarixçədə qalacaq. Bu geri qaytarıla bilməz.`,
+  unsavedTitle: "Saxlanmamış dəyişikliklər var",
+  unsavedBody: "Redaktə rejimindən çıxsanız, saxlanmamış dəyişikliklər itəcək.",
+  unsavedBack: "Redaktəyə qayıt",
+  unsavedDiscard: "Dəyişiklikləri at",
+  conflictBody: "Elan başqa sessiyada dəyişdirilib. Səhifəni yeniləyin.",
+  conflictAction: "Səhifəni yenilə",
+  // transitional Stage B copy (replaced when adjusted decisions land)
+  decisionsBlockedAdjustment:
+    "Saxlanılmış moderator düzəlişi olan elanlarda qərarlar hələlik bağlıdır.",
+  decisionsBlockedUnsaved: "Saxlanmamış dəyişikliklər var — qərarlar bağlıdır.",
+  historyAdjSaved: "Moderator düzəlişi saxladı",
+  historyAdjDiscarded: "Moderator düzəlişi sildi",
 } as const;
 
 /** Admin panel strings (Phase 4.15). */

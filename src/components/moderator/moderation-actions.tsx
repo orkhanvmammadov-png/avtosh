@@ -33,6 +33,7 @@ export function ModerationActions({
   claimOther,
   claimExpiresAt,
   editRevisionNo = null,
+  lockedReason = null,
 }: {
   listingId: string;
   status: string;
@@ -44,6 +45,10 @@ export function ModerationActions({
       decisions then address the EDIT endpoints with the edit revision's
       own counter. Same claim, same verbs, same confirmation flow. */
   editRevisionNo?: number | null;
+  /** O.13 Stage B: non-null renders the queue decisions disabled with
+      a visible reason (open adjustment / unsaved edit) — the server
+      refuses these decisions independently. */
+  lockedReason?: string | null;
 }) {
   // The portal recovers via FULL page reloads; a click on a freshly
   // loaded page must never land before React's handlers exist.
@@ -199,17 +204,43 @@ export function ModerationActions({
         </div>
       ) : null}
 
+      {reviewPending && claimMine && lockedReason !== null ? (
+        <p
+          className="rounded-staff bg-warning-soft px-3 py-2 text-xs font-medium leading-relaxed text-warning"
+          data-testid="decisions-locked"
+        >
+          {lockedReason}
+        </p>
+      ) : null}
+
       {(reviewPending && claimMine) || isActive ? (
         <div className="flex flex-wrap gap-2" data-testid="decision-buttons">
           {reviewPending && claimMine ? (
             <>
-              <Button onClick={() => setPendingAction("approve")} disabled={busy || !hydrated} data-testid="action-approve">
+              <Button
+                onClick={() => setPendingAction("approve")}
+                disabled={busy || !hydrated || lockedReason !== null}
+                aria-disabled={lockedReason !== null}
+                data-testid="action-approve"
+              >
                 {STAFF.approve}
               </Button>
-              <Button variant="secondary" onClick={() => setPendingAction("request-correction")} disabled={busy || !hydrated} data-testid="action-correction">
+              <Button
+                variant="secondary"
+                onClick={() => setPendingAction("request-correction")}
+                disabled={busy || !hydrated || lockedReason !== null}
+                aria-disabled={lockedReason !== null}
+                data-testid="action-correction"
+              >
                 {STAFF.correction}
               </Button>
-              <Button variant="secondary" onClick={() => setPendingAction("reject")} disabled={busy || !hydrated} data-testid="action-reject">
+              <Button
+                variant="secondary"
+                onClick={() => setPendingAction("reject")}
+                disabled={busy || !hydrated || lockedReason !== null}
+                aria-disabled={lockedReason !== null}
+                data-testid="action-reject"
+              >
                 {STAFF.reject}
               </Button>
             </>

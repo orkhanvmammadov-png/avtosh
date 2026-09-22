@@ -33,6 +33,7 @@ import {
   type ReviewRow,
 } from "@/repositories/moderation";
 import { getListingFeatureIds, listFeatureRowsByIds, replaceListingFeatures } from "@/repositories/listings";
+import { getOpenAdjustment } from "@/repositories/moderation-adjustments";
 import { findActiveCategoryByCode } from "@/repositories/catalog";
 import { toListingImageDto, type ListingImageDto } from "@/services/listing-dto";
 import {
@@ -112,8 +113,9 @@ function dataFeatureIds(data: Record<string, unknown>): string[] {
 }
 
 /** Resolve display names for arbitrary catalog ids (both sides of the
-    diff, including inactive rows — historical names must still render). */
-async function nameMaps(sql: Sql): Promise<{
+    diff, including inactive rows — historical names must still render).
+    Exported for the O.13 adjustment read model (same resolution rules). */
+export async function nameMaps(sql: Sql): Promise<{
   of: (table: "brands" | "models" | "cities" | "reference_options" | "features" | "categories", id: string | null) => Promise<string | null>;
 }> {
   const cache = new Map<string, string | null>();
@@ -148,7 +150,7 @@ function formatAzn(minor: number | null): string | null {
   return `${String(major).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} AZN`;
 }
 
-interface ApprovedSideRow extends LifecycleListingRow {
+export interface ApprovedSideRow extends LifecycleListingRow {
   brand_name: string | null;
   model_name: string | null;
   city_name: string | null;
@@ -160,7 +162,7 @@ interface ApprovedSideRow extends LifecycleListingRow {
   color: string | null;
 }
 
-async function approvedSide(sql: Sql, listingId: string): Promise<ApprovedSideRow | undefined> {
+export async function approvedSide(sql: Sql, listingId: string): Promise<ApprovedSideRow | undefined> {
   const rows = await sql<ApprovedSideRow[]>`
     select
       l.id, l.public_id::text as public_id, l.owner_id, l.category_id,
@@ -442,7 +444,9 @@ export interface EditDecisionResultDto {
   reactivated: boolean;
 }
 
-async function requireOwnedLiveClaim(tx: Sql, listingId: string, moderatorId: string): Promise<ClaimRow> {
+/** Exported for the O.13 adjustment writes — the SAME live-claim
+    ownership gate as decisions (never a parallel claim model). */
+export async function requireOwnedLiveClaim(tx: Sql, listingId: string, moderatorId: string): Promise<ClaimRow> {
   const claim = await getUnreleasedClaim(tx, listingId);
   if (claim === undefined || claim.expires_at.getTime() <= Date.now()) {
     throw new ApiError("MODERATION_CLAIM_REQUIRED", "Claim the listing before deciding.");
@@ -583,6 +587,19 @@ async function decideEdit(
       );
     }
     const claim = await requireOwnedLiveClaim(tx, listingId, auth.user.id);
+    // O.13 Stage B safety: a saved OPEN moderator adjustment must never
+    // let the pre-O.13 decision path run against seller content as if
+    // no adjustment existed. Approval-with-adjustment (and the sealed
+    // correction/reject terminalization) is wired in Stage C/D — until
+    // then every decision on such a subject is a typed refusal.
+    const openAdjustment = await getOpenAdjustment(tx, listingId);
+    if (openAdjustment !== undefined) {
+      throw new ApiError(
+        "MODERATION_ADJUSTMENT_PENDING",
+        "A saved moderator adjustment exists; adjusted decisions are not enabled yet.",
+        { details: { adjustment_id: openAdjustment.id } },
+      );
+    }
 
     // review row records BOTH counters with their original meanings:
     // the approved listing revision reviewed against + the edit's own

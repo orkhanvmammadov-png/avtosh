@@ -498,6 +498,22 @@ export async function listingPeriodCount(listingId: string): Promise<number> {
   }
 }
 
+/** O.13: deterministic claim expiry — no sleeps; claimed_at moves too
+    because the schema enforces expires_at > claimed_at. */
+export async function expireModerationClaim(listingId: string): Promise<void> {
+  const sql = db();
+  try {
+    await sql`
+      update moderation_claims
+      set claimed_at = now() - interval '10 minutes',
+          expires_at = now() - interval '1 minute'
+      where listing_id = ${listingId} and released_at is null
+    `;
+  } finally {
+    await sql.end();
+  }
+}
+
 /** Registers a live moderation claim directly (claimed-by-other fixtures). */
 export async function claimListingAs(listingId: string, moderatorUserId: string): Promise<void> {
   const sql = db();
