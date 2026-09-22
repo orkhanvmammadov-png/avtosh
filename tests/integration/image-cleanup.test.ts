@@ -99,6 +99,43 @@ afterAll(async () => {
 });
 
 describe("image cleanup worker", () => {
+  it("retained moderation-adjustment snapshots protect their submitted image paths (O.13)", async () => {
+    const sql = getSql();
+    const listing = await insertListing();
+    const paths = {
+      OPEN: `listings/${randomUUID()}.webp`,
+      APPLIED: `listings/${randomUUID()}.webp`,
+      DISCARDED: `listings/${randomUUID()}.webp`,
+    } as const;
+    const orphanPath = `listings/${randomUUID()}.webp`;
+    for (const path of [...Object.values(paths), orphanPath]) putObject(path);
+    // one retained adjustment row per lifecycle state, each freezing
+    // exactly one submitted image path (sealed O.13.2: OPEN, APPLIED
+    // and DISCARDED history rows are all intentional references)
+    for (const [status, path] of Object.entries(paths)) {
+      await sql`
+        insert into moderation_adjustments
+          (listing_id, status, submitted_listing_revision, submitted_data,
+           submitted_images, adjusted_data, image_plan, moderator_id,
+           discarded_at, applied_at)
+        values
+          (${listing}, ${status}::moderation_adjustment_status, 1, '{}'::jsonb,
+           ${sql.json([{ source_id: randomUUID(), storage_path: path, sort_order: 0, is_primary: true, width: null, height: null, mime_type: "image/webp" }])},
+           '{}'::jsonb, '[]'::jsonb, ${seller.userId},
+           ${status === "DISCARDED" ? sql`now()` : null},
+           ${status === "APPLIED" ? sql`now()` : null})
+      `;
+    }
+    const event = await emitCandidate(listing, [...Object.values(paths), orphanPath]);
+    const summary = await runImageCleanup({ graceSeconds: 3600 });
+    expect(summary.events).toBeGreaterThanOrEqual(1);
+    expect(storage.has(BUCKET(), paths.OPEN)).toBe(true); // history-protected
+    expect(storage.has(BUCKET(), paths.APPLIED)).toBe(true); // history-protected
+    expect(storage.has(BUCKET(), paths.DISCARDED)).toBe(true); // history-protected
+    expect(storage.has(BUCKET(), orphanPath)).toBe(false); // true orphan → deleted
+    expect((await eventState(event)).status).toBe("PROCESSED");
+  });
+
   it("deletes only true orphans; every live reference wins", async () => {
     const listing = await insertListing();
     const approvedPath = `listings/${randomUUID()}.webp`;

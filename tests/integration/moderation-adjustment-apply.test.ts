@@ -332,18 +332,26 @@ describe("NEW adjusted approval", () => {
     expect(after.images).toHaveLength(3);
     expect(await applyOutboxEvents(listing.id)).toHaveLength(1);
 
-    // reference-safe cleanup: removed object deleted once aged past
-    // grace; final gallery objects never touched (frozen snapshot is
-    // metadata-only history and does not block deletion)
+    // reference-safe cleanup (sealed O.13.2 retention rule): the
+    // candidate reaches the worker after grace, but the removed
+    // object is NOT deleted — the retained APPLIED adjustment's frozen
+    // submitted_images snapshot still references its exact path; the
+    // final approved gallery stays protected as before
     await getSql()`
       update outbox_events set created_at = now() - interval '2 hours'
       where aggregate_id = ${listing.id} and event_type = 'MODERATION_ADJUSTMENT_APPLIED'
     `;
-    await runImageCleanup({ graceSeconds: 3600 });
-    expect(storage.has(BUCKET(), listing.imagePaths[3])).toBe(false);
+    const summary = await runImageCleanup({ graceSeconds: 3600 });
+    expect(summary.events).toBeGreaterThanOrEqual(1);
+    expect(storage.has(BUCKET(), listing.imagePaths[3])).toBe(true); // history-protected
     expect(storage.has(BUCKET(), listing.imagePaths[0])).toBe(true);
     expect(storage.has(BUCKET(), listing.imagePaths[1])).toBe(true);
     expect(storage.has(BUCKET(), listing.imagePaths[2])).toBe(true);
+    const [event] = await applyOutboxEvents(listing.id);
+    const [{ status: eventStatus }] = await getSql()<{ status: string }[]>`
+      select status from outbox_events where id = ${event.id}
+    `;
+    expect(eventStatus).toBe("PROCESSED"); // retained, not retried forever
   });
 
   it("blocks stale/mismatched adjustment views and lost claims with typed conflicts", async () => {

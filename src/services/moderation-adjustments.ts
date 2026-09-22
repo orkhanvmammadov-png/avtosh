@@ -530,9 +530,12 @@ export async function applyAdjustmentOnNewApproval(
     },
   });
   // reference-safe cleanup intake (worker claims this event type):
-  // ONLY images removed from the final approved set become candidates;
-  // the frozen submitted_images snapshot is metadata-only history by
-  // the sealed O.13.2 rule and never blocks nor demands storage
+  // ONLY images removed from the final approved set become candidates.
+  // Candidates are hints, never deletion authority — the worker's
+  // centralized reference check also treats every retained
+  // adjustment's frozen submitted_images snapshot as a live history
+  // reference (sealed O.13.2 retention rule), so these objects stay
+  // protected while their moderation history is retained.
   await insertOutboxEvent(tx, {
     eventType: "MODERATION_ADJUSTMENT_APPLIED",
     aggregateId: listing.id,
