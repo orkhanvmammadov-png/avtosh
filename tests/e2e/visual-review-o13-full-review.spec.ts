@@ -117,8 +117,9 @@ test.describe("O.13.5A full review visual artifacts", () => {
       await page.screenshot({ path: `${OUT}/o13b-edit-mode-${width}.png`, fullPage: true });
     }
     await page.setViewportSize({ width: 1440, height: 900 });
-    // working changes: price, equipment marker, photo plan
+    // working changes: price, description, equipment marker, photo plan
     await page.getByTestId("adj-price").fill("23500");
+    await page.getByTestId("adj-description").fill("Moderator tərəfindən düzəldilmiş, daha dəqiq təsvir.");
     await page.getByTestId("equipment-options-SAFETY").locator("input:not(:checked)").first().check();
     await page.getByTestId("photo-plan-item").nth(3).getByTestId("photo-remove").click();
     await page.getByTestId("photo-plan-item").nth(1).getByTestId("photo-set-primary").click();

@@ -7,7 +7,7 @@ import { ModerationActions } from "@/components/moderator/moderation-actions";
 import { ModeratorPhotoPlan, type PhotoPlanItem } from "@/components/moderator/photo-plan";
 import { OPTION_GROUPS, useWizardCatalog, type CatalogItem } from "@/components/seller/use-wizard-catalog";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
-import { formatDateAz, formatTimeAz } from "@/lib/format";
+import { formatDateAz, formatMileage, formatPriceMinor, formatTimeAz } from "@/lib/format";
 import { STAFF } from "@/lib/marketplace/labels";
 import { publicFetch, PublicApiError } from "@/lib/marketplace/public-api";
 import type { AdjustmentDto } from "@/services/moderation-adjustments";
@@ -132,20 +132,84 @@ function formatDateTime(iso: string): string {
 
 // --- shared small UI --------------------------------------------------------
 
+const FOCUSABLE =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * The ONE Stage B modal primitive (sealed accessibility contract):
+ * semantic role=dialog + aria-modal, initial focus inside, a real
+ * focus trap (Tab and Shift+Tab cycle within; a document-level capture
+ * listener means focus can never Tab into the background), Escape as
+ * safe cancellation (`onClose` — every Stage B dialog has a
+ * non-destructive cancel path), and focus return to the triggering
+ * control on close. No second bespoke trap exists.
+ */
 function Dialog({
   title,
   body,
+  onClose,
   children,
   testId,
 }: {
   title: string;
   body: string;
+  /** Safe cancellation (Escape / the dialog's cancel action). */
+  onClose: () => void;
   children: ReactNode;
   testId: string;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container === null) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusables = () => Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE));
+    focusables()[0]?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusables();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      const inside = active instanceof HTMLElement && container.contains(active);
+      if (event.shiftKey) {
+        if (!inside || active === first) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (!inside || active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown, true);
+      previous?.focus();
+    };
+  }, []);
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center" data-testid={testId}>
-      <div role="dialog" aria-modal="true" aria-label={title} className="w-full max-w-md rounded-staff bg-raised p-5 shadow-xl">
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="w-full max-w-md rounded-staff bg-raised p-5 shadow-xl"
+      >
         <h3 className="text-sm font-bold text-ink">{title}</h3>
         <p className="mt-2 text-sm leading-relaxed text-slate-strong">{body}</p>
         <div className="mt-4 flex flex-wrap justify-end gap-2">{children}</div>
@@ -159,6 +223,7 @@ function Dialog({
 function AdjustmentSummary({ adjustment }: { adjustment: AdjustmentDto }) {
   const hasFieldChanges =
     adjustment.changes.length > 0 ||
+    adjustment.descriptionChange !== null ||
     adjustment.equipmentAdded.length > 0 ||
     adjustment.equipmentRemoved.length > 0;
   const photo = adjustment.photoSummary;
@@ -209,6 +274,32 @@ function AdjustmentSummary({ adjustment }: { adjustment: AdjustmentDto }) {
             </p>
           ) : null}
         </dl>
+      ) : null}
+      {adjustment.descriptionChange !== null ? (
+        <div className="mt-3 grid gap-2 md:grid-cols-2" data-testid="adjustment-description-diff">
+          <div className="rounded-staff bg-sunken p-3">
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.06em] text-slate-strong">
+              Satıcı
+            </h4>
+            <p
+              className="mt-1 max-h-40 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-ink"
+              data-testid="adjustment-description-before"
+            >
+              {adjustment.descriptionChange.submitted ?? "—"}
+            </p>
+          </div>
+          <div className="rounded-staff bg-success-soft p-3">
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.06em] text-success">
+              Moderator
+            </h4>
+            <p
+              className="mt-1 max-h-40 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-ink"
+              data-testid="adjustment-description-after"
+            >
+              {adjustment.descriptionChange.adjusted ?? "—"}
+            </p>
+          </div>
+        </div>
       ) : null}
       {hasPhotoChanges ? (
         <p className="mt-2 text-xs text-slate-strong" data-testid="adjustment-photo-summary">
@@ -564,7 +655,7 @@ function AdjustmentEditor({
       <section aria-label={STAFF.secSales} className="rounded-staff border border-line bg-raised p-4">
         <h3 className="text-sm font-bold text-ink">{STAFF.secSales}</h3>
         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-          <FieldShell label="Qiymət (AZN)" htmlFor="adj-price" sellerValue={sellerWas("price_minor", (v) => (v.price_minor === null ? null : `${Math.floor(v.price_minor / 100)} AZN`))}>
+          <FieldShell label="Qiymət (AZN)" htmlFor="adj-price" sellerValue={sellerWas("price_minor", (v) => (v.price_minor === null ? null : formatPriceMinor(v.price_minor)))}>
             <input
               id="adj-price"
               data-testid="adj-price"
@@ -574,7 +665,7 @@ function AdjustmentEditor({
               onChange={(e) => set("price_minor", e.target.value === "" ? null : Number(e.target.value) * 100)}
             />
           </FieldShell>
-          <FieldShell label="Yürüş (km)" htmlFor="adj-mileage" sellerValue={sellerWas("mileage", (v) => (v.mileage === null ? null : `${v.mileage} km`))}>
+          <FieldShell label="Yürüş (km)" htmlFor="adj-mileage" sellerValue={sellerWas("mileage", (v) => (v.mileage === null ? null : formatMileage(v.mileage)))}>
             <input
               id="adj-mileage"
               data-testid="adj-mileage"
@@ -739,7 +830,12 @@ function AdjustmentEditor({
       </div>
 
       {unsavedDialog ? (
-        <Dialog title={STAFF.unsavedTitle} body={STAFF.unsavedBody} testId="unsaved-dialog">
+        <Dialog
+          title={STAFF.unsavedTitle}
+          body={STAFF.unsavedBody}
+          onClose={() => setUnsavedDialog(false)}
+          testId="unsaved-dialog"
+        >
           <Button variant="secondary" onClick={() => setUnsavedDialog(false)} data-testid="unsaved-back">
             {STAFF.unsavedBack}
           </Button>
@@ -756,7 +852,12 @@ function AdjustmentEditor({
       ) : null}
 
       {categoryDialog !== null ? (
-        <Dialog title={STAFF.confirmAction} body={STAFF.depResetWarning} testId="category-dialog">
+        <Dialog
+          title={STAFF.confirmAction}
+          body={STAFF.depResetWarning}
+          onClose={() => setCategoryDialog(null)}
+          testId="category-dialog"
+        >
           <Button variant="secondary" onClick={() => setCategoryDialog(null)} data-testid="category-cancel">
             {STAFF.cancel}
           </Button>
@@ -928,6 +1029,11 @@ export function ModerationWorkbench({
         <Dialog
           title={STAFF.takeoverDiscard}
           body={STAFF.takeoverDiscardConfirm(adjustment.savedBy.displayName ?? "Moderator")}
+          onClose={() => {
+            // Escape = safe cancellation only — never while the discard
+            // request is already in flight
+            if (!busy) setDiscardDialog(false);
+          }}
           testId="discard-dialog"
         >
           <Button variant="secondary" onClick={() => setDiscardDialog(false)} disabled={busy} data-testid="discard-cancel">

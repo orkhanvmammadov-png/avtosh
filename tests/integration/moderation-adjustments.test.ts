@@ -259,13 +259,24 @@ describe("NEW first save — frozen snapshot, no seller-artifact mutation", () =
     const save = await saveAdjustment(mod1, listing.id, {
       expected_listing_revision: listing.revision,
       expected_adjustment_revision: null,
-      content: { price_minor: 2350000, feature_ids: [featA, featB] },
+      content: {
+        price_minor: 2350000,
+        mileage: 45500,
+        description: "Moderator tərəfindən düzəldilmiş təsvir",
+        feature_ids: [featA, featB],
+      },
       image_plan: planFor(listing.imageIds, { 0: { primary: false }, 1: { primary: true } }),
     });
     expect(save.status).toBe(200);
     const result = save.body.data?.adjustment as { id: string; revision: number; changedFields: string[] };
     expect(result.revision).toBe(1);
-    expect(result.changedFields).toEqual(["feature_ids", "price_minor", "image_plan"]);
+    expect(result.changedFields).toEqual([
+      "description",
+      "feature_ids",
+      "mileage",
+      "price_minor",
+      "image_plan",
+    ]);
 
     // seller artifacts byte-identical
     expect(await sellerArtifacts(listing.id)).toBe(before);
@@ -288,14 +299,22 @@ describe("NEW first save — frozen snapshot, no seller-artifact mutation", () =
       revision: number;
       savedBy: { id: string };
       changes: { field: string; submittedValue: string | null; adjustedValue: string | null }[];
+      descriptionChange: { submitted: string | null; adjusted: string | null } | null;
       equipmentAdded: string[];
       photoSummary: { primaryChanged: boolean };
     };
     expect(adjustment.revision).toBe(1);
     expect(adjustment.savedBy.id).toBe(mod1.userId);
+    // human-readable grouped values via the shared AVTOSH formatters —
+    // and description is NEVER a scalar row (dedicated before/after)
     expect(adjustment.changes).toEqual([
       { field: "price", submittedValue: "25 000 AZN", adjustedValue: "23 500 AZN" },
+      { field: "mileage", submittedValue: "50 000 km", adjustedValue: "45 500 km" },
     ]);
+    expect(adjustment.descriptionChange).toEqual({
+      submitted: "O13B satıcı təsviri",
+      adjusted: "Moderator tərəfindən düzəldilmiş təsvir",
+    });
     expect(adjustment.equipmentAdded).toEqual(["O13B Avadanlıq B"]);
     expect(adjustment.photoSummary.primaryChanged).toBe(true);
 
@@ -456,8 +475,14 @@ describe("claim ownership + takeover lineage", () => {
 
     // B sees A's saved work with A's attribution
     const d = await detail(mod2, listing.id);
-    const adjustment = d.adjustment as { revision: number; savedBy: { id: string; displayName: string | null } };
+    const adjustment = d.adjustment as {
+      revision: number;
+      savedBy: { id: string; displayName: string | null };
+      descriptionChange: unknown;
+    };
     expect(adjustment.savedBy).toEqual({ id: mod1.userId, displayName: "Aygün" });
+    // unchanged description never fabricates a false before/after diff
+    expect(adjustment.descriptionChange).toBeNull();
 
     // B continues — current saved-state author becomes B, counter bumps
     const cont = await saveAdjustment(mod2, listing.id, {

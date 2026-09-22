@@ -25,6 +25,7 @@ import {
   type SubmittedImageSnapshot,
 } from "@/repositories/moderation-adjustments";
 import { insertModerationAudit } from "@/repositories/moderation-audit";
+import { formatMileage, formatPriceMinor } from "@/lib/format";
 import { buildEditSnapshot } from "@/services/listing-lifecycle";
 import { resolveSellerContentPatch, type SellerContentPatch } from "@/services/listing-patch";
 import { nameMaps, requireOwnedLiveClaim } from "@/services/moderation-edit";
@@ -564,6 +565,9 @@ export interface AdjustmentDto {
   imagePlan: AdjustmentImageViewDto[];
   /** Server-resolved two-way summary (Satıcı → Moderator). */
   changes: AdjustmentChangeDto[];
+  /** Readable before/after blocks (O.12 description-diff treatment in
+      the Satıcı → Moderator layer vocabulary); null when unchanged. */
+  descriptionChange: { submitted: string | null; adjusted: string | null } | null;
   equipmentAdded: string[];
   equipmentRemoved: string[];
   photoSummary: { removedCount: number; primaryChanged: boolean; reordered: boolean };
@@ -573,10 +577,14 @@ export interface AdjustmentDto {
 const YES = "Bəli";
 const NO = "Yox";
 
+/** Shared AVTOSH money/mileage formatters — never a second formatter.
+    (Wrapped only to keep the diff convention "absent = null row".) */
 function formatAzn(minor: number | null): string | null {
-  if (minor === null) return null;
-  const major = Math.floor(minor / 100);
-  return `${String(major).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} AZN`;
+  return minor === null ? null : formatPriceMinor(minor);
+}
+
+function formatKm(km: number | null): string | null {
+  return km === null ? null : formatMileage(km);
 }
 
 function dataNumber(data: Record<string, unknown>, key: string): number | null {
@@ -623,7 +631,7 @@ async function buildChanges(
   };
   consider("year", num(submitted, "year", ""), num(adjusted, "year", ""));
   consider("price", formatAzn(dataNumber(submitted, "price_minor")), formatAzn(dataNumber(adjusted, "price_minor")));
-  consider("mileage", num(submitted, "mileage", " km"), num(adjusted, "mileage", " km"));
+  consider("mileage", formatKm(dataNumber(submitted, "mileage")), formatKm(dataNumber(adjusted, "mileage")));
   consider("engine_cc", num(submitted, "engine_cc", " sm³"), num(adjusted, "engine_cc", " sm³"));
   for (const [field, key] of [
     ["fuel_type", "fuel_type_id"],
@@ -650,7 +658,8 @@ async function buildChanges(
   consider("barter", bool(submitted, "barter_available"), bool(adjusted, "barter_available"));
   consider("no_accident", bool(submitted, "no_accident"), bool(adjusted, "no_accident"));
   consider("not_repainted", bool(submitted, "not_repainted"), bool(adjusted, "not_repainted"));
-  consider("description", dataString(submitted, "description"), dataString(adjusted, "description"));
+  // description is NEVER a scalar row — it renders as the dedicated
+  // Satıcı → Moderator before/after blocks (descriptionChange)
   consider("seller_name", dataString(submitted, "seller_name"), dataString(adjusted, "seller_name"));
   consider("contact_phone", dataString(submitted, "contact_phone"), dataString(adjusted, "contact_phone"));
   return changes;
@@ -740,6 +749,11 @@ export async function getAdjustmentViewFor(listingId: string): Promise<Adjustmen
     submittedData: row.submitted_data,
     imagePlan,
     changes: await buildChanges(sql, row.submitted_data, row.adjusted_data),
+    descriptionChange: (() => {
+      const submitted = dataString(row.submitted_data, "description");
+      const adjusted = dataString(row.adjusted_data, "description");
+      return submitted === adjusted ? null : { submitted, adjusted };
+    })(),
     equipmentAdded,
     equipmentRemoved,
     photoSummary: {

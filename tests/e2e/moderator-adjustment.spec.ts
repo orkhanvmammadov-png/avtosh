@@ -93,6 +93,9 @@ test("NEW: claim → edit → save → reload survives; seller submission untouc
 
   // content edit + equipment add (marker before save) — no upload control anywhere
   await page.getByTestId("adj-price").fill("23500");
+  // evidence helper uses the normal AVTOSH grouped formatting
+  await expect(page.getByTestId("seller-was-adj-price")).toHaveText("Satıcı: 25 000 AZN");
+  await page.getByTestId("adj-description").fill("Moderator tərəfindən düzəldilmiş təsvir");
   const safety = page.getByTestId("equipment-options-SAFETY");
   await expect(safety.locator("input").first()).toBeVisible();
   const unchecked = safety.locator("input:not(:checked)").first();
@@ -120,6 +123,12 @@ test("NEW: claim → edit → save → reload survives; seller submission untouc
   await expect(page.getByTestId("adjustment-attribution")).toContainText("Saxlayan moderator");
   await expect(page.getByTestId("adjustment-change-price")).toContainText("25 000 AZN");
   await expect(page.getByTestId("adjustment-change-price")).toContainText("23 500 AZN");
+  // changed description renders as real Satıcı → Moderator blocks
+  const descriptionDiff = page.getByTestId("adjustment-description-diff");
+  await expect(descriptionDiff.getByTestId("adjustment-description-before")).toHaveText("E2E fixture təsviri");
+  await expect(descriptionDiff.getByTestId("adjustment-description-after")).toHaveText(
+    "Moderator tərəfindən düzəldilmiş təsvir",
+  );
   await expect(page.getByTestId("adjustment-equipment-added")).toBeVisible();
   await expect(page.getByTestId("adjustment-photo-summary")).toContainText("Silindi — 1");
   await expect(page.getByTestId("adjustment-photo-summary")).toContainText("Yeni əsas şəkil");
@@ -135,10 +144,23 @@ test("NEW: claim → edit → save → reload survives; seller submission untouc
   await page.getByTestId("adjustment-edit").click();
   await expect(page.getByTestId("adj-price")).toHaveValue("23500");
 
-  // unsaved protection: local changes never exit silently
+  // unsaved protection: local changes never exit silently — and the
+  // dialog satisfies the sealed focus contract (initial focus inside,
+  // Tab/Shift+Tab contained, Escape = safe cancel, focus returned)
   await page.getByTestId("adj-price").fill("24000");
   await page.getByTestId("adjustment-cancel").click();
   await expect(page.getByTestId("unsaved-dialog")).toContainText("Saxlanmamış dəyişikliklər var");
+  await expect(page.getByTestId("unsaved-back")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByTestId("unsaved-discard")).toBeFocused();
+  await page.keyboard.press("Tab"); // forward wrap stays inside
+  await expect(page.getByTestId("unsaved-back")).toBeFocused();
+  await page.keyboard.press("Shift+Tab"); // backward wrap stays inside
+  await expect(page.getByTestId("unsaved-discard")).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("unsaved-dialog")).toHaveCount(0);
+  await expect(page.getByTestId("adjustment-cancel")).toBeFocused(); // trigger regains focus
+  await page.getByTestId("adjustment-cancel").click();
   await page.getByTestId("unsaved-back").click();
   await expect(page.getByTestId("adjustment-editor")).toBeVisible();
   await page.getByTestId("adjustment-cancel").click();
@@ -226,9 +248,16 @@ test("takeover: B inherits A's saved adjustment with attribution and discards it
   await page.getByTestId("adjustment-cancel").click();
   await expect(takeover).toBeVisible();
 
-  // Düzəlişi sil requires confirmation, keeps history, unlocks decisions
+  // Düzəlişi sil requires confirmation; the dialog contains focus and
+  // Escape safely cancels back to the trigger
   await takeover.getByTestId("takeover-discard").click();
   await expect(page.getByTestId("discard-dialog")).toContainText("geri qaytarıla bilməz");
+  await expect(page.getByTestId("discard-cancel")).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("discard-dialog")).toHaveCount(0);
+  await expect(takeover.getByTestId("takeover-discard")).toBeFocused();
+  // confirmed discard keeps history and unlocks decisions
+  await takeover.getByTestId("takeover-discard").click();
   await page.getByTestId("discard-confirm").click();
   await expect(page.getByTestId("adjustment-chip")).toHaveCount(0);
   await expect(page.getByTestId("takeover-card")).toHaveCount(0);
