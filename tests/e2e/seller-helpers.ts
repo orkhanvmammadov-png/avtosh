@@ -476,11 +476,19 @@ export async function expireListingPromotions(listingId: string): Promise<void> 
   }
 }
 
-/** Toggles every promotion package (zero-package UI state testing). */
+/**
+ * Toggles the O.14 matrix packages (zero-package UI state testing).
+ * Scoped to the matrix identities on purpose: a blanket toggle would
+ * resurrect the retired Premium 3/7 and Boost 1 rows on restore.
+ */
 export async function setPromotionPackagesActive(active: boolean): Promise<void> {
   const sql = db();
   try {
-    await sql`update promotion_packages set is_active = ${active}`;
+    await sql`
+      update promotion_packages set is_active = ${active}
+      where (type = 'PREMIUM' and duration_days in (1, 10, 21, 30))
+         or (type = 'BOOST' and duration_days in (3, 7, 10, 15))
+    `;
   } finally {
     await sql.end();
   }

@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { loginAs, testPhone } from "./auth-helpers";
+import { expectNoHorizontalOverflow } from "./helpers";
 import {
   expireListingPromotions,
   insertListingFixture,
@@ -33,7 +34,7 @@ async function startPromotionCheckout(
   page: Page,
   listingId: string,
   type: "PREMIUM" | "BOOST",
-  days: 1 | 3 | 7,
+  days: number,
 ) {
   await page.goto(`/profil/elanlar/${listingId}/tesviq`);
   await expect(page.getByTestId("promotion-purchase")).toBeVisible();
@@ -52,12 +53,13 @@ test("Premium purchase: packages → confirm → HPP → verified activation eve
   await expect(card.getByTestId("owner-promote")).toBeVisible();
   await card.getByTestId("owner-promote").click();
   await expect(page.getByTestId("promotion-purchase")).toBeVisible();
-  // server-loaded package price appears in the confirmation
-  await page.getByTestId("promo-package-3").check();
-  await expect(page.getByTestId("promo-price")).toHaveText("7 AZN");
+  // server-loaded package price appears in the confirmation —
+  // Premium 10 gün, the Owner-approved fractional 11,99 AZN
+  await page.getByTestId("promo-package-10").check();
+  await expect(page.getByTestId("promo-price")).toHaveText("11,99 AZN");
   await page.getByTestId("promo-pay").click();
   await page.waitForURL(/\/api\/dev-kapital\/hpp\?/);
-  await expect(page.getByTestId("fake-hpp-amount")).toHaveText("7.00 AZN");
+  await expect(page.getByTestId("fake-hpp-amount")).toHaveText("11.99 AZN");
   await page.getByTestId("fake-hpp-pay").click();
   await page.waitForURL(/\/odenis\/kapital\/netice\?/);
   const result = page.getByTestId("payment-result");
@@ -102,9 +104,62 @@ test("Boost purchase activates and shows the public badge; both types coexist", 
   await expireListingPromotions(fixture.id);
 });
 
+test("O.14 matrix: exactly 4 options per product, exact order/prices, retired packages absent", async ({ page }, { project }) => {
+  const { fixture } = await activeListingFixture(page, project.name, 98);
+  await page.goto(`/profil/elanlar/${fixture.id}/tesviq`);
+  await expect(page.getByTestId("promotion-purchase")).toBeVisible();
+
+  const expectMatrix = async (rows: [number, string][], retired: number[]) => {
+    const options = page.locator('input[name="promotion-package"]');
+    await expect(options).toHaveCount(4);
+    for (let i = 0; i < rows.length; i += 1) {
+      const [days, price] = rows[i];
+      const row = page.getByTestId(`promo-package-${days}`).locator("xpath=ancestor::label");
+      await expect(row).toContainText(`${days} gün`);
+      await expect(row).toContainText(price);
+      // rendered ORDER matches the Owner matrix, not accident
+      await expect(options.nth(i)).toHaveAttribute("data-testid", `promo-package-${days}`);
+    }
+    for (const days of retired) {
+      await expect(page.getByTestId(`promo-package-${days}`)).toHaveCount(0);
+    }
+  };
+
+  // A. Premium — 1/10/21/30 with exact prices; retired 3 and 7 absent
+  await expectMatrix(
+    [[1, "3 AZN"], [10, "11,99 AZN"], [21, "21,99 AZN"], [30, "30,99 AZN"]],
+    [3, 7],
+  );
+  // C. Premium 10 confirmation: 10 gün / 11,99 AZN
+  await page.getByTestId("promo-package-10").check();
+  await expect(page.getByTestId("promo-confirmation")).toContainText("10 gün");
+  await expect(page.getByTestId("promo-price")).toHaveText("11,99 AZN");
+
+  // B. Boost — 3/7/10/15 with exact prices; retired 1 absent
+  await page.getByTestId("promo-type-BOOST").click();
+  await expectMatrix(
+    [[3, "4 AZN"], [7, "8 AZN"], [10, "11 AZN"], [15, "13 AZN"]],
+    [1],
+  );
+  // D. Boost 15 confirmation: 15 gün / 13 AZN
+  await page.getByTestId("promo-package-15").check();
+  await expect(page.getByTestId("promo-confirmation")).toContainText("15 gün");
+  await expect(page.getByTestId("promo-price")).toHaveText("13 AZN");
+
+  // no horizontal overflow with 4 options at this project's viewport,
+  // and at 1024 (the one width no project covers directly)
+  await expectNoHorizontalOverflow(page);
+  if (project.name === "desktop") {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await expect(page.locator('input[name="promotion-package"]')).toHaveCount(4);
+    await expectNoHorizontalOverflow(page);
+    await page.setViewportSize({ width: 1440, height: 900 });
+  }
+});
+
 test("a pending callback never activates a promotion", async ({ page }, { project }) => {
   const { fixture } = await activeListingFixture(page, project.name, 92);
-  await startPromotionCheckout(page, fixture.id, "PREMIUM", 3);
+  await startPromotionCheckout(page, fixture.id, "PREMIUM", 1);
   // do NOT pay — forge the return with a lying STATUS
   const orderId = new URL(page.url()).searchParams.get("id")!;
   await page.goto(`/odenis/kapital/netice?ID=${orderId}&STATUS=FullyPaid`);
@@ -131,7 +186,7 @@ test("a FullyPaid order with a wrong amount never activates", async ({ page }, {
 
 test("repeated callbacks add the purchased duration exactly once", async ({ page }, { project }) => {
   const { fixture } = await activeListingFixture(page, project.name, 94);
-  await startPromotionCheckout(page, fixture.id, "PREMIUM", 3);
+  await startPromotionCheckout(page, fixture.id, "PREMIUM", 1);
   await page.getByTestId("fake-hpp-pay").click();
   await page.waitForURL(/\/odenis\/kapital\/netice\?/);
   await expect(page.getByTestId("payment-result")).toHaveAttribute("data-state", "SUCCESS");
@@ -140,24 +195,24 @@ test("repeated callbacks add the purchased duration exactly once", async ({ page
     await page.reload();
     await expect(page.getByTestId("payment-result")).toHaveAttribute("data-state", "SUCCESS");
   }
-  expect(await promotionEnds(fixture.id, "PREMIUM")).toBe(endsAfterFirst); // 3 days, not 18
+  expect(await promotionEnds(fixture.id, "PREMIUM")).toBe(endsAfterFirst); // 1 day, not 6
   expect(await promotionPeriodCount(fixture.id)).toBe(1);
   await expireListingPromotions(fixture.id);
 });
 
 test("a second purchase extends from the current end — paid time is never lost", async ({ page }, { project }) => {
   const { fixture } = await activeListingFixture(page, project.name, 95);
-  await startPromotionCheckout(page, fixture.id, "PREMIUM", 3);
+  await startPromotionCheckout(page, fixture.id, "PREMIUM", 10);
   await page.getByTestId("fake-hpp-pay").click();
   await page.waitForURL(/\/odenis\/kapital\/netice\?/);
   await expect(page.getByTestId("payment-result")).toHaveAttribute("data-state", "SUCCESS");
   const firstEnd = new Date((await promotionEnds(fixture.id, "PREMIUM"))!);
-  await startPromotionCheckout(page, fixture.id, "PREMIUM", 3);
+  await startPromotionCheckout(page, fixture.id, "PREMIUM", 10);
   await page.getByTestId("fake-hpp-pay").click();
   await page.waitForURL(/\/odenis\/kapital\/netice\?/);
   await expect(page.getByTestId("payment-result")).toHaveAttribute("data-state", "SUCCESS");
   const secondEnd = new Date((await promotionEnds(fixture.id, "PREMIUM"))!);
-  expect(secondEnd.getTime() - firstEnd.getTime()).toBe(3 * 86_400_000);
+  expect(secondEnd.getTime() - firstEnd.getTime()).toBe(10 * 86_400_000);
   expect(await promotionPeriodCount(fixture.id)).toBe(2);
   await expireListingPromotions(fixture.id);
 });
@@ -176,7 +231,7 @@ test("promotion purchase is refused for non-active listings", async ({ page }, {
 test("with no active packages the purchase page shows a safe unavailable state", async ({ page }, { project }) => {
   const { fixture } = await activeListingFixture(page, project.name, 97);
   try {
-    await setPromotionPackagesActive(false); // the production default
+    await setPromotionPackagesActive(false); // zero-catalog degradation state
     await page.goto(`/profil/elanlar/${fixture.id}/tesviq`);
     const unavailable = page.getByTestId("promotion-packages-unavailable");
     await expect(unavailable).toBeVisible();
@@ -186,6 +241,6 @@ test("with no active packages the purchase page shows a safe unavailable state",
     await expect(page.getByTestId("promotion-purchase")).toHaveCount(0);
     await expect(page.locator("body")).not.toContainText("AZN");
   } finally {
-    await setPromotionPackagesActive(true); // restore the E2E fixture state
+    await setPromotionPackagesActive(true); // restore the O.14 matrix
   }
 });

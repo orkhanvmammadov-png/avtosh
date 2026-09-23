@@ -190,9 +190,14 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
 
       // review — promotion unavailable (packages deactivated briefly)
       const freeDraft = await insertListingFixture(userId, { status: "DRAFT", complete: true, images: 3 });
+      // exact-row restore — a blanket reactivation would resurrect the
+      // retired O.14 identities (Premium 3/7, Boost 1)
+      const activeIds = (await sql`select id from promotion_packages where is_active`).map(
+        (r) => r.id as string,
+      );
       await sql`update promotion_packages set is_active = false where is_active`;
       cleanup = async () => {
-        await sql`update promotion_packages set is_active = true`;
+        await sql`update promotion_packages set is_active = true where id in ${sql(activeIds)}`;
       };
       await page.goto(`/elan-yerlesdir/${freeDraft.id}`);
       await openSection(page, "review");
@@ -212,15 +217,15 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
       await page.getByTestId("review-contact").screenshot({ path: `${OUT}/o9-stagef-1440-review-contact.png` });
 
       // Premium selected
-      await page.getByTestId("promo-intent-PREMIUM-3").click();
+      await page.getByTestId("promo-intent-PREMIUM-10").click();
       await expect(page.getByTestId("promo-intent-PREMIUM")).toHaveAttribute("data-selected", "true");
       await page.screenshot({ path: `${OUT}/o9-stagef-1440-promotion-premium.png`, fullPage: true });
       // Dual
-      await page.getByTestId("promo-intent-BOOST-1").click();
+      await page.getByTestId("promo-intent-BOOST-3").click();
       await expect(page.getByTestId("promo-intent-BOOST")).toHaveAttribute("data-selected", "true");
       await page.screenshot({ path: `${OUT}/o9-stagef-1440-promotion-dual.png`, fullPage: true });
       // Boost only
-      await page.getByTestId("promo-intent-PREMIUM-3").click();
+      await page.getByTestId("promo-intent-PREMIUM-10").click();
       await expect(page.getByTestId("promo-intent-PREMIUM")).toHaveAttribute("data-selected", "false");
       await page.screenshot({ path: `${OUT}/o9-stagef-1440-promotion-boost.png`, fullPage: true });
 
@@ -308,8 +313,8 @@ test.describe("O.9 AXIN visual review (Stage B — 1440)", () => {
       await page.screenshot({ path: `${OUT}/o9-stageg-390-review.png`, fullPage: true });
       await page.getByTestId("promo-intent").scrollIntoViewIfNeeded();
       await page.screenshot({ path: `${OUT}/o9-stageg-390-promotion.png` });
-      await page.getByTestId("promo-intent-PREMIUM-3").click();
-      await page.getByTestId("promo-intent-BOOST-1").click();
+      await page.getByTestId("promo-intent-PREMIUM-10").click();
+      await page.getByTestId("promo-intent-BOOST-3").click();
       await expect(page.getByTestId("promo-intent-BOOST")).toHaveAttribute("data-selected", "true");
       await page.screenshot({ path: `${OUT}/o9-stageg-390-promotion-dual.png` });
 

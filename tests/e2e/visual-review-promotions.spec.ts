@@ -44,14 +44,14 @@ test.describe("promotion visual review artifacts", () => {
 
   test("package selection — Premium", async ({ page }) => {
     await shootBothWidths(page, "promotion-packages-premium", `/profil/elanlar/${listingId}/tesviq`, async (p) => {
-      await p.getByTestId("promo-package-3").check();
+      await p.getByTestId("promo-package-10").check();
     });
   });
 
   test("checkout confirmation — Boost", async ({ page }) => {
     await shootBothWidths(page, "promotion-confirm-boost", `/profil/elanlar/${listingId}/tesviq`, async (p) => {
       await p.getByTestId("promo-type-BOOST").click();
-      await p.getByTestId("promo-package-3").check();
+      await p.getByTestId("promo-package-15").check();
       await expect(p.getByTestId("promo-confirmation")).toBeVisible();
     });
   });
@@ -59,7 +59,7 @@ test.describe("promotion visual review artifacts", () => {
   test("Premium payment success", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`/profil/elanlar/${listingId}/tesviq`);
-    await page.getByTestId("promo-package-3").check();
+    await page.getByTestId("promo-package-10").check();
     await page.getByTestId("promo-pay").click();
     await page.waitForURL(/dev-kapital\/hpp/);
     await page.getByTestId("fake-hpp-pay").click();
@@ -72,7 +72,7 @@ test.describe("promotion visual review artifacts", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`/profil/elanlar/${listingId}/tesviq`);
     await page.getByTestId("promo-type-BOOST").click();
-    await page.getByTestId("promo-package-3").check();
+    await page.getByTestId("promo-package-15").check();
     await page.getByTestId("promo-pay").click();
     await page.waitForURL(/dev-kapital\/hpp/);
     await page.getByTestId("fake-hpp-pay").click();

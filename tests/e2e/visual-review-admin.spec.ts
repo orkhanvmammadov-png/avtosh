@@ -109,7 +109,8 @@ test.describe("admin visual review artifacts", () => {
     await shootBothWidths(page, "admin-packages", "/admin/tesviq-paketleri");
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/admin/tesviq-paketleri");
-    const row = page.locator('[data-package="PREMIUM-7"]');
+    // an ACTIVE matrix row (retired PREMIUM-7 only offers activation)
+    const row = page.locator('[data-package="PREMIUM-10"]');
     await row.getByTestId("pkg-price-input").fill("12");
     await page.screenshot({ path: `${OUT}/admin-package-price-edit-desktop-1440.png`, fullPage: false });
     await row.getByTestId("pkg-deactivate").click();

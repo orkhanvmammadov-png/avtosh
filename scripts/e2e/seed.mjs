@@ -9,11 +9,10 @@ import { parseCatalogImportFile, runCatalogImport } from "../catalog/import.mts"
 const sql = postgres(process.env.DATABASE_URL, { prepare: false, max: 2 });
 const out = { databaseUrl: process.env.DATABASE_URL };
 
-// TEST FIXTURE: promotion packages ship DISABLED in the production
-// seed (unapproved placeholder pricing). The E2E environment activates
-// them explicitly as controlled fixture data — this does not weaken
-// the production safeguard, which is regression-tested separately.
-await sql`update promotion_packages set is_active = true`;
+// Promotion packages: the O.14 migration ships the Owner-approved
+// matrix ACTIVE (Premium 1/10/21/30, Boost 3/7/10/15) with the retired
+// legacy identities (Premium 3/7, Boost 1) inactive. Seeds must NOT
+// blanket-activate — that would incorrectly resurrect retired rows.
 
 const [seller] = await sql`insert into users (phone_e164, display_name) values ('+994501110001', 'Elvin') returning id`;
 const cats = Object.fromEntries((await sql`select id, code from categories`).map((c) => [c.code, c.id]));

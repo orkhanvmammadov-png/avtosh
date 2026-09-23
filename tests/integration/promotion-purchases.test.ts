@@ -147,18 +147,15 @@ beforeAll(async () => {
   otherSeller = await createTestUserSession("+994521000002");
   blockedSeller = await createTestUserSession("+994521000003", { blocked: true });
   carCat = (await sql<{ id: string }[]>`select id from categories where code = 'CAR'`)[0].id;
-  // FIXTURE: production seeds ship DISABLED (unapproved placeholder
-  // pricing). Tests explicitly activate them as controlled setup data
-  // — the production safeguard itself is regression-tested below.
-  const [inactiveSeed] = await sql<{ n: string }[]>`
-    select count(*)::text as n from promotion_packages where is_active
-  `;
-  expect(Number(inactiveSeed.n)).toBe(0); // the seed itself is not sellable
-  await sql`update promotion_packages set is_active = true`;
+  // FIXTURE CONTRACT (O.14): the migration chain itself ships the
+  // Owner-approved matrix ACTIVE — tests consume the production
+  // catalog as-is (its exact shape is asserted in
+  // promotion-package-matrix.test.ts, which runs before this file).
   const rows = await sql<{ id: string; type: string; duration_days: number; price_minor: string }[]>`
     select id, type::text as type, duration_days, price_minor::text as price_minor
     from promotion_packages where is_active
   `;
+  expect(rows).toHaveLength(8);
   packagesByKey = new Map(
     rows.map((row) => [
       `${row.type}:${row.duration_days}`,
@@ -173,22 +170,48 @@ afterAll(async () => {
 });
 
 describe("promotion packages API", () => {
-  it("requires auth and returns the seeded server-priced packages", async () => {
+  it("requires auth and returns the exact Owner-approved matrix in seller order", async () => {
     const anonymous = await api(packagesRoute, "GET", PACKAGES);
     expect(anonymous.status).toBe(401);
     const r = await api(packagesRoute, "GET", PACKAGES, { cookie: seller.cookie });
     expect(r.status).toBe(200);
     const packages = r.body.data?.packages as { type: string; durationDays: number; priceMinor: number; currency: string }[];
-    expect(packages).toHaveLength(6);
-    for (const type of ["PREMIUM", "BOOST"]) {
-      for (const days of [1, 3, 7]) {
-        const found = packages.find((p) => p.type === type && p.durationDays === days);
-        expect(found).toBeDefined();
-        expect(found!.priceMinor).toBeGreaterThan(0);
-        expect(found!.currency).toBe("AZN");
-      }
-    }
+    expect(packages).toHaveLength(8);
+    for (const p of packages) expect(p.currency).toBe("AZN");
+    // exact O.14 matrix AND server-side per-type ordering (the UI
+    // renders the array as-is after a type filter)
+    const pairs = (type: string) =>
+      packages.filter((p) => p.type === type).map((p) => [p.durationDays, p.priceMinor]);
+    expect(pairs("PREMIUM")).toEqual([[1, 300], [10, 1199], [21, 2199], [30, 3099]]);
+    expect(pairs("BOOST")).toEqual([[3, 400], [7, 800], [10, 1100], [15, 1300]]);
     expect(r.response.headers.get("cache-control")).toContain("no-store");
+  });
+
+  it("retired legacy packages (Premium 3/7, Boost 1) are not offered and not purchasable", async () => {
+    const provider = installFake();
+    const sql = getSql();
+    const retired = await sql<{ id: string; type: string; duration_days: number }[]>`
+      select id, type::text as type, duration_days from promotion_packages where not is_active
+    `;
+    expect(
+      retired.map((p) => `${p.type}:${p.duration_days}`).sort(),
+    ).toEqual(["BOOST:1", "PREMIUM:3", "PREMIUM:7"]);
+    const list = await api(packagesRoute, "GET", PACKAGES, { cookie: seller.cookie });
+    const offeredIds = (list.body.data?.packages as { id: string }[]).map((p) => p.id);
+    const listing = await insertActiveListing(seller.userId);
+    for (const pkgRow of retired) {
+      expect(offeredIds).not.toContain(pkgRow.id);
+      const r = await promoCheckout(
+        listing.id,
+        { type: pkgRow.type, package_id: pkgRow.id },
+        seller.cookie,
+      );
+      expect(r.status).toBe(404);
+      expect(r.body.error?.code).toBe("PROMOTION_PACKAGE_NOT_FOUND");
+    }
+    expect(provider.state.createCalls).toBe(0); // no checkout ever started
+    expect(await paymentFor(listing.id, "PREMIUM")).toHaveLength(0);
+    expect(await paymentFor(listing.id, "BOOST")).toHaveLength(0);
   });
 });
 
@@ -233,8 +256,8 @@ describe("promotion checkout — eligibility", () => {
   it("enforces auth, ownership, blocked status, and package validity", async () => {
     installFake();
     const listing = await insertActiveListing(seller.userId);
-    const premium3 = pkg("PREMIUM", 3);
-    const body = { type: "PREMIUM", package_id: premium3.id };
+    const premium10 = pkg("PREMIUM", 10);
+    const body = { type: "PREMIUM", package_id: premium10.id };
     expect((await promoCheckout(listing.id, body)).status).toBe(401);
     const foreign = await promoCheckout(listing.id, body, otherSeller.cookie);
     expect(foreign.status).toBe(404);
@@ -261,7 +284,7 @@ describe("promotion checkout — eligibility", () => {
       const listing = await insertActiveListing(seller.userId, { status });
       const r = await promoCheckout(
         listing.id,
-        { type: "BOOST", package_id: pkg("BOOST", 1).id },
+        { type: "BOOST", package_id: pkg("BOOST", 3).id },
         seller.cookie,
       );
       expect(r.status).toBe(409);
@@ -285,24 +308,72 @@ describe("promotion checkout — pricing authority and idempotency", () => {
   it("creates the provider order at the server package price; later price changes never touch the intent", async () => {
     const provider = installFake();
     const listing = await insertActiveListing(seller.userId);
-    const premium3 = pkg("PREMIUM", 3);
-    const r = await promoCheckout(listing.id, { type: "PREMIUM", package_id: premium3.id }, seller.cookie);
+    const premium10 = pkg("PREMIUM", 10);
+    const r = await promoCheckout(listing.id, { type: "PREMIUM", package_id: premium10.id }, seller.cookie);
     expect(r.status).toBe(200);
     const order = [...provider.orders.values()][0];
-    expect(Number(order.amountMajor.replace(".", ""))).toBe(premium3.priceMinor);
+    expect(Number(order.amountMajor.replace(".", ""))).toBe(premium10.priceMinor);
     expect(order.currency).toBe("AZN");
     // the configured price rises AFTER the intent exists
     const sql = getSql();
     try {
-      await sql`update promotion_packages set price_minor = price_minor + 100 where id = ${premium3.id}`;
+      await sql`update promotion_packages set price_minor = price_minor + 100 where id = ${premium10.id}`;
       const { outcome } = await fulfillLatest(provider, listing.id, "PREMIUM");
       expect(outcome.state).toBe("SUCCESS"); // verified against the SNAPSHOT amount
       const [payment] = await paymentFor(listing.id, "PREMIUM", "SUCCESS");
-      expect(Number(payment.amount_minor)).toBe(premium3.priceMinor);
+      expect(Number(payment.amount_minor)).toBe(premium10.priceMinor);
       const [period] = await promotionRows(listing.id, "PREMIUM");
-      expect(Number(period.ends_at.getTime() - period.starts_at.getTime())).toBe(3 * 86_400_000);
+      expect(Number(period.ends_at.getTime() - period.starts_at.getTime())).toBe(10 * 86_400_000);
     } finally {
-      await sql`update promotion_packages set price_minor = price_minor - 100 where id = ${premium3.id}`;
+      await sql`update promotion_packages set price_minor = price_minor - 100 where id = ${premium10.id}`;
+    }
+  });
+
+  it.each([
+    ["PREMIUM", 10, 1199],
+    ["PREMIUM", 30, 3099],
+    ["BOOST", 3, 400],
+    ["BOOST", 15, 1300],
+  ] as const)(
+    "%s %s gün checkout charges exactly %s minor — intent and provider order agree",
+    async (type, days, expectedMinor) => {
+      const provider = installFake();
+      const listing = await insertActiveListing(seller.userId);
+      const chosen = pkg(type, days);
+      expect(chosen.priceMinor).toBe(expectedMinor); // the Owner-approved price
+      const r = await promoCheckout(listing.id, { type, package_id: chosen.id }, seller.cookie);
+      expect(r.status).toBe(200);
+      const [payment] = await paymentFor(listing.id, type, "PENDING");
+      expect(Number(payment.amount_minor)).toBe(expectedMinor);
+      const order = [...provider.orders.values()][0];
+      expect(Number(order.amountMajor.replace(".", ""))).toBe(expectedMinor);
+      expect(order.currency).toBe("AZN");
+    },
+  );
+
+  it("catalog price/activation changes never touch an already-created promotion period", async () => {
+    const provider = installFake();
+    const listing = await insertActiveListing(seller.userId);
+    const boost7 = pkg("BOOST", 7);
+    await promoCheckout(listing.id, { type: "BOOST", package_id: boost7.id }, seller.cookie);
+    await fulfillLatest(provider, listing.id, "BOOST");
+    const sql = getSql();
+    const snapshot = await sql<{ row: string }[]>`
+      select row(starts_at, ends_at, status, purchased_duration_days, purchased_price_minor)::text as row
+      from listing_promotions where listing_id = ${listing.id} and type = 'BOOST'
+    `;
+    expect(snapshot).toHaveLength(1);
+    try {
+      await sql`update promotion_packages set price_minor = 9900, is_active = false where id = ${boost7.id}`;
+      const after = await sql<{ row: string }[]>`
+        select row(starts_at, ends_at, status, purchased_duration_days, purchased_price_minor)::text as row
+        from listing_promotions where listing_id = ${listing.id} and type = 'BOOST'
+      `;
+      expect(after).toEqual(snapshot); // dates and purchase snapshot byte-identical
+      const [payment] = await paymentFor(listing.id, "BOOST", "SUCCESS");
+      expect(Number(payment.amount_minor)).toBe(boost7.priceMinor); // 800, not 9900
+    } finally {
+      await sql`update promotion_packages set price_minor = ${boost7.priceMinor}, is_active = true where id = ${boost7.id}`;
     }
   });
 
@@ -320,7 +391,7 @@ describe("promotion checkout — pricing authority and idempotency", () => {
   it("10 simultaneous purchase POSTs settle into one intent and ONE provider createOrder", async () => {
     const provider = installFake();
     const listing = await insertActiveListing(seller.userId);
-    const body = { type: "PREMIUM", package_id: pkg("PREMIUM", 7).id };
+    const body = { type: "PREMIUM", package_id: pkg("PREMIUM", 21).id };
     const responses = await Promise.all(
       Array.from({ length: 10 }, () => promoCheckout(listing.id, body, seller.cookie)),
     );
@@ -336,16 +407,16 @@ describe("promotion checkout — pricing authority and idempotency", () => {
     provider.state.failCreate = new PaymentProviderError("NETWORK", "down");
     const listing = await insertActiveListing(seller.userId);
     const p1 = pkg("PREMIUM", 1);
-    const p7 = pkg("PREMIUM", 7);
+    const p10 = pkg("PREMIUM", 10);
     const first = await promoCheckout(listing.id, { type: "PREMIUM", package_id: p1.id }, seller.cookie);
     expect(first.status).toBe(503); // provider down → intent stays CREATED
     provider.state.failCreate = null;
-    const second = await promoCheckout(listing.id, { type: "PREMIUM", package_id: p7.id }, seller.cookie);
+    const second = await promoCheckout(listing.id, { type: "PREMIUM", package_id: p10.id }, seller.cookie);
     expect(second.status).toBe(200);
     const payments = await paymentFor(listing.id, "PREMIUM");
     expect(payments.map((p) => p.status).sort()).toEqual(["CANCELLED", "PENDING"]);
     const pending = payments.find((p) => p.status === "PENDING")!;
-    expect(Number(pending.amount_minor)).toBe(p7.priceMinor);
+    expect(Number(pending.amount_minor)).toBe(p10.priceMinor);
     // once a checkout is in flight, the package cannot be switched —
     // the open HPP could still be paid
     const blocked = await promoCheckout(listing.id, { type: "PREMIUM", package_id: p1.id }, seller.cookie);
@@ -362,14 +433,14 @@ describe("promotion fulfillment", () => {
     const before = (await sql<{ e: string }[]>`
       select current_expires_at::text as e from listings where id = ${listing.id}
     `)[0].e;
-    await promoCheckout(listing.id, { type: "PREMIUM", package_id: pkg("PREMIUM", 3).id }, seller.cookie);
+    await promoCheckout(listing.id, { type: "PREMIUM", package_id: pkg("PREMIUM", 10).id }, seller.cookie);
     const { outcome, payment } = await fulfillLatest(provider, listing.id, "PREMIUM");
     expect(outcome.state).toBe("SUCCESS");
     const periods = await promotionRows(listing.id, "PREMIUM");
     expect(periods).toHaveLength(1);
     expect(periods[0].status).toBe("ACTIVE");
     expect(periods[0].starts_at.getTime()).toBeLessThanOrEqual(Date.now() + 1000);
-    expect(periods[0].ends_at.getTime() - periods[0].starts_at.getTime()).toBe(3 * 86_400_000);
+    expect(periods[0].ends_at.getTime() - periods[0].starts_at.getTime()).toBe(10 * 86_400_000);
     // listing publication window is untouched (§20)
     const after = (await sql<{ e: string; s: string }[]>`
       select current_expires_at::text as e, status::text as s from listings where id = ${listing.id}
@@ -399,17 +470,17 @@ describe("promotion fulfillment", () => {
     async (type) => {
       const provider = installFake();
       const listing = await insertActiveListing(seller.userId);
-      const p3 = pkg(type, 3);
-      await promoCheckout(listing.id, { type, package_id: p3.id }, seller.cookie);
+      const chosen = pkg(type, type === "PREMIUM" ? 10 : 3);
+      await promoCheckout(listing.id, { type, package_id: chosen.id }, seller.cookie);
       await fulfillLatest(provider, listing.id, type);
       const [first] = await promotionRows(listing.id, type);
       // second purchase while the first is still running
-      await promoCheckout(listing.id, { type, package_id: p3.id }, seller.cookie);
+      await promoCheckout(listing.id, { type, package_id: chosen.id }, seller.cookie);
       await fulfillLatest(provider, listing.id, type);
       const periods = await promotionRows(listing.id, type);
       expect(periods).toHaveLength(2);
       expect(periods[1].starts_at.getTime()).toBe(first.ends_at.getTime());
-      expect(periods[1].ends_at.getTime()).toBe(first.ends_at.getTime() + 3 * 86_400_000);
+      expect(periods[1].ends_at.getTime()).toBe(first.ends_at.getTime() + chosen.durationDays * 86_400_000);
       expect(periods[1].status).toBe("SCHEDULED"); // queued after remaining time
     },
   );
@@ -438,7 +509,7 @@ describe("promotion fulfillment", () => {
   it("PREMIUM and BOOST coexist on one listing", async () => {
     const provider = installFake();
     const listing = await insertActiveListing(seller.userId);
-    await promoCheckout(listing.id, { type: "PREMIUM", package_id: pkg("PREMIUM", 3).id }, seller.cookie);
+    await promoCheckout(listing.id, { type: "PREMIUM", package_id: pkg("PREMIUM", 1).id }, seller.cookie);
     await fulfillLatest(provider, listing.id, "PREMIUM");
     await promoCheckout(listing.id, { type: "BOOST", package_id: pkg("BOOST", 3).id }, seller.cookie);
     await fulfillLatest(provider, listing.id, "BOOST");
@@ -538,7 +609,7 @@ describe("promotion exactly-once and concurrency", () => {
   it("a Preparing promotion order never activates anything (callback STATUS impotence)", async () => {
     const provider = installFake();
     const listing = await insertActiveListing(seller.userId);
-    await promoCheckout(listing.id, { type: "PREMIUM", package_id: pkg("PREMIUM", 3).id }, seller.cookie);
+    await promoCheckout(listing.id, { type: "PREMIUM", package_id: pkg("PREMIUM", 10).id }, seller.cookie);
     const [payment] = await paymentFor(listing.id, "PREMIUM", "PENDING");
     const outcome = await verifyProviderPayment(payment.id); // provider truth: Preparing
     expect(outcome.state).toBe("PENDING");
