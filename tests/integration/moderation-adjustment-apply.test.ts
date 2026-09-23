@@ -587,8 +587,8 @@ describe("NEW correction / reject with adjustment — nothing applied, terminal 
   });
 });
 
-describe("Stage D regression — EDIT adjusted decisions stay blocked", () => {
-  it("every EDIT decision over an OPEN adjustment remains a typed refusal", async () => {
+describe("EDIT decisions over an OPEN adjustment must name the adjustment version", () => {
+  it("every blind EDIT decision over an OPEN adjustment is a typed refusal", async () => {
     const listing = await insertListing({ status: "ACTIVE" });
     // real seller edit → PENDING revision
     const create = await api(editCreateRoute as Route, "POST", `${SELLER_BASE}/${listing.id}/edit-revision`, {
@@ -636,7 +636,7 @@ describe("Stage D regression — EDIT adjusted decisions stay blocked", () => {
         params: { listingId: listing.id },
       });
       expect(r.status).toBe(409);
-      expect(r.body.error?.code).toBe("MODERATION_ADJUSTMENT_PENDING");
+      expect(r.body.error?.code).toBe("MODERATION_ADJUSTMENT_CONFLICT");
     }
   });
 });

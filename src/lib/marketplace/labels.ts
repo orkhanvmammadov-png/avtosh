@@ -490,9 +490,6 @@ export const STAFF = {
   unsavedDiscard: "Dəyişiklikləri at",
   conflictBody: "Elan başqa sessiyada dəyişdirilib. Səhifəni yeniləyin.",
   conflictAction: "Səhifəni yenilə",
-  // transitional Stage B copy (replaced when adjusted decisions land)
-  decisionsBlockedAdjustment:
-    "Saxlanılmış moderator düzəlişi olan elanlarda qərarlar hələlik bağlıdır.",
   decisionsBlockedUnsaved: "Saxlanmamış dəyişikliklər var — qərarlar bağlıdır.",
   historyAdjSaved: "Moderator düzəlişi saxladı",
   historyAdjDiscarded: "Moderator düzəlişi sildi",

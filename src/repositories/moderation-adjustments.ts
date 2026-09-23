@@ -222,6 +222,63 @@ export async function materializeImagePlanForListing(
   return { removedPaths };
 }
 
+/**
+ * O.13 Stage D — materialize the moderator plan for a LISTING_EDIT
+ * approval. Kept sources are the seller's STAGED listing_edit_images
+ * rows (frozen source_id = staged row id); those rows are READ, never
+ * mutated — the seller proposal survives as evidence. The old approved
+ * public gallery is replaced atomically. Cleanup candidates are every
+ * path leaving the public gallery plus every staged path the plan
+ * dropped, minus everything still present in the final gallery (the
+ * worker's reference check then protects retained staged rows and
+ * frozen snapshots). Returns undefined when a kept source no longer
+ * exists (subject changed — caller aborts).
+ */
+export async function materializeImagePlanFromStaged(
+  sql: Sql,
+  input: {
+    listingId: string;
+    revisionId: string;
+    kept: { sourceId: string; isPrimary: boolean }[];
+  },
+): Promise<{ cleanupCandidatePaths: string[] } | undefined> {
+  const staged = await sql<
+    { id: string; storage_path: string; width: number | null; height: number | null; mime_type: string; file_size_bytes: string }[]
+  >`
+    select id, storage_path, width, height, mime_type, file_size_bytes
+    from listing_edit_images where edit_revision_id = ${input.revisionId}
+  `;
+  const byId = new Map(staged.map((row) => [row.id, row]));
+  if (input.kept.some((entry) => !byId.has(entry.sourceId))) {
+    return undefined;
+  }
+  const keptIds = new Set(input.kept.map((entry) => entry.sourceId));
+  const finalPaths = new Set(
+    input.kept.map((entry) => byId.get(entry.sourceId)!.storage_path),
+  );
+  const oldPublic = await sql<{ storage_path: string }[]>`
+    delete from listing_images where listing_id = ${input.listingId}
+    returning storage_path
+  `;
+  for (const [index, entry] of input.kept.entries()) {
+    const source = byId.get(entry.sourceId)!;
+    await sql`
+      insert into listing_images
+        (listing_id, storage_path, sort_order, is_primary, width, height, mime_type, file_size_bytes)
+      values
+        (${input.listingId}, ${source.storage_path}, ${index}, ${entry.isPrimary},
+         ${source.width}, ${source.height}, ${source.mime_type}, ${source.file_size_bytes})
+    `;
+  }
+  const cleanupCandidatePaths = [
+    ...new Set([
+      ...oldPublic.map((row) => row.storage_path),
+      ...staged.filter((row) => !keptIds.has(row.id)).map((row) => row.storage_path),
+    ]),
+  ].filter((path) => !finalPaths.has(path));
+  return { cleanupCandidatePaths };
+}
+
 /** Terminal discard: retained forever, never revived by mutation. */
 export async function discardAdjustmentRow(
   sql: Sql,

@@ -223,23 +223,39 @@ test("LISTING_EDIT: moderator save leaves the seller proposal and the public lis
   await page.getByTestId("adj-price").fill("27000");
   await page.getByTestId("adjustment-save").click();
   await expect(page.getByTestId("adjustment-chip")).toBeVisible();
-  // O.13.5C Journey 4 guard: EDIT adjusted decisions stay Stage-B-locked
-  await expect(page.getByTestId("decisions-locked")).toBeVisible();
-  await expect(page.getByTestId("action-approve")).toBeDisabled();
   await expect(page.getByTestId("adjustment-change-price")).toContainText("26 500 AZN");
   await expect(page.getByTestId("adjustment-change-price")).toContainText("27 000 AZN");
   // O.12 seller diff stays intact beside the moderator layer
   await expect(page.getByTestId("edit-review-diff")).toContainText("26 500 AZN");
+  // O.13.5D: EDIT decisions are adjustment-aware and UNLOCKED
+  await expect(page.getByTestId("decisions-locked")).toHaveCount(0);
+  await expect(page.getByTestId("action-approve")).toBeEnabled();
 
   // seller proposal frozen-evidence base is the revision — still 26 500
   const snapshot = await listingSnapshot(fixture.id);
   expect(snapshot.revisionData?.price_minor).toBe(2650000);
   expect(snapshot.price).toBe("2500000");
 
-  // old public content unchanged
+  // §20: old public content unchanged UNTIL approval
   await page.goto(`/elan/${fixture.publicId}`);
   await expect(page.getByTestId("detail-price")).toContainText("25 000");
   await expect(page.getByTestId("detail-price")).not.toContainText("27 000");
+
+  // Journey 1 finale (O.13.5D): adjusted approval → moderator content
+  // is the public approved listing; seller proposal never leaks
+  await page.goto(`/moderator/elanlar/${fixture.id}`);
+  await page.getByTestId("action-approve").click();
+  await expect(page.getByTestId("adjusted-decision-note")).toContainText(
+    "Moderator düzəlişləri ilə təsdiqlənəcək",
+  );
+  await page.getByTestId("decision-submit").click();
+  await expect(page.getByTestId("decision-done")).toContainText("Dəyişikliklər təsdiqləndi.");
+  const applied = await listingSnapshot(fixture.id);
+  expect(applied.status).toBe("ACTIVE");
+  expect(applied.price).toBe("2700000");
+  await page.goto(`/elan/${fixture.publicId}`);
+  await expect(page.getByTestId("detail-price")).toContainText("27 000");
+  await expect(page.getByTestId("detail-price")).not.toContainText("26 500");
 });
 
 test("takeover: B inherits A's saved adjustment with attribution and discards it after confirmation (O.13.5B)", async ({ page }, { project }) => {
@@ -393,4 +409,140 @@ test("Owner journey — legacy submission without seller_name: save → Təsdiql
   expect(snapshot.price).toBe("2750000");
   await page.goto(`/elan/${fixture.publicId}`);
   await expect(page.getByTestId("detail-price")).toContainText("27 500");
+});
+
+/** Real seller edit journey: enter, change price, submit. */
+async function sellerSubmitsEdit(page: Page, listingId: string, price: string) {
+  await page.goto("/profil/elanlar");
+  await page
+    .locator(`[data-testid="owner-listing-card"][data-listing-id="${listingId}"]`)
+    .getByTestId("owner-edit")
+    .click();
+  await page.waitForURL(/\/redakte$/);
+  const sale = page.getByTestId("axin-section-sale");
+  if ((await sale.getAttribute("data-state")) !== "open") {
+    await sale.click();
+  }
+  await page.getByTestId("wizard-price").fill(price);
+  await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+  const review = page.getByTestId("axin-section-review");
+  if ((await review.getAttribute("data-state")) !== "open") {
+    await review.click();
+  }
+  await page.getByTestId("wizard-submit").click();
+  await expect(page.getByTestId("edit-result")).toHaveAttribute("data-outcome", "SUBMITTED");
+}
+
+async function moderatorAdjustsPrice(page: Page, listingId: string, price: string) {
+  await claimOnDetail(page, listingId);
+  await page.getByTestId("adjustment-edit").click();
+  await page.getByTestId("adj-price").fill(price);
+  await page.getByTestId("adjustment-save").click();
+  await expect(page.getByTestId("adjustment-chip")).toBeVisible();
+}
+
+test("EDIT Journey 2 — correction applies nothing; seller fixes the SAME revision; next pass clean (O.13.5D)", async ({ page, context }, { project }) => {
+  const { userId } = await loginAs(context, testPhone(project.name, 193));
+  const fixture = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 3 });
+  await sellerSubmitsEdit(page, fixture.id, "26500");
+
+  await loginAs(context, testPhone(project.name, 194), { roles: ["MODERATOR"] });
+  await moderatorAdjustsPrice(page, fixture.id, "26800");
+  await page.getByTestId("action-correction").click();
+  await expect(page.getByTestId("adjusted-decision-note")).toContainText(
+    "Moderator düzəlişləri tətbiq olunmayacaq",
+  );
+  await page.getByTestId("decision-reason").selectOption("INVALID_PHOTOS");
+  await page.getByTestId("decision-note").fill("Şəkilləri yeniləyin.");
+  await page.getByTestId("decision-submit").click();
+  await expect(page.getByTestId("decision-done")).toContainText("Düzəliş tələbi");
+
+  // public old X; moderator value never applied
+  await page.goto(`/elan/${fixture.publicId}`);
+  await expect(page.getByTestId("detail-price")).toContainText("25 000");
+
+  // seller corrects the SAME revision and resubmits through the real UI
+  await loginAs(context, testPhone(project.name, 193));
+  await page.goto("/profil/elanlar");
+  const card = page.locator(`[data-testid="owner-listing-card"][data-listing-id="${fixture.id}"]`);
+  await expect(card.getByTestId("owner-edit-chip")).toHaveText("Redaktəyə düzəliş tələb olunur");
+  await card.getByTestId("owner-edit-link").click();
+  await page.waitForURL(/\/redakte$/);
+  await expect(page.getByTestId("wizard-feedback")).toContainText("Şəkillər uyğun deyil");
+  const sale = page.getByTestId("axin-section-sale");
+  if ((await sale.getAttribute("data-state")) !== "open") {
+    await sale.click();
+  }
+  await page.getByTestId("wizard-price").fill("26600");
+  await expect(page.getByTestId("wizard-save-state")).toHaveText("Yadda saxlanıldı", { timeout: 15_000 });
+  const review = page.getByTestId("axin-section-review");
+  if ((await review.getAttribute("data-state")) !== "open") {
+    await review.click();
+  }
+  await page.getByTestId("wizard-submit").click();
+  await expect(page.getByTestId("edit-result")).toHaveAttribute("data-outcome", "SUBMITTED");
+
+  // the old moderator adjustment never reattaches — clean new pass
+  await loginAs(context, testPhone(project.name, 194), { roles: ["MODERATOR"] });
+  await page.goto(`/moderator/elanlar/${fixture.id}`);
+  await expect(page.getByTestId("adjustment-chip")).toHaveCount(0);
+  await expect(page.getByTestId("takeover-card")).toHaveCount(0);
+  await expect(page.getByTestId("adjustment-history")).toContainText("Moderator düzəlişi sildi");
+});
+
+test("EDIT Journey 3 — reject applies nothing; old public content remains (O.13.5D)", async ({ page, context }, { project }) => {
+  const { userId } = await loginAs(context, testPhone(project.name, 195));
+  const fixture = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 3 });
+  await sellerSubmitsEdit(page, fixture.id, "26500");
+  await loginAs(context, testPhone(project.name, 196), { roles: ["MODERATOR"] });
+  await moderatorAdjustsPrice(page, fixture.id, "26900");
+  await page.getByTestId("action-reject").click();
+  await expect(page.getByTestId("adjusted-decision-note")).toContainText("yalnız tarixçədə qalacaq");
+  await page.getByTestId("decision-reason").selectOption("MISLEADING_INFO");
+  await page.getByTestId("decision-submit").click();
+  await expect(page.getByTestId("decision-done")).toContainText("Dəyişikliklər rədd edildi.");
+  await page.goto(`/elan/${fixture.publicId}`);
+  await expect(page.getByTestId("detail-price")).toContainText("25 000");
+  const snapshot = await listingSnapshot(fixture.id);
+  expect(snapshot.price).toBe("2500000");
+});
+
+test("EDIT Journey 4 — deactivated + requested: adjusted approval reactivates ONLY through the finalizer (O.13.5D)", async ({ page, context }, { project }) => {
+  const { userId } = await loginAs(context, testPhone(project.name, 197));
+  const fixture = await insertListingFixture(userId, { status: "ACTIVE", complete: true, images: 3 });
+  const sql = postgres(seed().databaseUrl, { prepare: false, max: 1 });
+  await sql`update listings set seller_deactivated_at = now() where id = ${fixture.id}`;
+  await sql.end();
+  await sellerSubmitsEdit(page, fixture.id, "26500");
+  // the recorded seller activation intent (its one-click UI journey is
+  // covered by the O.12 lifecycle specs)
+  const sql2 = postgres(seed().databaseUrl, { prepare: false, max: 1 });
+  await sql2`update listings set seller_reactivation_requested_at = now() where id = ${fixture.id}`;
+  await sql2.end();
+
+  await loginAs(context, testPhone(project.name, 198), { roles: ["MODERATOR"] });
+  await moderatorAdjustsPrice(page, fixture.id, "26700");
+  await page.getByTestId("action-approve").click();
+  await page.getByTestId("decision-submit").click();
+  await expect(page.getByTestId("decision-done")).toContainText("Dəyişikliklər təsdiqləndi.");
+  // finalizer reactivated → adjusted content is publicly live
+  await page.goto(`/elan/${fixture.publicId}`);
+  await expect(page.getByTestId("detail-price")).toContainText("26 700");
+  await expect(page.getByTestId("status-chip")).toHaveCount(0);
+});
+
+test("EDIT Journey 5 — expired: adjusted approval applies content but never renews (O.13.5D)", async ({ page, context }, { project }) => {
+  const { userId } = await loginAs(context, testPhone(project.name, 199));
+  const fixture = await insertListingFixture(userId, { status: "EXPIRED", complete: true, images: 3 });
+  await sellerSubmitsEdit(page, fixture.id, "26500");
+  await loginAs(context, testPhone(project.name, 200), { roles: ["MODERATOR"] });
+  await moderatorAdjustsPrice(page, fixture.id, "26400");
+  await page.getByTestId("action-approve").click();
+  await page.getByTestId("decision-submit").click();
+  await expect(page.getByTestId("decision-done")).toContainText("Dəyişikliklər təsdiqləndi.");
+  const snapshot = await listingSnapshot(fixture.id);
+  expect(snapshot.status).toBe("EXPIRED"); // no renewal bypass
+  expect(snapshot.price).toBe("2640000");
+  await page.goto(`/elan/${fixture.publicId}`);
+  await expect(page.getByTestId("status-chip")).toBeVisible(); // degraded expired view
 });

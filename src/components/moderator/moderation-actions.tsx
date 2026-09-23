@@ -136,9 +136,9 @@ export function ModerationActions({
       const body: Record<string, unknown> = isEditDecision
         ? { expected_edit_revision: editRevisionNo }
         : { expected_revision: revision };
-      // O.13 Stage C: a NEW decision over a saved adjustment must name
-      // the exact adjustment version it reviewed
-      if (adjustmentRevision !== null && !isEditDecision && kind !== "suspend") {
+      // O.13: a decision over a saved adjustment must name the exact
+      // adjustment version it reviewed (NEW and LISTING_EDIT alike)
+      if (adjustmentRevision !== null && kind !== "suspend") {
         body.expected_adjustment_revision = adjustmentRevision;
       }
       if (ACTION_META[kind].needsReason) {
@@ -288,8 +288,8 @@ export function ModerationActions({
           <h3 className="text-sm font-bold text-ink">
             {STAFF.confirmAction}: {ACTION_META[pendingAction].label}
           </h3>
-          {/* O.13 Stage C: sealed adjusted-decision copy (NEW only) */}
-          {adjustmentRevision !== null && !editPending && pendingAction !== "suspend" ? (
+          {/* O.13: sealed adjusted-decision copy (both subject types) */}
+          {adjustmentRevision !== null && pendingAction !== "suspend" ? (
             <p
               className={`mt-2 rounded-staff px-3 py-2 text-xs leading-relaxed ${
                 pendingAction === "approve" ? "bg-info-soft text-info" : "bg-warning-soft text-warning"

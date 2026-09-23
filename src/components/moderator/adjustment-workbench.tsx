@@ -934,19 +934,12 @@ export function ModerationWorkbench({
     }
   }
 
-  // O.13 Stage C: NEW decisions are adjustment-aware and UNLOCKED; the
-  // Stage B lock remains only for the editor's unsaved state and for
-  // LISTING_EDIT adjustments (their final semantics arrive in Stage D —
-  // the server refuses those decisions independently).
-  const newAdjustment = adjustment !== null && adjustment.editRevisionId === null;
-  const lockedReason = editing
-    ? STAFF.decisionsBlockedUnsaved
-    : adjustment !== null && adjustment.editRevisionId !== null
-      ? STAFF.decisionsBlockedAdjustment
-      : null;
+  // O.13 Stage D: BOTH subject types support adjusted decisions — the
+  // only remaining lock is the editor's unsaved state (§28 protection).
+  const lockedReason = editing ? STAFF.decisionsBlockedUnsaved : null;
   // concise changed-area labels for the sealed adjusted-approval
   // confirmation (server-resolved changes drive it)
-  const adjustmentSummary = newAdjustment
+  const adjustmentSummary = adjustment !== null
     ? [
         ...adjustment.changes.map((change) => FIELD_LABELS[change.field] ?? change.field),
         ...(adjustment.descriptionChange !== null ? [FIELD_LABELS.description] : []),
@@ -1041,7 +1034,7 @@ export function ModerationWorkbench({
           claimExpiresAt={claimExpiresAt}
           editRevisionNo={editRevisionNo}
           lockedReason={lockedReason}
-          adjustmentRevision={newAdjustment ? adjustment.revision : null}
+          adjustmentRevision={adjustment?.revision ?? null}
           adjustmentSummary={adjustmentSummary}
         />
       </div>

@@ -28,6 +28,7 @@ import {
   listAdjustmentAuditEvents,
   lockOpenAdjustment,
   materializeImagePlanForListing,
+  materializeImagePlanFromStaged,
   updateAdjustmentWorkingState,
   type AdjustmentRow,
   type ImagePlanRowEntry,
@@ -36,11 +37,10 @@ import {
 import { insertModerationAudit } from "@/repositories/moderation-audit";
 import { applyApprovedEditContent } from "@/repositories/listing-edit-revisions";
 import { SUBMIT_REFERENCE_FIELDS, SUBMIT_REQUIRED_FIELDS } from "@/services/listing-edit";
-import { approvedContentSet } from "@/services/moderation-edit";
 import { formatMileage, formatPriceMinor } from "@/lib/format";
 import { buildEditSnapshot } from "@/services/listing-lifecycle";
 import { resolveSellerContentPatch, type SellerContentPatch } from "@/services/listing-patch";
-import { nameMaps, requireOwnedLiveClaim } from "@/services/moderation-edit";
+import { approvedContentSet, nameMaps, requireOwnedLiveClaim } from "@/services/moderation-shared";
 import type { AdjustmentImagePlanEntry, AdjustmentSaveInput } from "@/validators/moderation";
 
 /**
@@ -628,6 +628,106 @@ export async function applyAdjustmentOnNewApproval(
     },
   });
   return { newListingRevision, cleanupPaths: materialized.removedPaths };
+}
+
+/**
+ * O.13 Stage D — applies a saved OPEN adjustment as the approved
+ * LISTING_EDIT content, inside the caller's approval transaction
+ * (listing → edit revision → adjustment already locked in the sealed
+ * order; claim, revision counters and subject identity already
+ * verified by the caller). The approval source becomes
+ * adjusted_data/image_plan instead of the seller revision; the
+ * seller's revision.data and staged listing_edit_images are READ-only
+ * evidence and never mutated. Pure CONTENT operation — no period, no
+ * fee, no quota, no expiry/status write; reactivation stays with the
+ * central finalizer that decideEdit calls afterwards.
+ */
+export async function applyAdjustmentOnEditApproval(
+  tx: Sql,
+  input: {
+    listing: { id: string; owner_id: string; revision: number };
+    editRevisionId: string;
+    adjustment: AdjustmentRow;
+    moderatorId: string;
+  },
+): Promise<{ newListingRevision: number; cleanupPaths: string[] }> {
+  const { listing, adjustment } = input;
+  const settings = await getSubmissionSettings(tx);
+  if (settings === null) {
+    throw new ApiError("LISTING_CONFIGURATION_ERROR", "Listing settings are not configured.");
+  }
+  // relative-approvability (Stage C model): never stricter than the
+  // no-adjustment approval baseline for content the moderator did not
+  // touch; degradation refused; today's catalog validity enforced
+  await assertAdjustedContentApprovable(adjustment.submitted_data, adjustment.adjusted_data);
+  const plan = normalizeImagePlan(
+    [...adjustment.image_plan]
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((entry) => ({
+        source_id: entry.source_id,
+        removed: entry.removed,
+        is_primary: entry.is_primary,
+      })),
+    adjustment.submitted_images,
+    settings.imageMin,
+  );
+
+  const set = await approvedContentSet(tx, adjustment.adjusted_data);
+  const newListingRevision = await applyApprovedEditContent(tx, {
+    listingId: listing.id,
+    expectedListingRevision: listing.revision,
+    set,
+  });
+  if (newListingRevision === undefined) {
+    throw new ApiError("MODERATION_INVALID_STATE", "Listing changed during approval.");
+  }
+  await replaceListingFeatures(tx, listing.id, dataFeatureIds(adjustment.adjusted_data));
+  const materialized = await materializeImagePlanFromStaged(tx, {
+    listingId: listing.id,
+    revisionId: input.editRevisionId,
+    kept: plan
+      .filter((entry) => !entry.removed)
+      .map((entry) => ({ sourceId: entry.source_id, isPrimary: entry.is_primary })),
+  });
+  if (materialized === undefined) {
+    throw new ApiError("MODERATION_SUBJECT_CHANGED", "The staged gallery changed during approval.");
+  }
+
+  const applied = await applyAdjustmentRow(tx, {
+    adjustmentId: adjustment.id,
+    expectedRevision: adjustment.revision,
+  });
+  if (applied === undefined) {
+    throw new ApiError("MODERATION_ADJUSTMENT_CONFLICT", "The adjustment changed during approval.");
+  }
+
+  await insertModerationAudit(tx, {
+    actorUserId: input.moderatorId,
+    action: "MODERATION_ADJUSTMENT_APPLIED",
+    entityId: listing.id,
+    afterData: {
+      adjustment_id: adjustment.id,
+      adjustment_revision: adjustment.revision,
+      edit_revision_id: input.editRevisionId,
+      submitted_edit_revision_no: adjustment.submitted_edit_revision_no,
+      new_listing_revision: newListingRevision,
+      removed_image_count: materialized.cleanupCandidatePaths.length,
+    },
+  });
+  await insertOutboxEvent(tx, {
+    eventType: "MODERATION_ADJUSTMENT_APPLIED",
+    aggregateId: listing.id,
+    payload: {
+      listing_id: listing.id,
+      owner_id: listing.owner_id,
+      moderator_id: input.moderatorId,
+      adjustment_id: adjustment.id,
+      adjustment_revision: adjustment.revision,
+      edit_revision_id: input.editRevisionId,
+      cleanup_candidate_paths: materialized.cleanupCandidatePaths.join(","),
+    },
+  });
+  return { newListingRevision, cleanupPaths: materialized.cleanupCandidatePaths };
 }
 
 /**

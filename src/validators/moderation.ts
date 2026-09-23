@@ -32,7 +32,11 @@ export const decisionWithReasonSchema = z
 /** O.12 edit-revision decisions: addressed by the EDIT revision's own
     counter (never listings.revision). */
 export const editApproveSchema = z
-  .object({ expected_edit_revision: z.number().int().min(1) })
+  .object({
+    expected_edit_revision: z.number().int().min(1),
+    /** O.13 Stage D: required to match when an OPEN adjustment exists. */
+    expected_adjustment_revision: z.number().int().min(1).optional(),
+  })
   .strict();
 
 export const editDecisionWithReasonSchema = z
@@ -40,6 +44,7 @@ export const editDecisionWithReasonSchema = z
     expected_edit_revision: z.number().int().min(1),
     reason_code: z.enum(MODERATION_REASON_CODES),
     note: z.string().trim().min(1).max(MODERATION_NOTE_MAX_LENGTH).optional(),
+    expected_adjustment_revision: z.number().int().min(1).optional(),
   })
   .strict();
 

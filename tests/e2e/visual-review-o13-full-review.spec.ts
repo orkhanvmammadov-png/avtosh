@@ -180,4 +180,38 @@ test.describe("O.13.5A full review visual artifacts", () => {
       }
     }
   });
+
+  test("O.13.5D EDIT adjusted decision confirmations at 1440/390", async ({ page, context }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "captures set explicit viewports");
+    await loginAs(context, MOD_PHONE, { roles: ["MODERATOR"] });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/moderator/elanlar/${editListingId}`);
+    await page.getByTestId("claim-button").click();
+    await page.waitForLoadState("load");
+    await page.getByTestId("adjustment-edit").click();
+    await page.getByTestId("adj-price").fill("28400");
+    await page.getByTestId("adjustment-save").click();
+    await expect(page.getByTestId("adjustment-chip")).toBeVisible();
+    await page.screenshot({ path: `${OUT}/o13d-edit-saved-adjustment-1440.png`, fullPage: true });
+    for (const [width, height] of [
+      [1440, 900],
+      [390, 844],
+    ] as const) {
+      await page.setViewportSize({ width, height });
+      await page.goto(`/moderator/elanlar/${editListingId}`);
+      for (const [action, name] of [
+        ["action-approve", "approve"],
+        ["action-correction", "correction"],
+        ["action-reject", "reject"],
+      ] as const) {
+        await page.getByTestId(action).click();
+        await expect(page.getByTestId("adjusted-decision-note")).toBeVisible();
+        await page.screenshot({
+          path: `${OUT}/o13d-edit-${name}-confirm-${width}.png`,
+          fullPage: width === 390,
+        });
+        await page.getByTestId("decision-cancel").click();
+      }
+    }
+  });
 });

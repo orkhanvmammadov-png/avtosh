@@ -610,14 +610,15 @@ describe("LISTING_EDIT first save — frozen seller revision evidence", () => {
     `;
     expect(after.submitted_data.price_minor).toBe(2800000);
 
-    // EDIT decision refused while the adjustment is OPEN
+    // Stage D semantics: a decision that does not name the saved
+    // adjustment version can never silently run over the proposal
     const approve = await api(editApproveRoute as Route, "POST", `${MOD}/${listing.id}/edit/approve`, {
       body: { expected_edit_revision: edit.revisionNo },
       cookie: mod1.cookie,
       params: { listingId: listing.id },
     });
     expect(approve.status).toBe(409);
-    expect(approve.body.error?.code).toBe("MODERATION_ADJUSTMENT_PENDING");
+    expect(approve.body.error?.code).toBe("MODERATION_ADJUSTMENT_CONFLICT");
 
     // the approved public listing never moved
     const pub = await publicDetail(listing.publicId);

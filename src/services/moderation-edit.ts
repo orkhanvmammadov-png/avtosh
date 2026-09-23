@@ -26,21 +26,23 @@ import {
 import { insertModerationAudit } from "@/repositories/moderation-audit";
 import {
   findMatchingEditReview,
-  getUnreleasedClaim,
   insertReview,
   releaseClaim,
-  type ClaimRow,
   type ReviewRow,
 } from "@/repositories/moderation";
 import { getListingFeatureIds, listFeatureRowsByIds, replaceListingFeatures } from "@/repositories/listings";
-import { getOpenAdjustment } from "@/repositories/moderation-adjustments";
-import { findActiveCategoryByCode } from "@/repositories/catalog";
+import { lockOpenAdjustment } from "@/repositories/moderation-adjustments";
+import {
+  applyAdjustmentOnEditApproval,
+  discardAdjustmentOnDecision,
+} from "@/services/moderation-adjustments";
 import { toListingImageDto, type ListingImageDto } from "@/services/listing-dto";
 import {
   buildFeatureGroupsFromRows,
   type ModerationContentDto,
 } from "@/services/moderation-content";
 import { tryFinalizeSellerReactivation } from "@/services/listing-lifecycle";
+import { approvedContentSet, nameMaps, requireOwnedLiveClaim } from "@/services/moderation-shared";
 import { assertRevisionSubmittable } from "@/services/listing-edit";
 
 /**
@@ -110,38 +112,6 @@ function dataFeatureIds(data: Record<string, unknown>): string[] {
   return Array.isArray(data.feature_ids)
     ? data.feature_ids.filter((id): id is string => typeof id === "string")
     : [];
-}
-
-/** Resolve display names for arbitrary catalog ids (both sides of the
-    diff, including inactive rows — historical names must still render).
-    Exported for the O.13 adjustment read model (same resolution rules). */
-export async function nameMaps(sql: Sql): Promise<{
-  of: (table: "brands" | "models" | "cities" | "reference_options" | "features" | "categories", id: string | null) => Promise<string | null>;
-}> {
-  const cache = new Map<string, string | null>();
-  return {
-    of: async (table, id) => {
-      if (id === null) return null;
-      const key = `${table}:${id}`;
-      if (cache.has(key)) return cache.get(key)!;
-      let name: string | null = null;
-      if (table === "brands") {
-        name = (await sql<{ name: string }[]>`select name from brands where id = ${id}`)[0]?.name ?? null;
-      } else if (table === "models") {
-        name = (await sql<{ name: string }[]>`select name from models where id = ${id}`)[0]?.name ?? null;
-      } else if (table === "cities") {
-        name = (await sql<{ name_az: string }[]>`select name_az from cities where id = ${id}`)[0]?.name_az ?? null;
-      } else if (table === "reference_options") {
-        name = (await sql<{ name_az: string }[]>`select name_az from reference_options where id = ${id}`)[0]?.name_az ?? null;
-      } else if (table === "features") {
-        name = (await sql<{ name_az: string }[]>`select name_az from features where id = ${id}`)[0]?.name_az ?? null;
-      } else {
-        name = (await sql<{ code: string }[]>`select code from categories where id = ${id}`)[0]?.code ?? null;
-      }
-      cache.set(key, name);
-      return name;
-    },
-  };
 }
 
 function formatAzn(minor: number | null): string | null {
@@ -444,19 +414,6 @@ export interface EditDecisionResultDto {
   reactivated: boolean;
 }
 
-/** Exported for the O.13 adjustment writes — the SAME live-claim
-    ownership gate as decisions (never a parallel claim model). */
-export async function requireOwnedLiveClaim(tx: Sql, listingId: string, moderatorId: string): Promise<ClaimRow> {
-  const claim = await getUnreleasedClaim(tx, listingId);
-  if (claim === undefined || claim.expires_at.getTime() <= Date.now()) {
-    throw new ApiError("MODERATION_CLAIM_REQUIRED", "Claim the listing before deciding.");
-  }
-  if (claim.moderator_id !== moderatorId) {
-    throw new ApiError("MODERATION_CLAIMED_BY_OTHER", "Another moderator holds the claim.");
-  }
-  return claim;
-}
-
 function toResult(
   listing: { id: string; status: string; revision: number },
   revision: EditRevisionRow,
@@ -474,44 +431,6 @@ function toResult(
       reviewedAt: review.reviewed_at.toISOString(),
     },
     reactivated,
-  };
-}
-
-/** Sealed seller-editable column set the approval copy writes — and
-    NOTHING else (no lifecycle/publication/payment/promotion columns).
-    Exported for the O.13 adjusted NEW approval — the SAME allowlisted
-    mapping, never a generic spread. */
-export async function approvedContentSet(
-  tx: Sql,
-  data: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  const categoryCode = dataString(data, "category");
-  const category = categoryCode === null ? undefined : await findActiveCategoryByCode(categoryCode);
-  if (category === undefined) {
-    throw new ApiError("LISTING_INVALID_CATALOG_SELECTION", "The revision category is no longer valid.");
-  }
-  return {
-    category_id: category.id,
-    brand_id: dataString(data, "brand_id"),
-    model_id: dataString(data, "model_id"),
-    year: dataNumber(data, "year"),
-    price_minor: dataNumber(data, "price_minor"),
-    mileage: dataNumber(data, "mileage"),
-    engine_cc: dataNumber(data, "engine_cc"),
-    fuel_type_id: dataString(data, "fuel_type_id"),
-    transmission_id: dataString(data, "transmission_id"),
-    body_type_id: dataString(data, "body_type_id"),
-    drive_type_id: dataString(data, "drive_type_id"),
-    motorcycle_type_id: dataString(data, "motorcycle_type_id"),
-    color_id: dataString(data, "color_id"),
-    city_id: dataString(data, "city_id"),
-    credit_available: data.credit_available === true,
-    barter_available: data.barter_available === true,
-    no_accident: data.no_accident === true ? true : null,
-    not_repainted: data.not_repainted === true ? true : null,
-    description: dataString(data, "description"),
-    contact_phone_e164: dataString(data, "contact_phone"),
-    seller_name: dataString(data, "seller_name"),
   };
 }
 
@@ -537,6 +456,9 @@ async function decideEdit(
     decision: EditDecision;
     reasonCode: string | null;
     note: string | null;
+    /** O.13 Stage D: which adjustment version the moderator decided —
+        REQUIRED to match when an OPEN adjustment exists. */
+    expectedAdjustmentRevision?: number;
   },
 ): Promise<EditDecisionResultDto> {
   return withTransaction(async (tx) => {
@@ -589,22 +511,42 @@ async function decideEdit(
       );
     }
     const claim = await requireOwnedLiveClaim(tx, listingId, auth.user.id);
-    // O.13 Stage B safety: a saved OPEN moderator adjustment must never
-    // let the pre-O.13 decision path run against seller content as if
-    // no adjustment existed. Approval-with-adjustment (and the sealed
-    // correction/reject terminalization) is wired in Stage C/D — until
-    // then every decision on such a subject is a typed refusal.
-    const openAdjustment = await getOpenAdjustment(tx, listingId);
+    // O.13 Stage D — adjustment-aware EDIT decisions. Sealed lock
+    // order: listing (held) → edit revision (held) → adjustment. With
+    // NO open adjustment the whole path below is the unchanged O.12
+    // behavior.
+    const openAdjustment = await lockOpenAdjustment(tx, listingId);
     if (openAdjustment !== undefined) {
+      // the adjustment must address THIS exact moderation pass
+      if (
+        openAdjustment.edit_revision_id !== open.id ||
+        openAdjustment.submitted_edit_revision_no !== open.revision ||
+        openAdjustment.submitted_listing_revision !== listing.revision
+      ) {
+        throw new ApiError(
+          "MODERATION_SUBJECT_CHANGED",
+          "The saved adjustment belongs to a previous moderation pass.",
+          { details: { adjustment_id: openAdjustment.id } },
+        );
+      }
+      if (input.expectedAdjustmentRevision !== openAdjustment.revision) {
+        throw new ApiError(
+          "MODERATION_ADJUSTMENT_CONFLICT",
+          "The adjustment changed since it was reviewed. Reload and re-review.",
+          { details: { current_revision: openAdjustment.revision } },
+        );
+      }
+    } else if (input.expectedAdjustmentRevision !== undefined) {
       throw new ApiError(
-        "MODERATION_ADJUSTMENT_PENDING",
-        "A saved moderator adjustment exists; adjusted decisions are not enabled yet.",
-        { details: { adjustment_id: openAdjustment.id } },
+        "MODERATION_ADJUSTMENT_CONFLICT",
+        "The adjustment no longer exists. Reload and re-review.",
+        { details: { current_revision: null } },
       );
     }
 
-    // review row records BOTH counters with their original meanings:
-    // the approved listing revision reviewed against + the edit's own
+    // review row records the counters with their original meanings:
+    // the approved listing revision, the edit's own counter, and (O.13)
+    // the EXACT adjustment version the decision was made over
     const review = await insertReview(tx, {
       listingId,
       moderatorId: auth.user.id,
@@ -614,13 +556,30 @@ async function decideEdit(
       note: input.note,
       editRevisionId: open.id,
       editRevisionNo: open.revision,
+      adjustmentId: openAdjustment?.id ?? null,
+      adjustmentRevision: openAdjustment?.revision ?? null,
     });
 
     let reactivated = false;
     let finalListing = { id: listing.id, status: listing.status, revision: listing.revision };
     let cleanupPaths: string[] = [];
 
-    if (input.decision === "APPROVED") {
+    if (input.decision === "APPROVED" && openAdjustment !== undefined) {
+      // O.13 Stage D: the saved moderator content is the approval
+      // source; the seller revision and staged gallery remain
+      // untouched evidence. Same pure-content semantics as O.12 (no
+      // period/fee/quota/expiry); the seller revision itself still
+      // transitions to APPROVED below.
+      const applied = await applyAdjustmentOnEditApproval(tx, {
+        listing: { id: listing.id, owner_id: listing.owner_id, revision: listing.revision },
+        editRevisionId: open.id,
+        adjustment: openAdjustment,
+        moderatorId: auth.user.id,
+      });
+      // the adjusted apply already emitted its own reference-safe
+      // cleanup intake — the O.12 event below stays linkage-only
+      finalListing = { id: listing.id, status: listing.status, revision: applied.newListingRevision };
+    } else if (input.decision === "APPROVED") {
       // final content re-validation — invalid staged content can never
       // become public even if catalog rules changed since submission
       const settings = await getSubmissionSettings(tx);
@@ -671,6 +630,19 @@ async function decideEdit(
       await clearReactivationRequest(tx, listingId);
     }
 
+    if (input.decision !== "APPROVED" && openAdjustment !== undefined) {
+      // sealed non-apply behavior: correction/reject leave the public
+      // content AND the seller proposal untouched; the adjustment
+      // becomes terminal DISCARDED history (original authorship kept)
+      // and the next moderation pass starts clean
+      await discardAdjustmentOnDecision(tx, {
+        listingId,
+        adjustment: openAdjustment,
+        actorUserId: auth.user.id,
+        decision: input.decision,
+      });
+    }
+
     await insertModerationAudit(tx, {
       actorUserId: auth.user.id,
       action: DECISION_EVENT[input.decision],
@@ -716,37 +688,51 @@ export function approveEditRevision(
   auth: AuthContext,
   listingId: string,
   expectedEditRevision: number,
+  expectedAdjustmentRevision?: number,
 ): Promise<EditDecisionResultDto> {
   return decideEdit(auth, listingId, {
     expectedEditRevision,
     decision: "APPROVED",
     reasonCode: null,
     note: null,
+    expectedAdjustmentRevision,
   });
 }
 
 export function rejectEditRevision(
   auth: AuthContext,
   listingId: string,
-  input: { expectedEditRevision: number; reasonCode: string; note: string | null },
+  input: {
+    expectedEditRevision: number;
+    reasonCode: string;
+    note: string | null;
+    expectedAdjustmentRevision?: number;
+  },
 ): Promise<EditDecisionResultDto> {
   return decideEdit(auth, listingId, {
     expectedEditRevision: input.expectedEditRevision,
     decision: "REJECTED",
     reasonCode: input.reasonCode,
     note: input.note,
+    expectedAdjustmentRevision: input.expectedAdjustmentRevision,
   });
 }
 
 export function requestEditCorrection(
   auth: AuthContext,
   listingId: string,
-  input: { expectedEditRevision: number; reasonCode: string; note: string | null },
+  input: {
+    expectedEditRevision: number;
+    reasonCode: string;
+    note: string | null;
+    expectedAdjustmentRevision?: number;
+  },
 ): Promise<EditDecisionResultDto> {
   return decideEdit(auth, listingId, {
     expectedEditRevision: input.expectedEditRevision,
     decision: "CORRECTION_REQUIRED",
     reasonCode: input.reasonCode,
     note: input.note,
+    expectedAdjustmentRevision: input.expectedAdjustmentRevision,
   });
 }
