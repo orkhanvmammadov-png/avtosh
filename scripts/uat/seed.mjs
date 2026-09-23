@@ -121,12 +121,12 @@ const auto = (await sql`select id from reference_options where group_code='TRANS
 const sedan = (await sql`select id from reference_options where group_code='BODY_TYPE' and code='SEDAN'`)[0].id;
 
 // ---------------------------------------------------------------------------
-// Promotion packages: the production migration seeds them DISABLED
-// (unapproved pricing). The UAT environment activates them explicitly
-// as controlled, documented UAT-ONLY prices — sellers still resolve
-// prices through the real server package model.
+// Promotion packages: the O.14 migration ships the Owner-approved
+// matrix ACTIVE (Premium 1/10/21/30, Boost 3/7/10/15; retired
+// Premium 3/7 and Boost 1 stay inactive). The seed only RESOLVES
+// rows — never activates, so the production catalog shape is exactly
+// what UAT exercises.
 // ---------------------------------------------------------------------------
-await sql`update promotion_packages set is_active = true`;
 const packages = await sql`
   select id, type::text as type, duration_days, price_minor::text as price_minor
   from promotion_packages
@@ -274,11 +274,11 @@ seeded.active = await insertListing({ status: "ACTIVE", model: corolla, price: 2
 await review(seeded.active, "APPROVED", null, null);
 // Promotions.
 seeded.premium = await insertListing({ status: "ACTIVE", model: camry, price: 3350000 });
-await promote(seeded.premium.id, "PREMIUM", 7);
+await promote(seeded.premium.id, "PREMIUM", 10);
 seeded.boost = await insertListing({ status: "ACTIVE", brand: bmw, model: x5, price: 4550000 });
 await promote(seeded.boost.id, "BOOST", 7);
 seeded.both = await insertListing({ status: "ACTIVE", category: "MOTORCYCLE", brand: yamaha, model: mt07, price: 990000, mileage: 4000 });
-await promote(seeded.both.id, "PREMIUM", 3);
+await promote(seeded.both.id, "PREMIUM", 1);
 await promote(seeded.both.id, "BOOST", 3);
 // O.13 — moderator edit-before-approve UAT coverage.
 // pending1 above is DELIBERATELY legacy-shaped (no seller_name) — it is

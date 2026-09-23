@@ -11,10 +11,21 @@ describe("formatDateAz — DD.MM.YYYY in Asia/Baku", () => {
 });
 
 describe("package price display reuses the exact minor-unit formatter", () => {
+  // the full O.14 matrix: fractional prices render with a comma
+  // decimal, whole prices stay whole — no floats, no second formatter
   it.each([
     [300, "3 AZN"],
+    [1199, "11,99 AZN"],
+    [2199, "21,99 AZN"],
+    [3099, "30,99 AZN"],
+    [400, "4 AZN"],
+    [800, "8 AZN"],
+    [1100, "11 AZN"],
+    [1300, "13 AZN"],
+    // retired legacy placeholder prices remain displayable in Admin
     [700, "7 AZN"],
     [1200, "12 AZN"],
+    [200, "2 AZN"],
   ])("%s minor → %s", (minor, expected) => {
     expect(formatPriceMinor(minor, "AZN")).toBe(expected);
   });

@@ -207,16 +207,18 @@ describe("admin payments — safe projection", () => {
   it("verify reuses the ONE accepted provider verification path, fulfillment stays exactly-once", async () => {
     const provider = installFake();
     const sql = getSql();
-    await sql`update promotion_packages set is_active = true`;
-    const [premium3] = await sql<{ id: string }[]>`
-      select id from promotion_packages where type = 'PREMIUM' and duration_days = 3
+    // O.14: the migration ships the matrix active — no test-side
+    // activation, and never a blanket one (it would resurrect the
+    // retired Premium 3/7 and Boost 1 identities).
+    const [premium10] = await sql<{ id: string }[]>`
+      select id from promotion_packages where type = 'PREMIUM' and duration_days = 10 and is_active
     `;
     const listing = await insertActiveListing(seller.userId);
     const checkout = await api(
       promoCheckoutRoute,
       "POST",
       `http://localhost/api/v1/me/listings/${listing.id}/promotions/checkout`,
-      { cookie: seller.cookie, params: { listingId: listing.id }, body: { type: "PREMIUM", package_id: premium3.id } },
+      { cookie: seller.cookie, params: { listingId: listing.id }, body: { type: "PREMIUM", package_id: premium10.id } },
     );
     expect(checkout.status).toBe(200);
     const [payment] = await sql<{ id: string }[]>`
@@ -331,9 +333,9 @@ describe("admin promotion packages — pricing, activation, concurrency", () => 
   it("price changes apply to FUTURE intents only — existing snapshots and periods keep the old price", async () => {
     const provider = installFake();
     const sql = getSql();
-    await sql`update promotion_packages set is_active = true where price_minor > 0`;
     const packages = await fetchPackages();
     const target = packages.find((p) => p.type === "BOOST" && p.durationDays === 3)!;
+    expect(target.isActive).toBe(true); // O.14 matrix row, active by migration
 
     // seller buys at the CURRENT price
     const firstListing = await insertActiveListing(seller.userId);

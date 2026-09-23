@@ -155,6 +155,18 @@ test("package pricing: admin-set price snapshots into intents; later changes hit
     await page.goto("/admin/tesviq-paketleri");
     await expect(page.getByTestId("admin-packages-page")).toBeVisible();
     await expectNoHorizontalOverflow(page);
+    // O.14 catalog: all 11 rows administrable — 8 active matrix rows
+    // (fractional Premium prices render through formatPriceMinor) and
+    // the 3 retired identities still visible as inactive
+    await expect(page.getByTestId("admin-package-row")).toHaveCount(11);
+    await expect(page.locator('[data-package][data-active="true"]')).toHaveCount(8);
+    await expect(page.locator('[data-package][data-active="false"]')).toHaveCount(3);
+    await expect(page.locator('[data-package="PREMIUM-10"]').getByTestId("pkg-current-price")).toHaveText("11,99 AZN");
+    await expect(page.locator('[data-package="PREMIUM-30"]').getByTestId("pkg-current-price")).toHaveText("30,99 AZN");
+    await expect(page.locator('[data-package="BOOST-7"]').getByTestId("pkg-current-price")).toHaveText("8 AZN");
+    await expect(page.locator('[data-package="PREMIUM-3"]')).toHaveAttribute("data-active", "false");
+    await expect(page.locator('[data-package="PREMIUM-7"]')).toHaveAttribute("data-active", "false");
+    await expect(page.locator('[data-package="BOOST-1"]')).toHaveAttribute("data-active", "false");
     const row = page.locator('[data-package="BOOST-7"]');
     await row.getByTestId("pkg-price-input").fill("7");
     const [priceResponse] = await Promise.all([
