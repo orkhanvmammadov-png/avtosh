@@ -313,7 +313,9 @@ export async function updateEditRevision(
   return buildEditView(getSql(), listing, updated);
 }
 
-const SUBMIT_REQUIRED_FIELDS: { key: string; code: string }[] = [
+/** Sealed submit-time required-field list — the single source of truth
+    (also consumed by the O.13 adjusted-approval relative check). */
+export const SUBMIT_REQUIRED_FIELDS: { key: string; code: string }[] = [
   { key: "brand_id", code: "brand" },
   { key: "model_id", code: "model" },
   { key: "year", code: "year" },
@@ -324,7 +326,7 @@ const SUBMIT_REQUIRED_FIELDS: { key: string; code: string }[] = [
   { key: "seller_name", code: "seller_name" },
 ];
 
-const SUBMIT_REFERENCE_FIELDS: { key: string; group: string }[] = [
+export const SUBMIT_REFERENCE_FIELDS: { key: string; group: string }[] = [
   { key: "fuel_type_id", group: "FUEL_TYPE" },
   { key: "transmission_id", group: "TRANSMISSION" },
   { key: "body_type_id", group: "BODY_TYPE" },
@@ -340,7 +342,28 @@ export async function assertRevisionSubmittable(
   revision: EditRevisionRow,
   imageMin: number,
 ): Promise<void> {
-  const data = revision.data;
+  await assertContentSubmittable(revision.data);
+  const confirmed = await countEditImages(tx, revision.id);
+  if (confirmed < imageMin) {
+    throw new ApiError(
+      "LISTING_INSUFFICIENT_IMAGES",
+      `At least ${imageMin} images are required.`,
+      { details: { required: imageMin, confirmed } },
+    );
+  }
+  if ((await countPrimaryEditImages(tx, revision.id)) !== 1) {
+    throw new ApiError("LISTING_INSUFFICIENT_IMAGES", "A primary image is required.", {
+      details: { required: imageMin, confirmed, primary: false },
+    });
+  }
+}
+
+/** The content half of the submit rules (required fields + catalog
+    validity), shared verbatim with the O.13 adjusted-approval
+    revalidation — image counts stay with each caller's own source. */
+export async function assertContentSubmittable(
+  data: Record<string, unknown>,
+): Promise<void> {
   const missing = SUBMIT_REQUIRED_FIELDS.filter(
     (f) => data[f.key] === null || data[f.key] === undefined || data[f.key] === "",
   ).map((f) => f.code);
@@ -381,19 +404,6 @@ export async function assertRevisionSubmittable(
   if (featureIds.length > 0) {
     const valid = await filterActiveFeatureIdsForCategory(featureIds, category.id);
     if (valid.length !== featureIds.length) throw invalid("features");
-  }
-  const confirmed = await countEditImages(tx, revision.id);
-  if (confirmed < imageMin) {
-    throw new ApiError(
-      "LISTING_INSUFFICIENT_IMAGES",
-      `At least ${imageMin} images are required.`,
-      { details: { required: imageMin, confirmed } },
-    );
-  }
-  if ((await countPrimaryEditImages(tx, revision.id)) !== 1) {
-    throw new ApiError("LISTING_INSUFFICIENT_IMAGES", "A primary image is required.", {
-      details: { required: imageMin, confirmed, primary: false },
-    });
   }
 }
 

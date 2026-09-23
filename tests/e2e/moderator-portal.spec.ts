@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { expectNoHorizontalOverflow, seed } from "./helpers";
 import { loginAs, testPhone } from "./auth-helpers";
 import {
+  addListingFeatures,
   bumpListingRevision,
   claimListingAs,
   insertListingFixture,
@@ -170,6 +171,44 @@ test("review shows condition claims without treating absence as a negative (4.17
   await expect(specs).toContainText("Qeyd edilib");
   await expect(specs).toContainText("Rənglənməyib");
   await expect(specs).toContainText("Qeyd edilməyib");
+});
+
+test("full review shows structured sections, grouped equipment, primary marker and full contact (O.13.5A)", async ({ page }, { project }) => {
+  const { userId } = await loginAsStub(project.name, 178);
+  const fixture = await insertListingFixture(userId, {
+    status: "PENDING_MODERATION", complete: true, images: 3, noAccident: true,
+  });
+  await addListingFeatures(fixture.id, ["ABS", "REAR_CAMERA"]);
+  await moderatorLogin(page, project.name, 179);
+  await page.goto(`/moderator/elanlar/${fixture.id}`);
+
+  // structured "Elanın bütün məlumatları" sections
+  const full = page.getByTestId("review-specs");
+  await expect(full).toContainText("Elanın bütün məlumatları");
+  await expect(full).toContainText("Avtomobil məlumatları");
+  await expect(full).toContainText("Satış məlumatları");
+  await expect(full).toContainText("Vəziyyət");
+  await expect(full).toContainText("Satıcı / Əlaqə");
+
+  // O.13 equipment gap closed: O.11 group headers + names, read-only
+  const equipment = page.getByTestId("review-specs-equipment");
+  await expect(equipment).toContainText("Təchizat");
+  await expect(equipment).toContainText("Təhlükəsizlik");
+  await expect(equipment).toContainText("ABS");
+  await expect(equipment).toContainText("Park və kameralar");
+  await expect(equipment).toContainText("Arxa görüntü kamerası");
+  await expect(equipment.locator("input")).toHaveCount(0);
+
+  // full authorized marketplace contact value for staff review
+  await expect(page.getByTestId("review-specs-contact")).toContainText("+994501234567");
+
+  // complete gallery with exactly one Əsas (primary) marker
+  const gallery = page.getByTestId("review-specs-gallery");
+  await expect(gallery.locator("li")).toHaveCount(3);
+  await expect(gallery.getByText("Əsas", { exact: true })).toHaveCount(1);
+
+  // read-mode layout holds at every project viewport
+  await expectNoHorizontalOverflow(page);
 });
 
 test("reject requires a reason and lands in history", async ({ page }, { project }) => {

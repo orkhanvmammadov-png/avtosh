@@ -333,6 +333,13 @@ export const CLEANUP_EVENT_TYPES = [
   "LISTING_EDIT_IMAGE_REMOVED",
   "LISTING_EDIT_APPROVED",
   "LISTING_EDIT_REJECTED",
+  // O.13 Stage C: adjusted NEW approval — candidates are the images the
+  // moderator's plan removed from the final approved gallery. The
+  // execution-time reference check (isImagePathReferenced) protects
+  // every live gallery AND every retained adjustment's frozen
+  // submitted_images snapshot (sealed O.13.2 history-retention rule),
+  // so such a candidate stays retained while its history row exists.
+  "MODERATION_ADJUSTMENT_APPLIED",
 ] as const;
 
 /**
@@ -367,11 +374,26 @@ export async function claimCleanupEvents(
     true orphan only when neither the approved gallery nor ANY staged
     revision row (open, APPROVED history, or terminal history) points
     at it. */
+/** THE centralized deletion-reference authority: a storage object is
+    deletable only when NO live gallery row (listing_images,
+    listing_edit_images) and NO retained moderation-adjustment frozen
+    seller-submission snapshot (moderation_adjustments.submitted_images
+    — sealed O.13.2 history-retention rule: OPEN, APPLIED and DISCARDED
+    rows alike are intentional history references) still names its
+    exact path. The JSONB check is exact-value containment on
+    storage_path — never substring matching — and an empty snapshot
+    array simply matches nothing. */
 export async function isImagePathReferenced(sql: Sql, storagePath: string): Promise<boolean> {
   const rows = await sql<{ referenced: boolean }[]>`
     select
       exists (select 1 from listing_images where storage_path = ${storagePath})
       or exists (select 1 from listing_edit_images where storage_path = ${storagePath})
+      or exists (
+        select 1 from moderation_adjustments
+        where submitted_images @> jsonb_build_array(
+          jsonb_build_object('storage_path', ${storagePath}::text)
+        )
+      )
       as referenced
   `;
   return rows[0].referenced;

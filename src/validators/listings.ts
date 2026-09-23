@@ -20,9 +20,10 @@ export const createDraftSchema = z
   })
   .strict();
 
-/** Seller-editable content fields shared by the draft PATCH and the
-    O.12 edit-revision PATCH (identical field semantics by contract). */
-const sellerContentPatchFields = {
+/** Seller-editable content fields shared by the draft PATCH, the
+    O.12 edit-revision PATCH, and the O.13 moderator adjustment save
+    (identical field semantics by contract — never a second model). */
+export const sellerContentPatchFields = {
   expected_revision: z.number().int().min(1),
   category: categoryCode.optional(),
     brand_id: z.uuid().nullable().optional(),

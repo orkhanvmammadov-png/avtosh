@@ -33,8 +33,12 @@ export interface ResolvedSellerPatch {
   categoryChanged: boolean;
 }
 
+/** The pure content key space (the O.13 moderator adjustment save has
+    its own counters and passes content without expected_revision). */
+export type SellerContentPatch = Omit<EditPatchInput, "expected_revision">;
+
 interface ReferenceFieldSpec {
-  patchKey: keyof EditPatchInput;
+  patchKey: keyof SellerContentPatch;
   group: string;
 }
 
@@ -53,7 +57,7 @@ function invalidSelection(message: string): ApiError {
 
 export async function resolveSellerContentPatch(
   current: SellerPatchContext,
-  patch: EditPatchInput,
+  patch: SellerContentPatch,
 ): Promise<ResolvedSellerPatch> {
   // Resolve the target category (it may change). Changing it
   // deterministically clears dependent fields server-side (brand,

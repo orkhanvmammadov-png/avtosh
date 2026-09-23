@@ -16,6 +16,7 @@ export const POST = createApiHandler(async ({ request, requestId, params }) => {
     expectedEditRevision: body.expected_edit_revision,
     reasonCode: body.reason_code,
     note: body.note ?? null,
+    expectedAdjustmentRevision: body.expected_adjustment_revision,
   });
   return apiSuccess(result, { requestId });
 });

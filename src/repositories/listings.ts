@@ -151,6 +151,29 @@ export async function getListingFeatureIds(
   return rows.map((row) => row.feature_id);
 }
 
+/** O.13 Stage A — batch feature resolution for moderation read models.
+    Selects by id regardless of is_active: historical selections must
+    keep rendering their names. Catalog order (sort_order, name_az)
+    keeps grouped output deterministic. */
+export interface FeatureNameRow {
+  id: string;
+  name_az: string;
+  group_code: string | null;
+}
+
+export async function listFeatureRowsByIds(
+  sql: Sql,
+  featureIds: readonly string[],
+): Promise<FeatureNameRow[]> {
+  if (featureIds.length === 0) return [];
+  return sql<FeatureNameRow[]>`
+    select id, name_az, group_code
+    from features
+    where id in ${sql([...featureIds])}
+    order by sort_order, name_az
+  `;
+}
+
 export async function replaceListingFeatures(
   sql: Sql,
   listingId: string,

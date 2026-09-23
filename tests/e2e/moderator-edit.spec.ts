@@ -107,6 +107,25 @@ test("approve flow: queue tag → claim → diff → Təsdiqlə → new content 
   // unchanged context lives behind the collapsed section, not as changes
   await expect(diff.getByTestId("edit-diff-unchanged")).toContainText("Digər məlumatlar (dəyişməyib)");
 
+  // O.13.5A: the COMPLETE proposed listing beside the diff — unchanged
+  // values inspectable, full grouped equipment, full contact, primary
+  // marker, and the whole current approved layer collapsed below
+  const full = page.getByTestId("edit-full-data");
+  await expect(full).toContainText("Elanın bütün məlumatları");
+  await expect(full).toContainText("Təklif olunan dəyişiklik");
+  await expect(full).toContainText("26 500 AZN");
+  await expect(full).toContainText("Toyota"); // unchanged brand still shown
+  const fullEquipment = page.getByTestId("edit-full-data-equipment");
+  await expect(fullEquipment).toContainText("Təhlükəsizlik");
+  await expect(fullEquipment.locator("input")).toHaveCount(0); // read mode, never controls
+  await expect(full.getByText("Əsas", { exact: true })).toHaveCount(1);
+  await expect(page.getByTestId("edit-full-data-contact")).toContainText("+994501234567");
+  const current = page.getByTestId("edit-current-data");
+  await expect(current).toContainText("Mövcud elan");
+  await current.locator("summary").click();
+  await expect(page.getByTestId("edit-current-sections")).toContainText("25 000 AZN");
+  await expectNoHorizontalOverflow(page);
+
   // claim → approve through the existing decision flow
   await page.getByTestId("claim-button").click();
   await page.waitForLoadState("load");

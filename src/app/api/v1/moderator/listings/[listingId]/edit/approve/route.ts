@@ -13,6 +13,6 @@ export const POST = createApiHandler(async ({ request, requestId, params }) => {
   const auth = await requireStaff(request);
   const listingId = requireUuidParam(params, "listingId");
   const body = await parseBody(request, editApproveSchema);
-  const result = await approveEditRevision(auth, listingId, body.expected_edit_revision);
+  const result = await approveEditRevision(auth, listingId, body.expected_edit_revision, body.expected_adjustment_revision);
   return apiSuccess(result, { requestId });
 });

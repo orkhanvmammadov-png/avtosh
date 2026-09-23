@@ -149,6 +149,21 @@ export async function consumeFreePublications(ownerId: string, count: number): P
   }
 }
 
+/** O.13 Stage A — attaches O.11 catalog features (by stable code) to a
+    fixture listing so moderation full-review equipment is real data. */
+export async function addListingFeatures(listingId: string, codes: string[]): Promise<void> {
+  const sql = db();
+  try {
+    await sql`
+      insert into listing_features (listing_id, feature_id)
+      select ${listingId}, f.id from features f where f.code in ${sql(codes)}
+      on conflict do nothing
+    `;
+  } finally {
+    await sql.end();
+  }
+}
+
 /** Simulates "another window" bumping the listing revision. */
 export async function bumpListingRevision(listingId: string): Promise<void> {
   const sql = db();
@@ -478,6 +493,22 @@ export async function listingPeriodCount(listingId: string): Promise<number> {
       select count(*)::int as n from listing_periods where listing_id = ${listingId}
     `;
     return row.n as number;
+  } finally {
+    await sql.end();
+  }
+}
+
+/** O.13: deterministic claim expiry — no sleeps; claimed_at moves too
+    because the schema enforces expires_at > claimed_at. */
+export async function expireModerationClaim(listingId: string): Promise<void> {
+  const sql = db();
+  try {
+    await sql`
+      update moderation_claims
+      set claimed_at = now() - interval '10 minutes',
+          expires_at = now() - interval '1 minute'
+      where listing_id = ${listingId} and released_at is null
+    `;
   } finally {
     await sql.end();
   }

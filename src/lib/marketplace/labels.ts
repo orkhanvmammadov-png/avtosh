@@ -420,7 +420,6 @@ export const STAFF = {
   images: "Şəkillər",
   primaryTag: "Əsas",
   noImage: "Şəkil yoxdur",
-  specs: "Məlumatlar",
   descriptionTitle: "Təsvir",
   contactField: "Əlaqə nömrəsi",
   logout: "Çıxış",
@@ -447,6 +446,60 @@ export const STAFF = {
     "Elan deaktivdir — təsdiqdən sonra yalnız aktivləşdirmə şərtləri ödənərsə yayımlanacaq.",
   editCtxExpired:
     "Elanın müddəti bitib — təsdiq məzmunu yeniləyəcək, elan yenilənənədək yayımlanmayacaq.",
+  // O.13 Stage A — full review read model (11-copy-contract + approved IA)
+  fullData: "Elanın bütün məlumatları",
+  layerCurrent: "Mövcud elan",
+  layerProposed: "Təklif olunan dəyişiklik",
+  secVehicleCar: "Avtomobil məlumatları",
+  secVehicleMoto: "Motosiklet məlumatları",
+  secSales: "Satış məlumatları",
+  secCondition: "Vəziyyət",
+  secEquipment: "Təchizat",
+  secSellerContact: "Satıcı / Əlaqə",
+  equipmentEmpty: "Təchizat seçilməyib",
+  // O.13 Stage B — moderator edit foundation (11-copy-contract)
+  editEnter: "Redaktə et",
+  editSave: "Yadda saxla",
+  editCancel: "Dəyişiklikləri ləğv et",
+  adjSaved: "Moderator düzəlişi saxlanılıb",
+  adjSavedBy: "Saxlayan moderator",
+  layerSeller: "Seller tərəfindən daxil edilib",
+  layerModerator: "Moderator düzəlişi",
+  editContextStrip:
+    "Moderator redaktə rejimi — dəyişikliklər satıcının müraciətini dəyişmir və dərc olunmur",
+  depResetWarning: "Model, ban növü və təchizat seçimləri sıfırlanacaq",
+  equipMarkerAdded: "əlavə edildi",
+  equipMarkerRemoved: "çıxarıldı",
+  photoPrimary: "Əsas şəkil",
+  photoRemove: "Şəkli çıxar",
+  photoRestore: "Geri qaytar",
+  photoSetPrimary: "Əsas şəkil et",
+  photoMoveUp: "Yuxarı",
+  photoMoveDown: "Aşağı",
+  photoMinError: "Ən azı 3 şəkil qalmalıdır — yadda saxlamaq mümkün deyil",
+  takeoverContinue: "Davam et",
+  takeoverDiscard: "Düzəlişi sil",
+  takeoverBanner: "Bu elanda saxlanılmış moderator düzəlişi var.",
+  takeoverNote: "Claim artıq sizindir — bu, əvvəlki moderatorun saxlanılmış işidir.",
+  takeoverDiscardConfirm: (name: string): string =>
+    `${name}-ın saxlanılmış düzəlişi silinəcək və tarixçədə qalacaq. Bu geri qaytarıla bilməz.`,
+  unsavedTitle: "Saxlanmamış dəyişikliklər var",
+  unsavedBody: "Redaktə rejimindən çıxsanız, saxlanmamış dəyişikliklər itəcək.",
+  unsavedBack: "Redaktəyə qayıt",
+  unsavedDiscard: "Dəyişiklikləri at",
+  conflictBody: "Elan başqa sessiyada dəyişdirilib. Səhifəni yeniləyin.",
+  conflictAction: "Səhifəni yenilə",
+  decisionsBlockedUnsaved: "Saxlanmamış dəyişikliklər var — qərarlar bağlıdır.",
+  historyAdjSaved: "Moderator düzəlişi saxladı",
+  historyAdjDiscarded: "Moderator düzəlişi sildi",
+  // O.13 Stage C — adjusted NEW decisions (sealed 11-copy-contract)
+  approveWithAdj: "Moderator düzəlişləri ilə təsdiqlənəcək",
+  correctionWithAdj:
+    "Moderator düzəlişləri tətbiq olunmayacaq. Satıcı düzəliş sorğusunu alacaq; saxlanılmış moderator düzəlişi tarixçəyə köçürüləcək.",
+  rejectWithAdj:
+    "Moderator düzəlişləri tətbiq olunmayacaq. Rədd mövcud qaydalarla icra olunacaq; düzəliş yalnız tarixçədə qalacaq.",
+  decisionAdjustmentInvalid:
+    "Moderator düzəlişi natamamdır və ya etibarsız seçim ehtiva edir — redaktəyə qayıdıb düzəldin.",
 } as const;
 
 /** Admin panel strings (Phase 4.15). */

@@ -26,15 +26,23 @@ import {
 import { insertModerationAudit } from "@/repositories/moderation-audit";
 import {
   findMatchingEditReview,
-  getUnreleasedClaim,
   insertReview,
   releaseClaim,
-  type ClaimRow,
   type ReviewRow,
 } from "@/repositories/moderation";
-import { getListingFeatureIds, replaceListingFeatures } from "@/repositories/listings";
-import { findActiveCategoryByCode } from "@/repositories/catalog";
+import { getListingFeatureIds, listFeatureRowsByIds, replaceListingFeatures } from "@/repositories/listings";
+import { lockOpenAdjustment } from "@/repositories/moderation-adjustments";
+import {
+  applyAdjustmentOnEditApproval,
+  discardAdjustmentOnDecision,
+} from "@/services/moderation-adjustments";
+import { toListingImageDto, type ListingImageDto } from "@/services/listing-dto";
+import {
+  buildFeatureGroupsFromRows,
+  type ModerationContentDto,
+} from "@/services/moderation-content";
 import { tryFinalizeSellerReactivation } from "@/services/listing-lifecycle";
+import { approvedContentSet, nameMaps, requireOwnedLiveClaim } from "@/services/moderation-shared";
 import { assertRevisionSubmittable } from "@/services/listing-edit";
 
 /**
@@ -80,6 +88,11 @@ export interface EditReviewDto {
   photosReordered: boolean;
   /** Unchanged context values for the collapsed "Digər məlumatlar". */
   unchanged: { field: string; value: string }[];
+  /** O.13 Stage A: the COMPLETE seller-proposed listing content
+      (labels resolved, full grouped equipment, full staged gallery
+      with order/primary) — the moderator inspects the whole proposed
+      listing, never only the diff. */
+  sellerSubmitted: ModerationContentDto;
 }
 
 const YES = "Bəli";
@@ -101,44 +114,13 @@ function dataFeatureIds(data: Record<string, unknown>): string[] {
     : [];
 }
 
-/** Resolve display names for arbitrary catalog ids (both sides of the
-    diff, including inactive rows — historical names must still render). */
-async function nameMaps(sql: Sql): Promise<{
-  of: (table: "brands" | "models" | "cities" | "reference_options" | "features" | "categories", id: string | null) => Promise<string | null>;
-}> {
-  const cache = new Map<string, string | null>();
-  return {
-    of: async (table, id) => {
-      if (id === null) return null;
-      const key = `${table}:${id}`;
-      if (cache.has(key)) return cache.get(key)!;
-      let name: string | null = null;
-      if (table === "brands") {
-        name = (await sql<{ name: string }[]>`select name from brands where id = ${id}`)[0]?.name ?? null;
-      } else if (table === "models") {
-        name = (await sql<{ name: string }[]>`select name from models where id = ${id}`)[0]?.name ?? null;
-      } else if (table === "cities") {
-        name = (await sql<{ name_az: string }[]>`select name_az from cities where id = ${id}`)[0]?.name_az ?? null;
-      } else if (table === "reference_options") {
-        name = (await sql<{ name_az: string }[]>`select name_az from reference_options where id = ${id}`)[0]?.name_az ?? null;
-      } else if (table === "features") {
-        name = (await sql<{ name_az: string }[]>`select name_az from features where id = ${id}`)[0]?.name_az ?? null;
-      } else {
-        name = (await sql<{ code: string }[]>`select code from categories where id = ${id}`)[0]?.code ?? null;
-      }
-      cache.set(key, name);
-      return name;
-    },
-  };
-}
-
 function formatAzn(minor: number | null): string | null {
   if (minor === null) return null;
   const major = Math.floor(minor / 100);
   return `${String(major).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} AZN`;
 }
 
-interface ApprovedSideRow extends LifecycleListingRow {
+export interface ApprovedSideRow extends LifecycleListingRow {
   brand_name: string | null;
   model_name: string | null;
   city_name: string | null;
@@ -150,7 +132,7 @@ interface ApprovedSideRow extends LifecycleListingRow {
   color: string | null;
 }
 
-async function approvedSide(sql: Sql, listingId: string): Promise<ApprovedSideRow | undefined> {
+export async function approvedSide(sql: Sql, listingId: string): Promise<ApprovedSideRow | undefined> {
   const rows = await sql<ApprovedSideRow[]>`
     select
       l.id, l.public_id::text as public_id, l.owner_id, l.category_id,
@@ -213,52 +195,72 @@ export async function buildEditReview(
     changes.push({ field, oldValue, newValue });
   };
 
+  // O.13 Stage A: every proposed value is resolved ONCE and reused by
+  // both the changed-first diff and the full sellerSubmitted read model
   const proposedCategory = dataString(data, "category") ?? listing.category_code;
+  const proposed = {
+    brandName: await names.of("brands", dataString(data, "brand_id")),
+    modelName: await names.of("models", dataString(data, "model_id")),
+    year: dataNumber(data, "year"),
+    priceMinor: dataNumber(data, "price_minor"),
+    mileage: dataNumber(data, "mileage"),
+    engineCc: dataNumber(data, "engine_cc"),
+    fuelType: await names.of("reference_options", dataString(data, "fuel_type_id")),
+    transmission: await names.of("reference_options", dataString(data, "transmission_id")),
+    bodyType: await names.of("reference_options", dataString(data, "body_type_id")),
+    driveType: await names.of("reference_options", dataString(data, "drive_type_id")),
+    motorcycleType: await names.of("reference_options", dataString(data, "motorcycle_type_id")),
+    color: await names.of("reference_options", dataString(data, "color_id")),
+    cityName: await names.of("cities", dataString(data, "city_id")),
+    creditAvailable: data.credit_available === true,
+    barterAvailable: data.barter_available === true,
+    noAccident: data.no_accident === true,
+    notRepainted: data.not_repainted === true,
+    description: dataString(data, "description"),
+    sellerName: dataString(data, "seller_name"),
+    contactPhone: dataString(data, "contact_phone"),
+  };
+
   consider(
     "category",
     listing.category_code === "MOTORCYCLE" ? "Motosiklet" : "Avtomobil",
     proposedCategory === "MOTORCYCLE" ? "Motosiklet" : "Avtomobil",
   );
-  consider("brand", listing.brand_name, await names.of("brands", dataString(data, "brand_id")));
-  consider("model", listing.model_name, await names.of("models", dataString(data, "model_id")));
-  consider("year", listing.year === null ? null : String(listing.year), (() => {
-    const y = dataNumber(data, "year");
-    return y === null ? null : String(y);
-  })());
+  consider("brand", listing.brand_name, proposed.brandName);
+  consider("model", listing.model_name, proposed.modelName);
+  consider(
+    "year",
+    listing.year === null ? null : String(listing.year),
+    proposed.year === null ? null : String(proposed.year),
+  );
   consider(
     "price",
     formatAzn(listing.price_minor === null ? null : Number(listing.price_minor)),
-    formatAzn(dataNumber(data, "price_minor")),
+    formatAzn(proposed.priceMinor),
   );
   consider(
     "mileage",
     listing.mileage === null ? null : `${listing.mileage} km`,
-    (() => {
-      const m = dataNumber(data, "mileage");
-      return m === null ? null : `${m} km`;
-    })(),
+    proposed.mileage === null ? null : `${proposed.mileage} km`,
   );
   consider(
     "engine_cc",
     listing.engine_cc === null ? null : `${listing.engine_cc} sm³`,
-    (() => {
-      const cc = dataNumber(data, "engine_cc");
-      return cc === null ? null : `${cc} sm³`;
-    })(),
+    proposed.engineCc === null ? null : `${proposed.engineCc} sm³`,
   );
-  consider("fuel_type", listing.fuel_type, await names.of("reference_options", dataString(data, "fuel_type_id")));
-  consider("transmission", listing.transmission, await names.of("reference_options", dataString(data, "transmission_id")));
-  consider("body_type", listing.body_type, await names.of("reference_options", dataString(data, "body_type_id")));
-  consider("drive_type", listing.drive_type, await names.of("reference_options", dataString(data, "drive_type_id")));
-  consider("motorcycle_type", listing.motorcycle_type, await names.of("reference_options", dataString(data, "motorcycle_type_id")));
-  consider("color", listing.color, await names.of("reference_options", dataString(data, "color_id")));
-  consider("city", listing.city_name, await names.of("cities", dataString(data, "city_id")));
-  consider("credit", listing.credit_available ? YES : NO, data.credit_available === true ? YES : NO);
-  consider("barter", listing.barter_available ? YES : NO, data.barter_available === true ? YES : NO);
-  consider("no_accident", listing.no_accident === true ? YES : NO, data.no_accident === true ? YES : NO);
-  consider("not_repainted", listing.not_repainted === true ? YES : NO, data.not_repainted === true ? YES : NO);
-  consider("seller_name", listing.seller_name, dataString(data, "seller_name"));
-  consider("contact_phone", listing.contact_phone_e164, dataString(data, "contact_phone"));
+  consider("fuel_type", listing.fuel_type, proposed.fuelType);
+  consider("transmission", listing.transmission, proposed.transmission);
+  consider("body_type", listing.body_type, proposed.bodyType);
+  consider("drive_type", listing.drive_type, proposed.driveType);
+  consider("motorcycle_type", listing.motorcycle_type, proposed.motorcycleType);
+  consider("color", listing.color, proposed.color);
+  consider("city", listing.city_name, proposed.cityName);
+  consider("credit", listing.credit_available ? YES : NO, proposed.creditAvailable ? YES : NO);
+  consider("barter", listing.barter_available ? YES : NO, proposed.barterAvailable ? YES : NO);
+  consider("no_accident", listing.no_accident === true ? YES : NO, proposed.noAccident ? YES : NO);
+  consider("not_repainted", listing.not_repainted === true ? YES : NO, proposed.notRepainted ? YES : NO);
+  consider("seller_name", listing.seller_name, proposed.sellerName);
+  consider("contact_phone", listing.contact_phone_e164, proposed.contactPhone);
 
   // description: readable before/after blocks — never a scalar row
   const oldDescription = listing.description;
@@ -266,23 +268,29 @@ export async function buildEditReview(
   const descriptionChange =
     oldDescription === newDescription ? null : { before: oldDescription, after: newDescription };
 
-  // equipment by stable feature identity (order-independent)
+  // equipment by stable feature identity (order-independent); ONE
+  // batch name/group lookup over both sides feeds the +/− diff AND the
+  // full grouped proposed set (O.13 Stage A — no per-feature queries)
   const approvedFeatures = await getListingFeatureIds(sql, listing.id);
   const proposedFeatures = dataFeatureIds(data);
   const approvedSet = new Set(approvedFeatures);
   const proposedSet = new Set(proposedFeatures);
+  const featureRows = await listFeatureRowsByIds(sql, [
+    ...new Set([...approvedFeatures, ...proposedFeatures]),
+  ]);
+  const featureNames = new Map(featureRows.map((row) => [row.id, row.name_az]));
   const equipmentAdded: string[] = [];
   const equipmentRemoved: string[] = [];
   for (const id of proposedFeatures) {
     if (!approvedSet.has(id)) {
-      const name = await names.of("features", id);
-      if (name !== null) equipmentAdded.push(name);
+      const name = featureNames.get(id);
+      if (name !== undefined) equipmentAdded.push(name);
     }
   }
   for (const id of approvedFeatures) {
     if (!proposedSet.has(id)) {
-      const name = await names.of("features", id);
-      if (name !== null) equipmentRemoved.push(name);
+      const name = featureNames.get(id);
+      if (name !== undefined) equipmentRemoved.push(name);
     }
   }
 
@@ -290,6 +298,11 @@ export async function buildEditReview(
   // (staged snapshot copies have new row ids by design)
   const approvedImages = await listListingImages(sql, listing.id);
   const stagedImages = await listEditRevisionImages(sql, revision.id);
+  // full proposed gallery signed ONCE — the badge diff reuses the URLs
+  const stagedDtos: ListingImageDto[] = [];
+  for (const img of stagedImages) {
+    stagedDtos.push(await toListingImageDto(img));
+  }
   const approvedPaths = approvedImages.map((img: ListingImageRow) => img.storage_path);
   const stagedPaths = stagedImages.map((img: EditImageRow) => img.storage_path);
   const approvedPathSet = new Set(approvedPaths);
@@ -299,9 +312,9 @@ export async function buildEditReview(
   const primaryChanged = oldPrimary !== newPrimary;
 
   const photoDiff: PhotoDiffItemDto[] = [];
-  for (const img of stagedImages) {
+  for (const [index, img] of stagedImages.entries()) {
     photoDiff.push({
-      url: await signImage(img.storage_path),
+      url: stagedDtos[index].url,
       isPrimary: img.is_primary,
       badge: !approvedPathSet.has(img.storage_path)
         ? "ADDED"
@@ -338,6 +351,36 @@ export async function buildEditReview(
     photoDiff,
     photosReordered,
     unchanged,
+    sellerSubmitted: {
+      category: proposedCategory,
+      brandName: proposed.brandName,
+      modelName: proposed.modelName,
+      year: proposed.year,
+      priceMinor: proposed.priceMinor,
+      currency: listing.currency,
+      mileage: proposed.mileage,
+      engineCc: proposed.engineCc,
+      fuelType: proposed.fuelType,
+      transmission: proposed.transmission,
+      bodyType: proposed.bodyType,
+      driveType: proposed.driveType,
+      motorcycleType: proposed.motorcycleType,
+      color: proposed.color,
+      cityName: proposed.cityName,
+      creditAvailable: proposed.creditAvailable,
+      barterAvailable: proposed.barterAvailable,
+      // positive-claim semantics (true or null) match the approved
+      // content the swap would write — absence is never a negative
+      noAccident: proposed.noAccident ? true : null,
+      notRepainted: proposed.notRepainted ? true : null,
+      description: proposed.description,
+      sellerName: proposed.sellerName,
+      contactPhone: proposed.contactPhone,
+      featureGroups: buildFeatureGroupsFromRows(
+        featureRows.filter((row) => proposedSet.has(row.id)),
+      ),
+      images: stagedDtos,
+    },
   };
 }
 
@@ -371,17 +414,6 @@ export interface EditDecisionResultDto {
   reactivated: boolean;
 }
 
-async function requireOwnedLiveClaim(tx: Sql, listingId: string, moderatorId: string): Promise<ClaimRow> {
-  const claim = await getUnreleasedClaim(tx, listingId);
-  if (claim === undefined || claim.expires_at.getTime() <= Date.now()) {
-    throw new ApiError("MODERATION_CLAIM_REQUIRED", "Claim the listing before deciding.");
-  }
-  if (claim.moderator_id !== moderatorId) {
-    throw new ApiError("MODERATION_CLAIMED_BY_OTHER", "Another moderator holds the claim.");
-  }
-  return claim;
-}
-
 function toResult(
   listing: { id: string; status: string; revision: number },
   revision: EditRevisionRow,
@@ -399,42 +431,6 @@ function toResult(
       reviewedAt: review.reviewed_at.toISOString(),
     },
     reactivated,
-  };
-}
-
-/** Sealed seller-editable column set the approval copy writes — and
-    NOTHING else (no lifecycle/publication/payment/promotion columns). */
-async function approvedContentSet(
-  tx: Sql,
-  data: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  const categoryCode = dataString(data, "category");
-  const category = categoryCode === null ? undefined : await findActiveCategoryByCode(categoryCode);
-  if (category === undefined) {
-    throw new ApiError("LISTING_INVALID_CATALOG_SELECTION", "The revision category is no longer valid.");
-  }
-  return {
-    category_id: category.id,
-    brand_id: dataString(data, "brand_id"),
-    model_id: dataString(data, "model_id"),
-    year: dataNumber(data, "year"),
-    price_minor: dataNumber(data, "price_minor"),
-    mileage: dataNumber(data, "mileage"),
-    engine_cc: dataNumber(data, "engine_cc"),
-    fuel_type_id: dataString(data, "fuel_type_id"),
-    transmission_id: dataString(data, "transmission_id"),
-    body_type_id: dataString(data, "body_type_id"),
-    drive_type_id: dataString(data, "drive_type_id"),
-    motorcycle_type_id: dataString(data, "motorcycle_type_id"),
-    color_id: dataString(data, "color_id"),
-    city_id: dataString(data, "city_id"),
-    credit_available: data.credit_available === true,
-    barter_available: data.barter_available === true,
-    no_accident: data.no_accident === true ? true : null,
-    not_repainted: data.not_repainted === true ? true : null,
-    description: dataString(data, "description"),
-    contact_phone_e164: dataString(data, "contact_phone"),
-    seller_name: dataString(data, "seller_name"),
   };
 }
 
@@ -460,6 +456,9 @@ async function decideEdit(
     decision: EditDecision;
     reasonCode: string | null;
     note: string | null;
+    /** O.13 Stage D: which adjustment version the moderator decided —
+        REQUIRED to match when an OPEN adjustment exists. */
+    expectedAdjustmentRevision?: number;
   },
 ): Promise<EditDecisionResultDto> {
   return withTransaction(async (tx) => {
@@ -512,9 +511,42 @@ async function decideEdit(
       );
     }
     const claim = await requireOwnedLiveClaim(tx, listingId, auth.user.id);
+    // O.13 Stage D — adjustment-aware EDIT decisions. Sealed lock
+    // order: listing (held) → edit revision (held) → adjustment. With
+    // NO open adjustment the whole path below is the unchanged O.12
+    // behavior.
+    const openAdjustment = await lockOpenAdjustment(tx, listingId);
+    if (openAdjustment !== undefined) {
+      // the adjustment must address THIS exact moderation pass
+      if (
+        openAdjustment.edit_revision_id !== open.id ||
+        openAdjustment.submitted_edit_revision_no !== open.revision ||
+        openAdjustment.submitted_listing_revision !== listing.revision
+      ) {
+        throw new ApiError(
+          "MODERATION_SUBJECT_CHANGED",
+          "The saved adjustment belongs to a previous moderation pass.",
+          { details: { adjustment_id: openAdjustment.id } },
+        );
+      }
+      if (input.expectedAdjustmentRevision !== openAdjustment.revision) {
+        throw new ApiError(
+          "MODERATION_ADJUSTMENT_CONFLICT",
+          "The adjustment changed since it was reviewed. Reload and re-review.",
+          { details: { current_revision: openAdjustment.revision } },
+        );
+      }
+    } else if (input.expectedAdjustmentRevision !== undefined) {
+      throw new ApiError(
+        "MODERATION_ADJUSTMENT_CONFLICT",
+        "The adjustment no longer exists. Reload and re-review.",
+        { details: { current_revision: null } },
+      );
+    }
 
-    // review row records BOTH counters with their original meanings:
-    // the approved listing revision reviewed against + the edit's own
+    // review row records the counters with their original meanings:
+    // the approved listing revision, the edit's own counter, and (O.13)
+    // the EXACT adjustment version the decision was made over
     const review = await insertReview(tx, {
       listingId,
       moderatorId: auth.user.id,
@@ -524,13 +556,30 @@ async function decideEdit(
       note: input.note,
       editRevisionId: open.id,
       editRevisionNo: open.revision,
+      adjustmentId: openAdjustment?.id ?? null,
+      adjustmentRevision: openAdjustment?.revision ?? null,
     });
 
     let reactivated = false;
     let finalListing = { id: listing.id, status: listing.status, revision: listing.revision };
     let cleanupPaths: string[] = [];
 
-    if (input.decision === "APPROVED") {
+    if (input.decision === "APPROVED" && openAdjustment !== undefined) {
+      // O.13 Stage D: the saved moderator content is the approval
+      // source; the seller revision and staged gallery remain
+      // untouched evidence. Same pure-content semantics as O.12 (no
+      // period/fee/quota/expiry); the seller revision itself still
+      // transitions to APPROVED below.
+      const applied = await applyAdjustmentOnEditApproval(tx, {
+        listing: { id: listing.id, owner_id: listing.owner_id, revision: listing.revision },
+        editRevisionId: open.id,
+        adjustment: openAdjustment,
+        moderatorId: auth.user.id,
+      });
+      // the adjusted apply already emitted its own reference-safe
+      // cleanup intake — the O.12 event below stays linkage-only
+      finalListing = { id: listing.id, status: listing.status, revision: applied.newListingRevision };
+    } else if (input.decision === "APPROVED") {
       // final content re-validation — invalid staged content can never
       // become public even if catalog rules changed since submission
       const settings = await getSubmissionSettings(tx);
@@ -581,6 +630,19 @@ async function decideEdit(
       await clearReactivationRequest(tx, listingId);
     }
 
+    if (input.decision !== "APPROVED" && openAdjustment !== undefined) {
+      // sealed non-apply behavior: correction/reject leave the public
+      // content AND the seller proposal untouched; the adjustment
+      // becomes terminal DISCARDED history (original authorship kept)
+      // and the next moderation pass starts clean
+      await discardAdjustmentOnDecision(tx, {
+        listingId,
+        adjustment: openAdjustment,
+        actorUserId: auth.user.id,
+        decision: input.decision,
+      });
+    }
+
     await insertModerationAudit(tx, {
       actorUserId: auth.user.id,
       action: DECISION_EVENT[input.decision],
@@ -626,37 +688,51 @@ export function approveEditRevision(
   auth: AuthContext,
   listingId: string,
   expectedEditRevision: number,
+  expectedAdjustmentRevision?: number,
 ): Promise<EditDecisionResultDto> {
   return decideEdit(auth, listingId, {
     expectedEditRevision,
     decision: "APPROVED",
     reasonCode: null,
     note: null,
+    expectedAdjustmentRevision,
   });
 }
 
 export function rejectEditRevision(
   auth: AuthContext,
   listingId: string,
-  input: { expectedEditRevision: number; reasonCode: string; note: string | null },
+  input: {
+    expectedEditRevision: number;
+    reasonCode: string;
+    note: string | null;
+    expectedAdjustmentRevision?: number;
+  },
 ): Promise<EditDecisionResultDto> {
   return decideEdit(auth, listingId, {
     expectedEditRevision: input.expectedEditRevision,
     decision: "REJECTED",
     reasonCode: input.reasonCode,
     note: input.note,
+    expectedAdjustmentRevision: input.expectedAdjustmentRevision,
   });
 }
 
 export function requestEditCorrection(
   auth: AuthContext,
   listingId: string,
-  input: { expectedEditRevision: number; reasonCode: string; note: string | null },
+  input: {
+    expectedEditRevision: number;
+    reasonCode: string;
+    note: string | null;
+    expectedAdjustmentRevision?: number;
+  },
 ): Promise<EditDecisionResultDto> {
   return decideEdit(auth, listingId, {
     expectedEditRevision: input.expectedEditRevision,
     decision: "CORRECTION_REQUIRED",
     reasonCode: input.reasonCode,
     note: input.note,
+    expectedAdjustmentRevision: input.expectedAdjustmentRevision,
   });
 }
