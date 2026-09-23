@@ -287,13 +287,11 @@ await promote(seeded.both.id, "BOOST", 3);
 // adjusted correction/reject smoke journeys.
 seeded.pending3 = await insertListing({ status: "PENDING_MODERATION", model: corolla, price: 2050000 });
 seeded.pending4 = await insertListing({ status: "PENDING_MODERATION", model: camry, price: 3150000 });
-// editPending: an ACTIVE listing with a REAL submitted seller edit
-// revision (price 25 000 → 26 500) + staged gallery snapshot — the
-// LISTING_EDIT moderator journey (three-way review, adjustment,
-// adjusted approval) is exercisable out of the box.
-seeded.editPending = await insertListing({ status: "ACTIVE", model: camry, price: 2500000 });
-{
-  const listing = seeded.editPending;
+// Seeds a REAL submitted seller edit revision (price → proposal) with
+// a staged gallery snapshot onto an existing listing — the sealed O.12
+// revision model, so every LISTING_EDIT moderator journey (three-way
+// review, adjustment, adjusted decisions) is exercisable out of the box.
+async function seedEditRevision(listing, proposalPriceMinor) {
   const [snapshot] = await sql`
     select category_id, brand_id, model_id, city_id, year, price_minor, mileage, engine_cc,
            fuel_type_id, transmission_id, body_type_id, drive_type_id, motorcycle_type_id,
@@ -306,7 +304,7 @@ seeded.editPending = await insertListing({ status: "ACTIVE", model: camry, price
     brand_id: snapshot.brand_id,
     model_id: snapshot.model_id,
     year: snapshot.year,
-    price_minor: 2650000, // the seller proposal
+    price_minor: proposalPriceMinor,
     mileage: snapshot.mileage,
     engine_cc: snapshot.engine_cc,
     fuel_type_id: snapshot.fuel_type_id,
@@ -337,6 +335,30 @@ seeded.editPending = await insertListing({ status: "ACTIVE", model: camry, price
     from listing_images where listing_id = ${listing.id}
   `;
 }
+// editPending 1-4: ACTIVE listings with pending seller edits — one per
+// O.13 EDIT smoke journey (adjusted approve / correction / reject and
+// the plain no-adjustment approve).
+seeded.editPending = await insertListing({ status: "ACTIVE", model: camry, price: 2500000 });
+await seedEditRevision(seeded.editPending, 2650000);
+seeded.editPending2 = await insertListing({ status: "ACTIVE", model: corolla, price: 1900000 });
+await seedEditRevision(seeded.editPending2, 1950000);
+seeded.editPending3 = await insertListing({ status: "ACTIVE", model: camry, price: 3050000 });
+await seedEditRevision(seeded.editPending3, 3200000);
+seeded.editPending4 = await insertListing({ status: "ACTIVE", model: corolla, price: 1700000 });
+await seedEditRevision(seeded.editPending4, 1750000);
+// deactEdit: seller-deactivated + reactivation requested + pending
+// edit — the finalizer-gated adjusted-approval journey.
+seeded.deactEdit = await insertListing({ status: "ACTIVE", model: camry, price: 2850000 });
+await sql`
+  update listings set seller_deactivated_at = now() - interval '2 days',
+    seller_reactivation_requested_at = now() - interval '1 hour'
+  where id = ${seeded.deactEdit.id}
+`;
+await seedEditRevision(seeded.deactEdit, 2800000);
+// expiredEdit: EXPIRED listing with a pending edit — adjusted approval
+// must apply content WITHOUT renewing.
+seeded.expiredEdit = await insertListing({ status: "EXPIRED", model: corolla, price: 1550000, startedDaysAgo: 40, expiresOffsetDays: -5, periodStatus: "EXPIRED" });
+await seedEditRevision(seeded.expiredEdit, 1600000);
 
 // EXPIRY DEMO — time already lapsed, durable status still ACTIVE:
 // public visibility must ALREADY exclude it (accepted fail-safe);
