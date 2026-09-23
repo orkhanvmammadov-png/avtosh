@@ -256,6 +256,14 @@ test("LISTING_EDIT: moderator save leaves the seller proposal and the public lis
   await page.goto(`/elan/${fixture.publicId}`);
   await expect(page.getByTestId("detail-price")).toContainText("27 000");
   await expect(page.getByTestId("detail-price")).not.toContainText("26 500");
+
+  // §33 hardening: after the terminal decision no working-state
+  // adjustment controls survive a fresh navigation — history remains
+  await page.goto(`/moderator/elanlar/${fixture.id}`);
+  await expect(page.getByTestId("adjustment-chip")).toHaveCount(0);
+  await expect(page.getByTestId("adjustment-edit")).toHaveCount(0);
+  await expect(page.getByTestId("takeover-card")).toHaveCount(0);
+  await expect(page.getByTestId("adjustment-history")).toContainText("Moderator düzəlişi saxladı");
 });
 
 test("takeover: B inherits A's saved adjustment with attribution and discards it after confirmation (O.13.5B)", async ({ page }, { project }) => {

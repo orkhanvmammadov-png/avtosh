@@ -420,7 +420,6 @@ export const STAFF = {
   images: "Şəkillər",
   primaryTag: "Əsas",
   noImage: "Şəkil yoxdur",
-  specs: "Məlumatlar",
   descriptionTitle: "Təsvir",
   contactField: "Əlaqə nömrəsi",
   logout: "Çıxış",

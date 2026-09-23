@@ -280,6 +280,64 @@ await promote(seeded.boost.id, "BOOST", 7);
 seeded.both = await insertListing({ status: "ACTIVE", category: "MOTORCYCLE", brand: yamaha, model: mt07, price: 990000, mileage: 4000 });
 await promote(seeded.both.id, "PREMIUM", 3);
 await promote(seeded.both.id, "BOOST", 3);
+// O.13 — moderator edit-before-approve UAT coverage.
+// pending1 above is DELIBERATELY legacy-shaped (no seller_name) — it is
+// the standing regression fixture for the Owner-found Stage C defect.
+// pending3/pending4: complete NEW pendings with images for the
+// adjusted correction/reject smoke journeys.
+seeded.pending3 = await insertListing({ status: "PENDING_MODERATION", model: corolla, price: 2050000 });
+seeded.pending4 = await insertListing({ status: "PENDING_MODERATION", model: camry, price: 3150000 });
+// editPending: an ACTIVE listing with a REAL submitted seller edit
+// revision (price 25 000 → 26 500) + staged gallery snapshot — the
+// LISTING_EDIT moderator journey (three-way review, adjustment,
+// adjusted approval) is exercisable out of the box.
+seeded.editPending = await insertListing({ status: "ACTIVE", model: camry, price: 2500000 });
+{
+  const listing = seeded.editPending;
+  const [snapshot] = await sql`
+    select category_id, brand_id, model_id, city_id, year, price_minor, mileage, engine_cc,
+           fuel_type_id, transmission_id, body_type_id, drive_type_id, motorcycle_type_id,
+           color_id, credit_available, barter_available, no_accident, not_repainted,
+           description, contact_phone_e164, seller_name
+    from listings where id = ${listing.id}
+  `;
+  const data = {
+    category: "CAR",
+    brand_id: snapshot.brand_id,
+    model_id: snapshot.model_id,
+    year: snapshot.year,
+    price_minor: 2650000, // the seller proposal
+    mileage: snapshot.mileage,
+    engine_cc: snapshot.engine_cc,
+    fuel_type_id: snapshot.fuel_type_id,
+    transmission_id: snapshot.transmission_id,
+    body_type_id: snapshot.body_type_id,
+    drive_type_id: snapshot.drive_type_id,
+    motorcycle_type_id: snapshot.motorcycle_type_id,
+    color_id: snapshot.color_id,
+    city_id: snapshot.city_id,
+    credit_available: snapshot.credit_available,
+    barter_available: snapshot.barter_available,
+    no_accident: snapshot.no_accident === true ? true : null,
+    not_repainted: snapshot.not_repainted === true ? true : null,
+    description: "UAT satıcı redaktəsi — yenilənmiş təsvir.",
+    contact_phone: snapshot.contact_phone_e164,
+    seller_name: "UAT Seller B",
+    feature_ids: [abs],
+  };
+  const [revision] = await sql`
+    insert into listing_edit_revisions (listing_id, status, data, submitted_at)
+    values (${listing.id}, 'PENDING_MODERATION', ${sql.json(data)}, now() - interval '1 hour')
+    returning id
+  `;
+  await sql`
+    insert into listing_edit_images
+      (edit_revision_id, storage_path, sort_order, is_primary, width, height, mime_type, file_size_bytes)
+    select ${revision.id}, storage_path, sort_order, is_primary, width, height, mime_type, file_size_bytes
+    from listing_images where listing_id = ${listing.id}
+  `;
+}
+
 // EXPIRY DEMO — time already lapsed, durable status still ACTIVE:
 // public visibility must ALREADY exclude it (accepted fail-safe);
 // the real secured expiry job then flips it to EXPIRED.
