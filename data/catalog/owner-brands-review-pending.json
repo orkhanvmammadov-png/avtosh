@@ -1,8 +1,8 @@
 {
-  "title": "Owner brand rows flagged for Product review",
+  "title": "Brand mapping rows with open research QA notes",
   "status": "PRODUCT_REVIEW_PENDING",
   "source_file": "AVTOSH_owner_brand_category_map.json",
-  "note": "These rows carry a review_reason in the owner mapping (status DRAFT_REVIEW). The flags are QA notes, not exclusions: the brands are included in data/catalog/owner-brands.json for local/UAT use. Production import stays blocked while these items are under Product review.",
+  "note": "These rows carry a review_reason: research QA notes added during category mapping (mapping status DRAFT_REVIEW). They are not exclusions — the brands are included in data/catalog/owner-brands.json. Owner UAT PASS covers the displayed brand selections only; it does not resolve these notes, and manufacturer identity and vehicle-form compatibility have not been externally verified. No production import has been authorized or performed.",
   "brands": [
     {
       "source_option_value": "859",

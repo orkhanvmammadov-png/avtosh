@@ -10,9 +10,11 @@
  *     ALL rows (exact names, stable slugs, proposed categories only —
  *     no models, cities or features)
  *   data/catalog/owner-brands-review-pending.json  the review-flagged
- *     rows, verbatim: QA flags under Product review. Flagged brands
- *     are still included in the import file for local/UAT use, but
- *     production import stays blocked while they are under review.
+ *     rows, verbatim: research QA notes recorded during category
+ *     mapping, still open under Product review. Flagged brands are
+ *     included in the import file. The importer accepts this file
+ *     technically; the production gate is authorization — no
+ *     production import has been authorized or performed.
  *
  * Output is byte-deterministic (sorted by name, stable key order), so
  * `--check` can verify the committed files match the source exactly.
@@ -140,16 +142,18 @@ export function generateOwnerBrandFiles(sourceRaw: string): {
   const importFile = `${JSON.stringify({ brands: importBrands }, null, 2)}\n`;
   const reviewFile = `${JSON.stringify(
     {
-      title: "Owner brand rows flagged for Product review",
+      title: "Brand mapping rows with open research QA notes",
       status: "PRODUCT_REVIEW_PENDING",
       source_file: path.basename(SOURCE_PATH),
       note:
-        "These rows carry a review_reason in the owner mapping " +
-        "(status DRAFT_REVIEW). The flags are QA notes, not " +
-        "exclusions: the brands are included in " +
-        "data/catalog/owner-brands.json for local/UAT use. Production " +
-        "import stays blocked while these items are under Product " +
-        "review.",
+        "These rows carry a review_reason: research QA notes added " +
+        "during category mapping (mapping status DRAFT_REVIEW). They " +
+        "are not exclusions — the brands are included in " +
+        "data/catalog/owner-brands.json. Owner UAT PASS covers the " +
+        "displayed brand selections only; it does not resolve these " +
+        "notes, and manufacturer identity and vehicle-form " +
+        "compatibility have not been externally verified. No " +
+        "production import has been authorized or performed.",
       brands: flagged,
     },
     null,
