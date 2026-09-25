@@ -69,3 +69,43 @@ Behavior:
 Run it only against a database you are entitled to change. Production
 imports should first be exercised with `--dry-run` and against
 staging.
+
+## Owner brand catalog
+
+`owner-brands.json` is the owner-supplied brand list (brands and
+brand/category links only — no models), generated deterministically
+from `source/AVTOSH_owner_brand_category_map.json` (status
+DRAFT_REVIEW) by `scripts/catalog/generate-owner-brands.mts`. All
+210 rows are included with their proposed categories; a display name
+whose canonical identity differs from its spelling keeps its stable
+identity slug via the generator's `SLUG_OVERRIDES` (e.g. Mercedes →
+`mercedes-benz`, Ssang Yong → `ssangyong`, iCar → `icaur`, Radar →
+`riddara`, Seres Aito → `aito`).
+
+Rows carrying a `review_reason` are research QA notes added during
+category mapping, not exclusions and not owner-authored flags: they
+are listed verbatim in `owner-brands-review-pending.json` and remain
+under Product review. The owner has passed local UAT for the
+displayed brand selections (PR #42); that does not by itself resolve
+the QA notes, and manufacturer identity and vehicle-form
+compatibility have not been externally verified.
+
+Production gate: the importer accepts this file technically when
+given a `DATABASE_URL` — the gate is authorization, not tooling. No
+production import has been authorized or performed, and none may run
+while the mapping is DRAFT_REVIEW. The production database's existing
+brand identities (UUIDs/slugs) have not been inspected; they must be
+reconciled against this file's slugs before any production import.
+
+Never edit the generated files by hand: change the source mapping,
+re-run the generator, and commit all three together (the unit tests
+fail on any drift).
+
+```bash
+node scripts/catalog/generate-owner-brands.mts          # regenerate
+node scripts/catalog/generate-owner-brands.mts --check  # verify
+```
+
+For local UAT import, use the ephemeral database started by
+`pnpm uat:dev` (see the harness output for its port) — not an
+arbitrary `DATABASE_URL`.
