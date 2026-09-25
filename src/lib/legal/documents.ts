@@ -85,14 +85,19 @@ export function parseLegalMarkdown(source: string, slug: string): LegalBlock[] {
       i += 1;
       continue;
     }
-    if (/^#{3,} /.test(line)) {
-      throw new Error(`${slug}: unsupported heading depth at line ${i + 1}`);
-    }
-    if (line.startsWith("## ")) {
-      blocks.push({ kind: "h2", text: line.slice(3).trim() });
-      i += 1;
-    } else if (line.startsWith("# ")) {
-      blocks.push({ kind: "h1", text: line.slice(2).trim() });
+    if (line.startsWith("#")) {
+      // Every "#" line must resolve here: the paragraph branch below
+      // skips "#" lines, so falling through would loop forever.
+      if (/^#{3,} /.test(line)) {
+        throw new Error(`${slug}: unsupported heading depth at line ${i + 1}`);
+      }
+      if (line.startsWith("## ")) {
+        blocks.push({ kind: "h2", text: line.slice(3).trim() });
+      } else if (line.startsWith("# ")) {
+        blocks.push({ kind: "h1", text: line.slice(2).trim() });
+      } else {
+        throw new Error(`${slug}: malformed heading at line ${i + 1}: ${trimmed.slice(0, 40)}`);
+      }
       i += 1;
     } else if (line.startsWith("|")) {
       const header = parseTableRow(line);
@@ -132,6 +137,11 @@ export function parseLegalMarkdown(source: string, slug: string): LegalBlock[] {
       ) {
         paraLines.push(parseInlines(lines[i].replace(/\s+$/, "")));
         i += 1;
+      }
+      if (paraLines.length === 0) {
+        // Invariant: every iteration consumes input or throws; a line no
+        // branch accepts must fail loudly instead of looping forever.
+        throw new Error(`${slug}: unparseable line ${i + 1}: ${trimmed.slice(0, 40)}`);
       }
       blocks.push({ kind: "paragraph", lines: paraLines });
     }

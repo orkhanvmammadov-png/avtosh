@@ -90,6 +90,16 @@ describe("parseLegalMarkdown guard rails", () => {
     expect(() => parseLegalMarkdown("1. ordered item", "test")).toThrow(/unsupported Markdown construct/);
   });
 
+  it("throws on a malformed heading instead of looping forever", () => {
+    // Regression: "#unspaced" matched no branch and the paragraph loop
+    // consumed zero lines, so the parser spun at the same index.
+    expect(() => parseLegalMarkdown("#unspaced", "test")).toThrow(/malformed heading at line 1/);
+    expect(() => parseLegalMarkdown("Adi bir abzas.\n\n#unspaced", "test")).toThrow(
+      /malformed heading at line 3/,
+    );
+    expect(() => parseLegalMarkdown("##also-unspaced", "test")).toThrow(/malformed heading/);
+  });
+
   it("rejects tables without a delimiter row", () => {
     expect(() => parseLegalMarkdown("| a | b |\n| 1 | 2 |", "test")).toThrow(/no delimiter row/);
   });
