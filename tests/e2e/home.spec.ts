@@ -24,13 +24,15 @@ test.describe("Home", () => {
     const s = seed();
     await page.goto("/");
     await page.getByTestId("home-brand").selectOption(s.toyotaBrandId);
-    await page.getByTestId("home-model").selectOption(s.corollaModelId);
+    await page.getByTestId("home-model-toggle").click();
+    await page.getByTestId("home-model-family-corolla").check();
+    await page.keyboard.press("Escape");
     await page.getByTestId("home-search-submit").click();
     await page.waitForURL(/\/elanlar\?/);
     const url = new URL(page.url());
     expect(url.searchParams.get("category")).toBe("CAR");
     expect(url.searchParams.get("brand_id")).toBe(s.toyotaBrandId);
-    expect(url.searchParams.get("model_id")).toBe(s.corollaModelId);
+    expect(url.searchParams.get("model_ids")).toBe(s.corollaModelId);
     await expect(page.getByTestId("organic-card").first()).toBeVisible();
   });
 

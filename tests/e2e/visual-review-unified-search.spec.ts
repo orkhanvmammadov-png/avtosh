@@ -68,7 +68,9 @@ test.describe("unified search visual review", () => {
       // realistic active-filter state built through the UI (URL-as-state)
       await page.goto("/elanlar?category=CAR");
       await page.getByTestId("home-brand").selectOption(s.toyotaBrandId);
-      await page.getByTestId("home-model").selectOption(s.corollaModelId);
+      await page.getByTestId("home-model-toggle").click();
+      await page.getByTestId("home-model-family-corolla").check();
+      await page.keyboard.press("Escape");
       await page.getByTestId("home-advanced-toggle").click();
       await page.getByTestId("home-adv-year-min").selectOption("2015");
       await page.getByTestId("home-adv-price-min").fill("10000");

@@ -11,7 +11,16 @@ internal identifiers). Design: `../architecture/public-marketplace.md`.
 ## GET /api/v1/listings
 
 Query: `category` (required: `CAR` | `MOTORCYCLE`), `brand_id`,
-`model_id` (requires `brand_id`), `city_id`, `price_min`, `price_max`,
+`model_ids=<uuid>,<uuid>` (model families, ≤20) and
+`model_variant_ids=<uuid>,<uuid>` (Alt models, ≤20) — both require
+`brand_id`, every id is validated against the brand and category
+(variants through their parent family), and together they form ONE OR
+group: a family id matches all its listings (any variant and legacy
+NULL rows), a variant id matches exactly its listings; a variant
+whose family is also selected is normalized away. Legacy singular
+`model_id`/`model_variant_id` stay accepted: the pair means that one
+variant (validated against `model_id` as before), a lone `model_id`
+one family. `city_id`, `price_min`, `price_max`,
 `year_min`, `year_max`, `mileage_max`, `fuel_type_id`,
 `transmission_id`, `body_type_id`, `drive_type_id`,
 `motorcycle_type_id`, `color_id`, `credit=true|false`,

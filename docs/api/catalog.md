@@ -48,15 +48,15 @@ in both CAR and MOTORCYCLE never leaks models across categories.
 { "data": [ { "id": "<uuid>", "brandId": "<uuid>", "name": "Corolla", "slug": "corolla" } ] }
 ```
 
-### GET /api/v1/catalog/variants?category=CAR&brand_id=<uuid>&model_id=<uuid>
+### GET /api/v1/catalog/model-variants?category=CAR&brand_id=<uuid>&model_id=<uuid>
 
 `category`, `brand_id`, `model_id` (all required). Active Alt models
 (variants) of that model family, validated through the full
 category → brand → model chain (`CATALOG_INVALID_MODEL` for a model
 outside the brand/category). An empty array means the family has no
 variants: the Alt model field is hidden and the listing stores NULL.
-A CAR family with at least one active variant requires an Alt model
-at submission; MOTORCYCLE families never require one.
+A family with at least one active variant requires an Alt model at
+submission — in BOTH categories.
 
 ```json
 { "data": [ { "id": "<uuid>", "modelId": "<uuid>", "name": "328", "slug": "328" } ] }

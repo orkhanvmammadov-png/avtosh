@@ -145,6 +145,37 @@ export async function findActiveVariantInModel(
   return rows[0];
 }
 
+/** Point lookups for a bounded id set (search filter validation). */
+export async function listActiveVariantsByIds(
+  variantIds: string[],
+): Promise<ModelVariantRow[]> {
+  if (variantIds.length === 0) return [];
+  const sql = getSql();
+  return sql<ModelVariantRow[]>`
+    select id, model_id, name, slug
+    from model_variants
+    where id = any(${variantIds}::uuid[]) and is_active
+  `;
+}
+
+/** Active models of the brand+category restricted to a bounded id set. */
+export async function listActiveModelsByIds(
+  modelIds: string[],
+  brandId: string,
+  categoryId: string,
+): Promise<ModelRow[]> {
+  if (modelIds.length === 0) return [];
+  const sql = getSql();
+  return sql<ModelRow[]>`
+    select id, brand_id, name, slug
+    from models
+    where id = any(${modelIds}::uuid[])
+      and brand_id = ${brandId}
+      and category_id = ${categoryId}
+      and is_active
+  `;
+}
+
 /** True when the family has at least one active variant. */
 export async function modelHasActiveVariants(modelId: string): Promise<boolean> {
   const sql = getSql();

@@ -210,18 +210,20 @@ test.describe("Search", () => {
     const s = seed();
     await page.goto("/elanlar?category=CAR");
     await page.getByTestId("home-brand").selectOption(s.toyotaBrandId);
-    await page.getByTestId("home-model").selectOption(s.corollaModelId);
+    await page.getByTestId("home-model-toggle").click();
+    await page.getByTestId("home-model-family-corolla").check();
+    await page.keyboard.press("Escape");
     await openPanel(page);
     await page.getByTestId("home-adv-price-max").fill("20000");
     await apply(page);
-    await page.waitForURL(/model_id=/);
+    await page.waitForURL(/model_ids=/);
     const url = new URL(page.url());
     expect(url.searchParams.get("brand_id")).toBe(s.toyotaBrandId);
     expect(url.searchParams.get("price_max")).toBe("2000000"); // 20 000 AZN entered → minor units in the URL/API
     await expect(page.getByTestId("organic-card").first()).toBeVisible();
     // compact controls restored from the applied URL after remount
     await expect(page.getByTestId("home-brand")).toHaveValue(s.toyotaBrandId);
-    await expect(page.getByTestId("home-model")).toHaveValue(s.corollaModelId);
+    await expect(page.getByTestId("home-model-toggle")).toContainText("Corolla");
 
     await page.getByTestId("sort-select").click();
     await page.getByTestId("sort-opt-PRICE_ASC").click();

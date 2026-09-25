@@ -19,6 +19,10 @@ export interface Seed {
   corollaModelId: string;
   yamahaBrandId: string;
   bakuCityId: string;
+  treeFamilyModelId: string;
+  tree100VariantId: string;
+  tree200VariantId: string;
+  treeListings: string[];
 }
 
 export function seed(): Seed {

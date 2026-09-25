@@ -6,7 +6,7 @@ import { searchMarketplace } from "@/services/marketplace";
 import { createTestUserSession } from "./helpers/session";
 import { POST as createListingRoute } from "@/app/api/v1/me/listings/route";
 import { PATCH as patchListingRoute } from "@/app/api/v1/me/listings/[listingId]/route";
-import { GET as variantsRoute } from "@/app/api/v1/catalog/variants/route";
+import { GET as variantsRoute } from "@/app/api/v1/catalog/model-variants/route";
 
 // O.15 Alt model behavior: catalog endpoint, seller patch rules,
 // conditional submission requirement, legacy NULL listings, search
@@ -25,6 +25,7 @@ let motoFamilyId = ""; // MOTORCYCLE family WITH variants
 let variantAId = "";
 let variantBId = "";
 let inactiveVariantId = "";
+let motoVariantId = "";
 let cityId = "";
 
 interface Envelope {
@@ -125,6 +126,7 @@ beforeAll(async () => {
   variantAId = variants.find((v) => v.slug === "mv-328")!.id;
   variantBId = variants.find((v) => v.slug === "mv-330")!.id;
   inactiveVariantId = variants.find((v) => v.slug === "mv-316-old")!.id;
+  motoVariantId = variants.find((v) => v.slug === "mv-s-1000-rr")!.id;
   const [city] = await sql<{ id: string }[]>`
     insert into cities (name_az, slug) values ('MvBakı', 'mv-baki') returning id
   `;
@@ -140,7 +142,7 @@ describe("GET /catalog/variants", () => {
     const { status, body } = await api(
       variantsRoute,
       "GET",
-      `http://localhost/api/v1/catalog/variants?category=CAR&brand_id=${brandId}&model_id=${familyId}`,
+      `http://localhost/api/v1/catalog/model-variants?category=CAR&brand_id=${brandId}&model_id=${familyId}`,
     );
     expect(status).toBe(200);
     const rows = body.data as { id: string; name: string }[];
@@ -151,7 +153,7 @@ describe("GET /catalog/variants", () => {
     const { status, body } = await api(
       variantsRoute,
       "GET",
-      `http://localhost/api/v1/catalog/variants?category=CAR&brand_id=${brandId}&model_id=${plainModelId}`,
+      `http://localhost/api/v1/catalog/model-variants?category=CAR&brand_id=${brandId}&model_id=${plainModelId}`,
     );
     expect(status).toBe(200);
     expect(body.data).toEqual([]);
@@ -161,7 +163,7 @@ describe("GET /catalog/variants", () => {
     const { status, body } = await api(
       variantsRoute,
       "GET",
-      `http://localhost/api/v1/catalog/variants?category=CAR&brand_id=${brandId}&model_id=${motoFamilyId}`,
+      `http://localhost/api/v1/catalog/model-variants?category=CAR&brand_id=${brandId}&model_id=${motoFamilyId}`,
     );
     expect(status).toBe(400);
     expect(body.error?.code).toBe("CATALOG_INVALID_MODEL");
@@ -252,7 +254,7 @@ describe("conditional Alt model requirement", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("does not require one for a MOTORCYCLE family with variants", async () => {
+  it("requires one for a MOTORCYCLE family with active variants too", async () => {
     await expect(
       assertContentSubmittable(
         submittableData({
@@ -261,7 +263,7 @@ describe("conditional Alt model requirement", () => {
           model_id: motoFamilyId,
         }),
       ),
-    ).resolves.toBeUndefined();
+    ).rejects.toMatchObject({ code: "LISTING_INCOMPLETE" });
   });
 });
 
@@ -310,6 +312,56 @@ describe("search filtering by Alt model", () => {
     expect(ids).toContain(withVariantA);
     expect(ids).not.toContain(withVariantB);
     expect(ids).not.toContain(withoutVariant);
+  });
+
+  it("multi-select: families OR variants in one group; family includes legacy NULL rows", async () => {
+    // second family with its own listing for cross-family OR
+    const sql = getSql();
+    const [otherRow] = await sql<{ public_id: string }[]>`
+      insert into listings (owner_id, category_id, brand_id, model_id, city_id, year,
+        price_minor, mileage, description, contact_phone_e164, status, published_at, current_expires_at)
+      values (${seller.userId}, ${carCategoryId}, ${brandId}, ${plainModelId}, ${cityId}, 2022,
+        3000000, 5000, 'Mv Digər', '+994501234567', 'ACTIVE', now(), now() + interval '10 days')
+      returning public_id::text as public_id
+    `;
+    const q = (extra: Record<string, unknown>) =>
+      searchMarketplace({ category: "CAR", sort: "NEWEST", brand_id: brandId, ...extra } as Parameters<typeof searchMarketplace>[0]);
+
+    // family(plain) OR variant(A of the other family)
+    const or = await q({ model_ids: [plainModelId], model_variant_ids: [variantAId] });
+    const orIds = or.items.map((i) => i.publicId);
+    expect(orIds).toEqual(expect.arrayContaining([otherRow.public_id, withVariantA]));
+    expect(orIds).not.toContain(withVariantB);
+    expect(orIds).not.toContain(withoutVariant);
+
+    // family selection alone includes every listing of the family (NULL too)
+    const fam = await q({ model_ids: [familyId] });
+    expect(fam.items.map((i) => i.publicId)).toEqual(
+      expect.arrayContaining([withVariantA, withVariantB, withoutVariant]),
+    );
+
+    // normalization: a variant of an already-selected family is absorbed
+    const normalized = await q({ model_ids: [familyId], model_variant_ids: [variantAId] });
+    expect(normalized.items.map((i) => i.publicId)).toEqual(
+      expect.arrayContaining([withVariantA, withVariantB, withoutVariant]),
+    );
+  });
+
+  it("rejects mixed-brand and foreign ids in multi-select", async () => {
+    const q = (extra: Record<string, unknown>) =>
+      searchMarketplace({ category: "CAR", sort: "NEWEST", brand_id: brandId, ...extra } as Parameters<typeof searchMarketplace>[0]);
+    // a MOTORCYCLE-brand family id under a CAR brand query
+    await expect(q({ model_ids: [motoFamilyId] })).rejects.toMatchObject({
+      code: "CATALOG_INVALID_BRAND",
+    });
+    // a variant whose parent family belongs to another brand/category
+    await expect(q({ model_variant_ids: [motoVariantId] })).rejects.toMatchObject({
+      code: "CATALOG_INVALID_BRAND",
+    });
+    // model selections without a brand
+    await expect(
+      searchMarketplace({ category: "CAR", sort: "NEWEST", model_ids: [familyId] } as Parameters<typeof searchMarketplace>[0]),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
   });
 
   it("rejects a variant filter without a model and a variant of another model", async () => {

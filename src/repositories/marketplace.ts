@@ -29,8 +29,11 @@ function promotionValid(sql: Sql): Fragment {
 export interface SearchFilters {
   categoryId: string;
   brandId?: string;
-  modelId?: string;
-  modelVariantId?: string;
+  /** Model family + Alt model multi-select, one OR group: a family id
+      matches every listing of the family (any variant and legacy NULL),
+      a variant id matches exactly its listings. */
+  modelIds?: string[];
+  modelVariantIds?: string[];
   cityId?: string;
   priceMin?: number;
   priceMax?: number;
@@ -87,9 +90,17 @@ export interface SearchCursor {
 function filterFragment(sql: Sql, f: SearchFilters): Fragment {
   const parts: Fragment[] = [sql`l.category_id = ${f.categoryId}`];
   if (f.brandId !== undefined) parts.push(sql`l.brand_id = ${f.brandId}`);
-  if (f.modelId !== undefined) parts.push(sql`l.model_id = ${f.modelId}`);
-  if (f.modelVariantId !== undefined)
-    parts.push(sql`l.model_variant_id = ${f.modelVariantId}`);
+  const families = f.modelIds ?? [];
+  const variants = f.modelVariantIds ?? [];
+  if (families.length > 0 && variants.length > 0) {
+    parts.push(
+      sql`(l.model_id = any(${families}::uuid[]) or l.model_variant_id = any(${variants}::uuid[]))`,
+    );
+  } else if (families.length > 0) {
+    parts.push(sql`l.model_id = any(${families}::uuid[])`);
+  } else if (variants.length > 0) {
+    parts.push(sql`l.model_variant_id = any(${variants}::uuid[])`);
+  }
   if (f.cityId !== undefined) parts.push(sql`l.city_id = ${f.cityId}`);
   if (f.priceMin !== undefined) parts.push(sql`l.price_minor >= ${f.priceMin}`);
   if (f.priceMax !== undefined) parts.push(sql`l.price_minor <= ${f.priceMax}`);

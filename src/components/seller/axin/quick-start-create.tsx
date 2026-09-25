@@ -9,6 +9,7 @@ import { publicFetch } from "@/lib/marketplace/public-api";
 import { createListing, patchListing } from "@/lib/seller/owner-api";
 import { SellerListboxField } from "@/components/seller/listbox-field";
 import { TypeaheadField, type TypeaheadItem } from "@/components/seller/axin/typeahead-field";
+import { ModelPathField } from "@/components/seller/axin/model-path-field";
 
 /**
  * O.9 AXIN Quick Start (flow.md): the navy 30-second entry —
@@ -29,13 +30,13 @@ export function QuickStartCreate({
   const [brandId, setBrandId] = useState<string | null>(null);
   const [modelId, setModelId] = useState<string | null>(null);
   const [variantId, setVariantId] = useState<string | null>(null);
+  const [variantName, setVariantName] = useState<string | null>(null);
   const [year, setYear] = useState<number | null>(null);
   // Loaded lists are keyed by their request inputs so "loading" is
   // DERIVED (key mismatch), never set synchronously inside effects
   // (React Compiler rule).
   const [brandsFor, setBrandsFor] = useState<{ key: string; items: TypeaheadItem[] } | null>(null);
   const [modelsFor, setModelsFor] = useState<{ key: string; items: TypeaheadItem[] } | null>(null);
-  const [variantsFor, setVariantsFor] = useState<{ key: string; items: TypeaheadItem[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
 
@@ -71,29 +72,9 @@ export function QuickStartCreate({
     };
   }, [category, brandId, modelKey]);
 
-  const variantKey = brandId === null || modelId === null ? null : `${category}:${brandId}:${modelId}`;
-  useEffect(() => {
-    if (variantKey === null || brandId === null || modelId === null) return;
-    let cancelled = false;
-    void publicFetch<TypeaheadItem[]>(
-      `/api/v1/catalog/variants?category=${encodeURIComponent(category)}&brand_id=${brandId}&model_id=${modelId}`,
-    )
-      .then((r) => {
-        if (!cancelled) setVariantsFor({ key: variantKey, items: r.data });
-      })
-      .catch(() => {
-        if (!cancelled) setVariantsFor({ key: variantKey, items: [] });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [category, brandId, modelId, variantKey]);
-
   const brands = brandsFor?.key === category ? brandsFor.items : [];
   const brandsLoading = brandsFor?.key !== category;
   const models = modelKey !== null && modelsFor?.key === modelKey ? modelsFor.items : [];
-  const variants = variantKey !== null && variantsFor?.key === variantKey ? variantsFor.items : [];
-  const variantsLoading = variantKey !== null && variantsFor?.key !== variantKey;
   const modelsLoading = modelKey !== null && modelsFor?.key !== modelKey;
 
   const yearOptions = useMemo(() => {
@@ -104,12 +85,9 @@ export function QuickStartCreate({
     });
   }, []);
 
-  const complete =
-    brandId !== null &&
-    modelId !== null &&
-    year !== null &&
-    // Owner rule: a CAR family with active Alt models requires one.
-    (category !== "CAR" || variantsLoading || variants.length === 0 || variantId !== null);
+  // The hierarchical model field always commits a complete selection
+  // (family alone only when it has zero active variants).
+  const complete = brandId !== null && modelId !== null && year !== null;
 
   async function start() {
     if (busy || !complete) return;
@@ -153,6 +131,7 @@ export function QuickStartCreate({
                   setBrandId(null);
                   setModelId(null);
                   setVariantId(null);
+                  setVariantName(null);
                 }}
                 className={`inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-control border text-[13px] font-semibold transition-colors duration-150 ${
                   selected
@@ -178,31 +157,27 @@ export function QuickStartCreate({
             setBrandId(id);
             setModelId(null); // stale model never survives a brand change
             setVariantId(null);
+            setVariantName(null);
           }}
         />
-        <TypeaheadField
+        <ModelPathField
           id="quick-start-model"
           label={SELLER.model}
-          value={modelId}
-          items={models}
+          category={category}
+          brandId={brandId}
+          families={models}
+          valueModelId={modelId}
+          valueVariantId={variantId}
+          variantNames={(id) => (id !== null && id === variantId ? variantName : null)}
           disabled={brandId === null}
           disabledHint={SELLER.brandFirstHint}
           loading={modelsLoading}
-          onChange={(id) => {
-            setModelId(id);
-            setVariantId(null); // stale Alt model never survives a model change
+          onSelect={(nextModelId, nextVariantId, nextVariantName) => {
+            setModelId(nextModelId);
+            setVariantId(nextVariantId);
+            setVariantName(nextVariantName);
           }}
         />
-        {modelId !== null && (variantsLoading || variants.length > 0) ? (
-          <TypeaheadField
-            id="quick-start-model-variant"
-            label={SELLER.modelVariant}
-            value={variantId}
-            items={variants}
-            loading={variantsLoading}
-            onChange={setVariantId}
-          />
-        ) : null}
         <div className="desk:col-span-2 [&_button]:bg-raised">
           <SellerListboxField
             id="quick-start-year"

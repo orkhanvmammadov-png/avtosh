@@ -1961,6 +1961,14 @@
       "sort_order": 0
     },
     {
+      "brand_slug": "suzuki",
+      "category": "MOTORCYCLE",
+      "name": "Amico 250",
+      "slug": "amico-250",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "brand_slug": "chery",
       "category": "CAR",
       "name": "Amulet (A15)",
@@ -9609,6 +9617,14 @@
       "sort_order": 0
     },
     {
+      "brand_slug": "dayun",
+      "category": "CAR",
+      "name": "Rehigh H8",
+      "slug": "rehigh-h8",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "brand_slug": "jeep",
       "category": "CAR",
       "name": "Renegade",
@@ -11657,6 +11673,14 @@
       "sort_order": 0
     },
     {
+      "brand_slug": "honda",
+      "category": "MOTORCYCLE",
+      "name": "Today",
+      "slug": "today",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "brand_slug": "seat",
       "category": "CAR",
       "name": "Toledo",
@@ -13057,10 +13081,26 @@
       "sort_order": 0
     },
     {
+      "brand_slug": "dayun",
+      "category": "MOTORCYCLE",
+      "name": "Yuehu",
+      "slug": "yuehu",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "brand_slug": "gmc",
       "category": "CAR",
       "name": "Yukon",
       "slug": "yukon",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "brand_slug": "jonway",
+      "category": "MOTORCYCLE",
+      "name": "YY800-12",
+      "slug": "yy800-12",
       "is_active": true,
       "sort_order": 0
     },

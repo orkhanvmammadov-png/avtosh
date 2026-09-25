@@ -13,11 +13,12 @@ import { CATEGORY_LABELS, UI } from "@/lib/marketplace/labels";
 import {
   filtersFromSearchParams,
   filtersToQueryString,
+  idsFromCsv,
   searchHref,
   visibleFilterGroups,
   type SearchFilterState,
 } from "@/lib/marketplace/search-params";
-import { getBrands, getCategories, getCities, getFeatures, getModels, getModelVariants, getReferenceOptions } from "@/services/catalog";
+import { getBrands, getCategories, getCities, getFeatures, getModels, getModelVariantsByIds, getReferenceOptions } from "@/services/catalog";
 import { loadAdvancedCatalog } from "@/services/advanced-catalog";
 import { LISTING_YEAR_MIN, listingYearMax } from "@/lib/config/marketplace";
 import { searchMarketplace, type SearchResultDto } from "@/services/marketplace";
@@ -47,8 +48,10 @@ async function loadCatalog(state: SearchFilterState): Promise<FilterCatalog> {
   visibleFilterGroups(category).forEach((g, i) => { options[g] = groups[i]; });
   const models = state.brand_id ? await getModels(category, state.brand_id).catch(() => []) : [];
   const modelVariants =
-    state.brand_id && state.model_id
-      ? await getModelVariants(category, state.brand_id, state.model_id).catch(() => [])
+    state.brand_id !== undefined
+      ? await getModelVariantsByIds(category, state.brand_id, idsFromCsv(state.model_variant_ids)).catch(
+          () => [],
+        )
       : [];
   const yearMax = listingYearMax();
   const years = Array.from({ length: yearMax - LISTING_YEAR_MIN + 1 }, (_, i) => yearMax - i);

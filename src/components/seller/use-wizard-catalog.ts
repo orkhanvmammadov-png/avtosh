@@ -95,7 +95,7 @@ export function useWizardCatalog(
       brandId === null || modelId === null
         ? Promise.resolve<CatalogItem[]>([])
         : list(
-            `/api/v1/catalog/variants?category=${encodeURIComponent(category)}&brand_id=${brandId}&model_id=${modelId}`,
+            `/api/v1/catalog/model-variants?category=${encodeURIComponent(category)}&brand_id=${brandId}&model_id=${modelId}`,
           );
     void fetchVariants.then((r) => {
       if (!cancelled) setVariants(r);

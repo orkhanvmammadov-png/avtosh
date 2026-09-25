@@ -7132,12 +7132,12 @@
       "label": "Today",
       "brand_name": "Honda",
       "brand_slug": "honda",
-      "role": "excluded",
-      "category": null,
-      "category_basis": "UNRESOLVED",
-      "model_slug": null,
+      "role": "family",
+      "category": "MOTORCYCLE",
+      "category_basis": "PROVISIONAL_CATEGORY",
+      "model_slug": "today",
       "variant_slug": null,
-      "note": "Honda 'Today' names both a kei car and a scooter; the source row gives no category signal"
+      "note": "PROVISIONAL (owner-directed inclusion, pending Product confirmation): Honda 'Today' names both a kei car and a scooter; the 50cc scooter is the common local import"
     },
     {
       "line": 58,
@@ -26316,12 +26316,12 @@
       "label": "Yuehu",
       "brand_name": "Dayun",
       "brand_slug": "dayun",
-      "role": "excluded",
-      "category": null,
-      "category_basis": "UNRESOLVED",
-      "model_slug": null,
+      "role": "family",
+      "category": "MOTORCYCLE",
+      "category_basis": "PROVISIONAL_CATEGORY",
+      "model_slug": "yuehu",
       "variant_slug": null,
-      "note": "Dayun 'Yuehu' is likely an electric two-wheeler but the identity is unverified"
+      "note": "PROVISIONAL (owner-directed inclusion, pending Product confirmation): Dayun 'Yuehu' is most consistent with the electric two-wheeler range"
     },
     {
       "line": 400,
@@ -29276,12 +29276,12 @@
       "label": "Rehigh H8",
       "brand_name": "Dayun",
       "brand_slug": "dayun",
-      "role": "excluded",
-      "category": null,
-      "category_basis": "UNRESOLVED",
-      "model_slug": null,
+      "role": "family",
+      "category": "CAR",
+      "category_basis": "PROVISIONAL_CATEGORY",
+      "model_slug": "rehigh-h8",
       "variant_slug": null,
-      "note": "Dayun 'Rehigh H8' is likely the EV car line but the identity is unverified"
+      "note": "PROVISIONAL (owner-directed inclusion, pending Product confirmation): Dayun 'Rehigh H8' is most consistent with the Dayun EV car line"
     },
     {
       "line": 1649,
@@ -34764,12 +34764,12 @@
       "label": "YY800-12",
       "brand_name": "Jonway",
       "brand_slug": "jonway",
-      "role": "excluded",
-      "category": null,
-      "category_basis": "UNRESOLVED",
-      "model_slug": null,
+      "role": "family",
+      "category": "MOTORCYCLE",
+      "category_basis": "PROVISIONAL_CATEGORY",
+      "model_slug": "yy800-12",
       "variant_slug": null,
-      "note": "Jonway 'YY800-12' does not match the documented YY scooter displacements; category unverified"
+      "note": "PROVISIONAL (owner-directed inclusion, pending Product confirmation): Jonway 'YY800-12' follows the YY scooter naming even though the displacement is undocumented"
     },
     {
       "line": 2140,
@@ -35052,12 +35052,12 @@
       "label": "Amico 250",
       "brand_name": "Suzuki",
       "brand_slug": "suzuki",
-      "role": "excluded",
-      "category": null,
-      "category_basis": "UNRESOLVED",
-      "model_slug": null,
+      "role": "family",
+      "category": "MOTORCYCLE",
+      "category_basis": "PROVISIONAL_CATEGORY",
+      "model_slug": "amico-250",
       "variant_slug": null,
-      "note": "Suzuki 'Amico 250' matches no known Suzuki car or motorcycle line; category unverified"
+      "note": "PROVISIONAL (owner-directed inclusion, pending Product confirmation): 'Amico 250' matches no documented Suzuki line; the 250 displacement points at a motorcycle"
     },
     {
       "line": 1535,

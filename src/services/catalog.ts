@@ -9,6 +9,8 @@ import {
   listActiveFeatures,
   listActiveModelVariants,
   listActiveModels,
+  listActiveModelsByIds,
+  listActiveVariantsByIds,
   listActiveReferenceOptions,
   referenceGroupExists,
   type CategoryRow,
@@ -149,6 +151,46 @@ export async function getModelVariants(
     );
   }
   const rows = await listActiveModelVariants(modelId);
+  return rows.map((row) => ({
+    id: row.id,
+    modelId: row.model_id,
+    name: row.name,
+    slug: row.slug,
+  }));
+}
+
+/**
+ * Validated variant rows for a bounded id set (search restore/chips):
+ * every id must be an active variant whose family belongs to the
+ * brand and category, otherwise a typed 400.
+ */
+export async function getModelVariantsByIds(
+  categoryCode: string,
+  brandId: string,
+  variantIds: string[],
+): Promise<ModelVariantDto[]> {
+  if (variantIds.length === 0) return [];
+  const category = await resolveActiveCategory(categoryCode);
+  const brand = await findActiveBrandInCategory(brandId, category.id);
+  if (brand === undefined) {
+    throw new ApiError(
+      "CATALOG_INVALID_BRAND",
+      "Unknown, inactive, or not available in the requested category.",
+    );
+  }
+  const unique = [...new Set(variantIds)];
+  const rows = await listActiveVariantsByIds(unique);
+  const parents = await listActiveModelsByIds(
+    [...new Set(rows.map((row) => row.model_id))],
+    brandId,
+    category.id,
+  );
+  if (rows.length !== unique.length || parents.length !== new Set(rows.map((r) => r.model_id)).size) {
+    throw new ApiError(
+      "CATALOG_INVALID_MODEL",
+      "Alt model is unknown, inactive, or not available for the requested brand.",
+    );
+  }
   return rows.map((row) => ({
     id: row.id,
     modelId: row.model_id,

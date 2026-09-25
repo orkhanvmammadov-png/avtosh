@@ -7,6 +7,7 @@ import { aznInputToMinor, minorToAznInput } from "@/lib/format";
 import { CATEGORY_LABELS, GROUP_LABELS, UI } from "@/lib/marketplace/labels";
 import { publicFetch } from "@/lib/marketplace/public-api";
 import { engineCcOptions } from "@/lib/marketplace/engine-options";
+import { ModelTreeSelect, type ModelTreeSelection } from "@/components/marketplace/model-tree-select";
 import { MultiSelectField } from "@/components/marketplace/multi-select";
 import {
   csvFromIds,
@@ -267,10 +268,12 @@ export function HomeSearch({
   const [category, setCategory] = useState(init.category ?? categories[0]?.code ?? "CAR");
   const [brands, setBrands] = useState<BrandDto[]>(initialBrands);
   const [models, setModels] = useState<ModelDto[]>(initialModels ?? []);
-  const [variants, setVariants] = useState<ModelVariantDto[]>(initialVariants ?? []);
+  const [modelSelection, setModelSelection] = useState<ModelTreeSelection>({
+    familyIds: idsFromCsv(init.model_ids),
+    variants: initialVariants ?? [],
+  });
   const [brandId, setBrandId] = useState(init.brand_id ?? "");
-  const [modelId, setModelId] = useState(init.model_id ?? "");
-  const [variantId, setVariantId] = useState(init.model_variant_id ?? "");
+
   const [loadingBrands, setLoadingBrands] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [priceMin, setPriceMin] = useState(init.price_min !== undefined ? minorToAznInput(init.price_min) : "");
@@ -301,10 +304,8 @@ export function HomeSearch({
   function selectCategory(code: string) {
     setCategory(code);
     setBrandId("");
-    setModelId("");
-    setVariantId("");
+    setModelSelection({ familyIds: [], variants: [] });
     setModels([]);
-    setVariants([]);
     setBrands([]);
     setLoadingBrands(true);
     void loadBrands(code);
@@ -312,31 +313,14 @@ export function HomeSearch({
 
   async function selectBrand(nextBrandId: string) {
     setBrandId(nextBrandId);
-    setModelId("");
-    setVariantId("");
+    setModelSelection({ familyIds: [], variants: [] });
     setModels([]);
-    setVariants([]);
     if (nextBrandId === "") return;
     try {
       const r = await publicFetch<ModelDto[]>(`/api/v1/catalog/models?category=${encodeURIComponent(category)}&brand_id=${encodeURIComponent(nextBrandId)}`);
       setModels(r.data);
     } catch {
       setModels([]);
-    }
-  }
-
-  async function selectModel(nextModelId: string) {
-    setModelId(nextModelId);
-    setVariantId("");
-    setVariants([]);
-    if (nextModelId === "" || brandId === "") return;
-    try {
-      const r = await publicFetch<ModelVariantDto[]>(
-        `/api/v1/catalog/variants?category=${encodeURIComponent(category)}&brand_id=${encodeURIComponent(brandId)}&model_id=${encodeURIComponent(nextModelId)}`,
-      );
-      setVariants(r.data);
-    } catch {
-      setVariants([]);
     }
   }
 
@@ -348,8 +332,12 @@ export function HomeSearch({
     const next: SearchFilterState = { category };
     if (mode === "results" && init.sort !== undefined) next.sort = init.sort;
     if (brandId !== "") next.brand_id = brandId;
-    if (modelId !== "") next.model_id = modelId;
-    if (modelId !== "" && variantId !== "") next.model_variant_id = variantId;
+    if (brandId !== "" && modelSelection.familyIds.length > 0) {
+      next.model_ids = csvFromIds(modelSelection.familyIds);
+    }
+    if (brandId !== "" && modelSelection.variants.length > 0) {
+      next.model_variant_ids = csvFromIds(modelSelection.variants.map((v) => v.id));
+    }
     const data = new FormData(event.currentTarget);
     const scalar = ["city_id", "year_min", "year_max", "engine_cc_min", "engine_cc_max",
       "body_type_id", "drive_type_id", "motorcycle_type_id"] as const;
@@ -418,10 +406,8 @@ export function HomeSearch({
   function clearAll() {
     formRef.current?.reset();
     setBrandId("");
-    setModelId("");
-    setVariantId("");
+    setModelSelection({ familyIds: [], variants: [] });
     setModels([]);
-    setVariants([]);
     setPriceMin("");
     setPriceMax("");
     setMileage("");
@@ -497,22 +483,16 @@ export function HomeSearch({
               {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </label>
-          <label className="block">
-            <FieldLabel>{UI.modelLabel}</FieldLabel>
-            <select className={`${control} appearance-none pr-8 min-h-12`} value={modelId} onChange={(e) => void selectModel(e.target.value)} disabled={brandId === ""} data-testid="home-model">
-              <option value="">{UI.any}</option>
-              {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
-          </label>
-          {modelId !== "" && variants.length > 0 ? (
-            <label className="block md:col-span-1">
-              <FieldLabel>{UI.modelVariantLabel}</FieldLabel>
-              <select className={`${control} appearance-none pr-8 min-h-12`} value={variantId} onChange={(e) => setVariantId(e.target.value)} data-testid="home-model-variant">
-                <option value="">{UI.any}</option>
-                {variants.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-              </select>
-            </label>
-          ) : null}
+          <ModelTreeSelect
+            label={UI.modelLabel}
+            category={category}
+            brandId={brandId}
+            families={models}
+            selection={modelSelection}
+            onChange={setModelSelection}
+            disabled={brandId === ""}
+            testid="home-model"
+          />
           <label className="block" key={`city-${clearCount}`}>
             <FieldLabel>{UI.city}</FieldLabel>
             <select name="city_id" defaultValue={restored(init.city_id)} className={`${control} appearance-none pr-8 min-h-12`} data-testid="home-adv-city">

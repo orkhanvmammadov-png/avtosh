@@ -8,7 +8,7 @@ import {
 import { IMPORT_PATH as BRANDS_PATH } from "../../scripts/catalog/generate-owner-brands.mts";
 import { MODELS_PATH } from "../../scripts/catalog/generate-owner-models.mts";
 
-// The COMPLETE owner set (210 brands + 1653 model families + 694
+// The COMPLETE owner set (210 brands + 1658 model families + 694
 // variants) is dry-run as ONE import against the live schema: every
 // row must resolve and be writable, and nothing may persist (the
 // shared integration database has non-idempotent fixtures on real
@@ -37,7 +37,7 @@ describe("owner model catalog file against the real schema", () => {
     expect(summary.dryRun).toBe(true);
     expect(summary.brands).toBe(210);
     expect(summary.brandCategoryLinks).toBe(222);
-    expect(summary.models).toBe(1653);
+    expect(summary.models).toBe(1658);
     expect(summary.modelVariants).toBe(694);
     const rows = await sql`select 1 from brands where slug = 'abarth'`;
     expect(rows.length).toBe(0); // nothing persisted

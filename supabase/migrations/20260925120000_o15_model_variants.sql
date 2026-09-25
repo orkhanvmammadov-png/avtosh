@@ -4,8 +4,9 @@
 -- model inside that family. Families without variants simply have no
 -- rows here. listings.model_variant_id is NULLABLE: legacy listings
 -- and zero-variant families store NULL, and the application enforces
--- the conditional requirement (CAR family with active variants =>
--- variant required) — the schema only guarantees integrity.
+-- the conditional requirement (a family with active variants =>
+-- variant required, both categories) — the schema only guarantees
+-- integrity.
 
 create table model_variants (
   id uuid primary key default gen_random_uuid(),

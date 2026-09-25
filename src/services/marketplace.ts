@@ -9,8 +9,9 @@ import {
   findActiveBrandInCategory,
   findActiveCategoryByCode,
   findActiveCityById,
-  findActiveModelInBrandCategory,
   findActiveVariantInModel,
+  listActiveModelsByIds,
+  listActiveVariantsByIds,
   findActiveReferenceOptionForCategory,
   filterActiveFeatureIdsForCategory,
 } from "@/repositories/catalog";
@@ -254,28 +255,54 @@ async function resolveFilters(query: SearchQuery): Promise<SearchFilters> {
     }
     filters.brandId = query.brand_id;
   }
-  if (query.model_id !== undefined) {
-    if (filters.brandId === undefined) {
-      throw new ApiError("VALIDATION_ERROR", "model_id requires brand_id.");
+  // Model family / Alt model multi-select (one OR group). Legacy
+  // singular params stay accepted: model_id+model_variant_id as a PAIR
+  // meant "that variant only" (with the original parent-model check),
+  // a lone model_id is a one-family selection.
+  {
+    const familyIds = new Set<string>(query.model_ids ?? []);
+    const variantIds = new Set<string>(query.model_variant_ids ?? []);
+    if (query.model_variant_id !== undefined) {
+      if (query.model_id === undefined) {
+        throw new ApiError("VALIDATION_ERROR", "model_variant_id requires model_id.");
+      }
+      const variant = await findActiveVariantInModel(query.model_variant_id, query.model_id);
+      if (variant === undefined) {
+        throw new ApiError("CATALOG_INVALID_BRAND", "Alt model does not belong to the model.");
+      }
+      variantIds.add(query.model_variant_id);
+    } else if (query.model_id !== undefined) {
+      familyIds.add(query.model_id);
     }
-    const model = await findActiveModelInBrandCategory(query.model_id, filters.brandId, category.id);
-    if (model === undefined) {
-      throw new ApiError("CATALOG_INVALID_BRAND", "Model does not belong to the brand and category.");
+    if (familyIds.size > 0 || variantIds.size > 0) {
+      if (filters.brandId === undefined) {
+        throw new ApiError("VALIDATION_ERROR", "Model selections require brand_id.");
+      }
+      // Every selected family must be an active model of the brand and
+      // category — a foreign or inactive id rejects the whole query.
+      const families = await listActiveModelsByIds([...familyIds], filters.brandId, category.id);
+      if (families.length !== familyIds.size) {
+        throw new ApiError("CATALOG_INVALID_BRAND", "Model does not belong to the brand and category.");
+      }
+      // Every selected variant must exist, be active, and its parent
+      // family must itself pass the same brand/category check.
+      const variants = await listActiveVariantsByIds([...variantIds]);
+      if (variants.length !== variantIds.size) {
+        throw new ApiError("CATALOG_INVALID_BRAND", "Alt model is unknown or inactive.");
+      }
+      const parentIds = [...new Set(variants.map((v) => v.model_id))];
+      const parents = await listActiveModelsByIds(parentIds, filters.brandId, category.id);
+      if (parents.length !== parentIds.length) {
+        throw new ApiError("CATALOG_INVALID_BRAND", "Alt model does not belong to the brand and category.");
+      }
+      // Normalize: a variant whose whole family is selected is
+      // redundant — the family already matches all its listings.
+      const effectiveVariants = variants.filter((v) => !familyIds.has(v.model_id));
+      if (familyIds.size > 0) filters.modelIds = [...familyIds];
+      if (effectiveVariants.length > 0) {
+        filters.modelVariantIds = effectiveVariants.map((v) => v.id);
+      }
     }
-    filters.modelId = query.model_id;
-  }
-  if (query.model_variant_id !== undefined) {
-    if (filters.modelId === undefined) {
-      throw new ApiError("VALIDATION_ERROR", "model_variant_id requires model_id.");
-    }
-    const variant = await findActiveVariantInModel(query.model_variant_id, filters.modelId);
-    if (variant === undefined) {
-      throw new ApiError(
-        "CATALOG_INVALID_BRAND",
-        "Alt model does not belong to the model.",
-      );
-    }
-    filters.modelVariantId = query.model_variant_id;
   }
   if (query.city_id !== undefined) {
     if ((await findActiveCityById(query.city_id)) === undefined) {

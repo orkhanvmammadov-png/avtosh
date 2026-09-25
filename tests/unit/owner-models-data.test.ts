@@ -34,16 +34,16 @@ describe("owner model catalog data", () => {
     expect(readFileSync(PROVENANCE_PATH, "utf8")).toBe(generated.provenanceFile);
   });
 
-  it("preserves every source row: 2352 options → 1653 families + 694 variants + 5 excluded", () => {
+  it("preserves every source row: 2352 options → 1658 families + 694 variants, none excluded", () => {
     const rows = parseModelSource(sourceRaw);
     expect(rows).toHaveLength(2352);
     expect(provenance).toHaveLength(2352);
     const roles = new Map<string, number>();
     for (const p of provenance) roles.set(p.role, (roles.get(p.role) ?? 0) + 1);
-    expect(roles.get("family")).toBe(1653);
+    expect(roles.get("family")).toBe(1658);
     expect(roles.get("variant")).toBe(694);
-    expect(roles.get("excluded")).toBe(5);
-    expect(modelsFile.models).toHaveLength(1653);
+    expect(roles.get("excluded")).toBeUndefined();
+    expect(modelsFile.models).toHaveLength(1658);
     expect(modelsFile.model_variants).toHaveLength(694);
     // Every source value appears exactly once in provenance.
     const sourceValues = new Set(rows.map((r) => r.source_value));
@@ -85,19 +85,20 @@ describe("owner model catalog data", () => {
     ).toBe(false);
   });
 
-  it("documents each excluded row with its exact source value and reason", () => {
-    const excluded = provenance.filter((p) => p.role === "excluded");
-    expect(excluded.map((p) => p.source_value).sort()).toEqual([
-      "2438", // Honda Today
-      "7183", // Dayun Yuehu
-      "8456", // Dayun Rehigh H8
-      "9510", // Jonway YY800-12
-      "9545", // Suzuki Amico 250
+  it("includes the five formerly excluded rows with documented provisional categories", () => {
+    const provisional = provenance.filter((p) => p.category_basis === "PROVISIONAL_CATEGORY");
+    expect(
+      provisional.map((p) => [p.source_value, p.category] as const).sort((a, b) => a[0].localeCompare(b[0])),
+    ).toEqual([
+      ["2438", "MOTORCYCLE"], // Honda Today
+      ["7183", "MOTORCYCLE"], // Dayun Yuehu
+      ["8456", "CAR"], // Dayun Rehigh H8
+      ["9510", "MOTORCYCLE"], // Jonway YY800-12
+      ["9545", "MOTORCYCLE"], // Suzuki Amico 250
     ]);
-    for (const p of excluded) {
-      expect(p.category).toBeNull();
-      expect(p.category_basis).toBe("UNRESOLVED");
-      expect(p.note).toBeTruthy();
+    for (const p of provisional) {
+      expect(p.role).toBe("family");
+      expect(p.note).toMatch(/PROVISIONAL/);
     }
   });
 
@@ -108,7 +109,7 @@ describe("owner model catalog data", () => {
         "MOTO_GROUP",
         "SHARED_DEFAULT",
         "ROW_DECISION",
-        "UNRESOLVED",
+        "PROVISIONAL_CATEGORY",
       ]).toContain(p.category_basis);
     }
     // One source row → at most one imported row (family or variant).
@@ -117,7 +118,7 @@ describe("owner model catalog data", () => {
       ...modelsFile.model_variants.map((v) => `${v.brand_slug}|${v.category}|${v.model_slug}|${v.slug}`),
     ];
     expect(new Set(importedKeys).size).toBe(importedKeys.length);
-    expect(importedKeys.length).toBe(2347); // 2352 − 5 excluded
+    expect(importedKeys.length).toBe(2352); // every source row imported
     // Triumph's one brand identity spans both categories via per-row decisions.
     const triumph = provenance.filter((p) => p.brand_slug === "triumph" && p.role !== "excluded");
     expect(triumph.map((p) => [p.label, p.category]).sort()).toEqual([
@@ -138,7 +139,7 @@ describe("owner model catalog data", () => {
 
   it("passes the catalog importer's own validation with valid unique slugs", () => {
     const parsed = parseCatalogImportFile(JSON.parse(readFileSync(MODELS_PATH, "utf8")));
-    expect(parsed.models).toHaveLength(1653);
+    expect(parsed.models).toHaveLength(1658);
     expect(parsed.model_variants).toHaveLength(694);
     for (const m of modelsFile.models) expect(m.slug).toMatch(/^[a-z0-9-]{1,64}$/);
     for (const v of modelsFile.model_variants) expect(v.slug).toMatch(/^[a-z0-9-]{1,64}$/);

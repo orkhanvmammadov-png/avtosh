@@ -398,11 +398,9 @@ export async function assertContentSubmittable(
   if (variantId !== null) {
     const variant = await findActiveVariantInModel(variantId, dataString(data, "model_id")!);
     if (variant === undefined) throw invalid("model_variant");
-  } else if (
-    categoryCode === "CAR" &&
-    (await modelHasActiveVariants(dataString(data, "model_id")!))
-  ) {
-    // Owner rule: a CAR family with active Alt models requires one.
+  } else if (await modelHasActiveVariants(dataString(data, "model_id")!)) {
+    // Owner rule: a family with active Alt models requires one
+    // (both categories).
     throw new ApiError("LISTING_INCOMPLETE", "The listing is incomplete.", {
       details: { missing: ["model_variant"] },
     });

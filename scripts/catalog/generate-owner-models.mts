@@ -93,6 +93,7 @@ export const SHARED_BRAND_DEFAULTS: Readonly<Record<string, "CAR" | "MOTORCYCLE"
 
 export type RowDecision =
   | { category: "CAR" | "MOTORCYCLE"; note: string }
+  | { category: "CAR" | "MOTORCYCLE"; provisional: true; note: string }
   | { unresolved: string };
 
 export const SHARED_BRAND_ROW_DECISIONS: Readonly<Record<string, RowDecision>> = {
@@ -104,8 +105,10 @@ export const SHARED_BRAND_ROW_DECISIONS: Readonly<Record<string, RowDecision>> =
   // Honda:
   "9419": { category: "MOTORCYCLE", note: "Honda Ruckus is a scooter line" },
   "2438": {
-    unresolved:
-      "Honda 'Today' names both a kei car and a scooter; the source row gives no category signal",
+    category: "MOTORCYCLE",
+    provisional: true,
+    note:
+      "PROVISIONAL (owner-directed inclusion, pending Product confirmation): Honda 'Today' names both a kei car and a scooter; the 50cc scooter is the common local import",
   },
   // Suzuki — owner ruling on the malformed reference:
   "2322": {
@@ -114,22 +117,30 @@ export const SHARED_BRAND_ROW_DECISIONS: Readonly<Record<string, RowDecision>> =
       "VL800 Intruder: brand class 33 (Suzuki) is authoritative over the malformed data-group 46 (Honda Moto); imported as a standalone Suzuki MOTORCYCLE family",
   },
   "9545": {
-    unresolved:
-      "Suzuki 'Amico 250' matches no known Suzuki car or motorcycle line; category unverified",
+    category: "MOTORCYCLE",
+    provisional: true,
+    note:
+      "PROVISIONAL (owner-directed inclusion, pending Product confirmation): 'Amico 250' matches no documented Suzuki line; the 250 displacement points at a motorcycle",
   },
   // Dayun non-DY rows:
   "8456": {
-    unresolved:
-      "Dayun 'Rehigh H8' is likely the EV car line but the identity is unverified",
+    category: "CAR",
+    provisional: true,
+    note:
+      "PROVISIONAL (owner-directed inclusion, pending Product confirmation): Dayun 'Rehigh H8' is most consistent with the Dayun EV car line",
   },
   "7183": {
-    unresolved:
-      "Dayun 'Yuehu' is likely an electric two-wheeler but the identity is unverified",
+    category: "MOTORCYCLE",
+    provisional: true,
+    note:
+      "PROVISIONAL (owner-directed inclusion, pending Product confirmation): Dayun 'Yuehu' is most consistent with the electric two-wheeler range",
   },
   // Jonway's single row:
   "9510": {
-    unresolved:
-      "Jonway 'YY800-12' does not match the documented YY scooter displacements; category unverified",
+    category: "MOTORCYCLE",
+    provisional: true,
+    note:
+      "PROVISIONAL (owner-directed inclusion, pending Product confirmation): Jonway 'YY800-12' follows the YY scooter naming even though the displacement is undocumented",
   },
   // Triumph — same name, two distinct histories, per-row decisions:
   "8961": { category: "CAR", note: "Triumph Renown — Triumph Motor Company saloon (1946–54)" },
@@ -249,7 +260,11 @@ export function generateOwnerModelFiles(sourceRaw: string, brandMapRaw: string):
       if ("unresolved" in decision) {
         return { category: null, basis: "UNRESOLVED", note: decision.unresolved };
       }
-      return { category: decision.category, basis: "ROW_DECISION", note: decision.note };
+      return {
+        category: decision.category,
+        basis: "provisional" in decision ? "PROVISIONAL_CATEGORY" : "ROW_DECISION",
+        note: decision.note,
+      };
     }
     const groupId = row.source_value.startsWith("group")
       ? row.source_value.slice(5)

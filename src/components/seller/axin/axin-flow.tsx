@@ -36,6 +36,7 @@ import { EquipmentSelector } from "@/components/seller/axin/equipment-selector";
 import { ReviewSection } from "@/components/seller/axin/review-section";
 import { SectionCard, type StageState } from "@/components/seller/axin/section-card";
 import { TypeaheadField } from "@/components/seller/axin/typeahead-field";
+import { ModelPathField } from "@/components/seller/axin/model-path-field";
 
 /**
  * O.9 AXIN seller flow (flow.md): ONE page of collapsing section
@@ -153,8 +154,8 @@ export function AxinFlow({
       dto.brandId !== null &&
       dto.modelId !== null &&
       dto.year !== null &&
-      // Owner rule: a CAR family with active Alt models requires one.
-      (dto.category !== "CAR" || catalog.variants.length === 0 || dto.modelVariantId !== null),
+      // Owner rule: a family with active Alt models requires one.
+      (catalog.variants.length === 0 || dto.modelVariantId !== null),
     details: true, // ALWAYS continuable — including fully empty
     sale: dto.priceMinor !== null && dto.mileage !== null && dto.cityId !== null,
     photos: dto.images.length >= 3,
@@ -813,25 +814,22 @@ function QuickStartSection({ editor, catalog }: { editor: ListingEditor; catalog
         loading={catalog.brands.length === 0}
         onChange={(id) => editor.patch({ brand_id: id }, { immediate: true })}
       />
-      <TypeaheadField
+      <ModelPathField
         id="wizard-model"
         label={SELLER.model}
-        value={dto.modelId}
-        items={catalog.models}
+        category={dto.category}
+        brandId={dto.brandId}
+        families={catalog.models}
+        valueModelId={dto.modelId}
+        valueVariantId={dto.modelVariantId}
+        variantNames={catalog.nameOf}
         disabled={dto.brandId === null}
         disabledHint={SELLER.brandFirstHint}
         loading={dto.brandId !== null && catalog.models.length === 0}
-        onChange={(id) => editor.patch({ model_id: id }, { immediate: true })}
+        onSelect={(modelId, variantId) =>
+          editor.patch({ model_id: modelId, model_variant_id: variantId }, { immediate: true })
+        }
       />
-      {dto.modelId !== null && catalog.variants.length > 0 ? (
-        <TypeaheadField
-          id="wizard-model-variant"
-          label={SELLER.modelVariant}
-          value={dto.modelVariantId}
-          items={catalog.variants}
-          onChange={(id) => editor.patch({ model_variant_id: id }, { immediate: true })}
-        />
-      ) : null}
       <SellerListboxField
         id="wizard-year"
         label={SELLER.year}

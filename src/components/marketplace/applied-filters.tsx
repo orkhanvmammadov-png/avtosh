@@ -57,15 +57,44 @@ export function appliedFilterChips(state: SearchFilterState, catalog: FilterCata
 
   const brand = name(catalog.brands, state.brand_id);
   if (brand !== undefined) {
-    chips.push({ key: "brand", label: brand, href: without(state, ["brand_id", "model_id", "model_variant_id"]) });
+    chips.push({
+      key: "brand",
+      label: brand,
+      href: without(state, ["brand_id", "model_id", "model_variant_id", "model_ids", "model_variant_ids"]),
+    });
   }
-  const model = name(catalog.models, state.model_id);
-  if (model !== undefined) {
-    chips.push({ key: "model", label: model, href: without(state, ["model_id", "model_variant_id"]) });
+  // ONE hierarchical model selection (owner decision): each selected
+  // family and each selected variant path is its own removable chip —
+  // no separate Alt model chip group.
+  const familyIds = idsFromCsv(state.model_ids);
+  const variantIds = idsFromCsv(state.model_variant_ids);
+  const csvState = (key: "model_ids" | "model_variant_ids", ids: string[]): string => {
+    const next: SearchFilterState = { ...state };
+    if (ids.length === 0) {
+      delete next[key];
+    } else {
+      next[key] = csvFromIds(ids);
+    }
+    return searchHref(next);
+  };
+  for (const id of familyIds) {
+    const label = name(catalog.models, id);
+    if (label === undefined) continue;
+    chips.push({
+      key: `model-${id}`,
+      label,
+      href: csvState("model_ids", familyIds.filter((f) => f !== id)),
+    });
   }
-  const modelVariant = name(catalog.modelVariants, state.model_variant_id);
-  if (modelVariant !== undefined) {
-    chips.push({ key: "model_variant", label: modelVariant, href: without(state, ["model_variant_id"]) });
+  for (const id of variantIds) {
+    const variant = catalog.modelVariants.find((v) => v.id === id);
+    if (variant === undefined) continue;
+    const family = name(catalog.models, variant.modelId);
+    chips.push({
+      key: `model-variant-${id}`,
+      label: family === undefined ? variant.name : `${family} › ${variant.name}`,
+      href: csvState("model_variant_ids", variantIds.filter((v) => v !== id)),
+    });
   }
   const city = name(catalog.cities, state.city_id);
   if (city !== undefined) {
