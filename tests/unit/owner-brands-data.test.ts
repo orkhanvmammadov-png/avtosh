@@ -4,6 +4,7 @@ import { parseCatalogImportFile } from "../../scripts/catalog/import.mts";
 import {
   IMPORT_PATH,
   REVIEW_PATH,
+  SLUG_OVERRIDES,
   SOURCE_PATH,
   generateOwnerBrandFiles,
   type OwnerBrand,
@@ -25,14 +26,15 @@ describe("owner brand catalog data", () => {
     expect(readFileSync(REVIEW_PATH, "utf8")).toBe(generated.reviewFile);
   });
 
-  it("splits the 210 owner rows into 180 importable and 30 review-pending", () => {
+  it("imports all 210 owner rows and reports the 30 review flags separately", () => {
     expect(source.brands).toHaveLength(210);
-    expect(importFile.brands).toHaveLength(180);
+    expect(importFile.brands).toHaveLength(210);
     expect(reviewFile.brands).toHaveLength(30);
   });
 
   it("keeps every brand name byte-identical to the owner source", () => {
     const sourceNames = new Map(source.brands.map((b) => [b.display_name, b]));
+    expect(importFile.brands.length).toBe(sourceNames.size);
     for (const brand of importFile.brands) {
       expect(sourceNames.has(brand.name)).toBe(true);
     }
@@ -50,18 +52,30 @@ describe("owner brand catalog data", () => {
     }
   });
 
-  it("imports no row that carries a review_reason, and reviews no row without one", () => {
-    const flagged = new Set(
-      source.brands.filter((b) => b.review_reason !== null).map((b) => b.display_name),
-    );
-    for (const brand of importFile.brands) {
-      expect(flagged.has(brand.name)).toBe(false);
-    }
+  it("review report holds exactly the flagged rows, verbatim", () => {
+    const flagged = source.brands.filter((b) => b.review_reason !== null);
+    expect(reviewFile.brands).toHaveLength(flagged.length);
     for (const brand of reviewFile.brands) {
       expect(brand.review_reason).toBeTruthy();
-      expect(flagged.has(brand.display_name)).toBe(true);
     }
-    expect(importFile.brands.length + reviewFile.brands.length).toBe(source.brands.length);
+    const reported = new Set(reviewFile.brands.map((b) => b.display_name));
+    for (const brand of flagged) {
+      expect(reported.has(brand.display_name)).toBe(true);
+    }
+  });
+
+  it("applies the reconciled identity slugs instead of name-derived ones", () => {
+    const bySlug = new Map(importFile.brands.map((b) => [b.name, b.slug]));
+    expect(SLUG_OVERRIDES).toEqual({
+      Mercedes: "mercedes-benz",
+      "Ssang Yong": "ssangyong",
+      iCar: "icaur",
+      Radar: "riddara",
+      "Seres Aito": "aito",
+    });
+    for (const [name, slug] of Object.entries(SLUG_OVERRIDES)) {
+      expect(bySlug.get(name)).toBe(slug);
+    }
   });
 
   it("has unique, importer-valid slugs", () => {
@@ -76,18 +90,18 @@ describe("owner brand catalog data", () => {
     const parsed = parseCatalogImportFile(
       JSON.parse(readFileSync(IMPORT_PATH, "utf8")),
     );
-    expect(parsed.brands).toHaveLength(180);
+    expect(parsed.brands).toHaveLength(210);
     expect(parsed.models).toHaveLength(0);
     expect(parsed.cities).toHaveLength(0);
     expect(parsed.features).toHaveLength(0);
   });
 
-  it("covers both categories per the owner proposal", () => {
+  it("matches the owner's expected per-category totals", () => {
     const car = importFile.brands.filter((b) => b.categories.includes("CAR"));
     const moto = importFile.brands.filter((b) => b.categories.includes("MOTORCYCLE"));
     const both = importFile.brands.filter((b) => b.categories.length === 2);
-    expect(car).toHaveLength(130);
-    expect(moto).toHaveLength(60);
-    expect(both).toHaveLength(10);
+    expect(car).toHaveLength(158);
+    expect(moto).toHaveLength(64);
+    expect(both).toHaveLength(12);
   });
 });

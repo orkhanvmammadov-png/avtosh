@@ -72,13 +72,22 @@ staging.
 
 ## Owner brand catalog
 
-`owner-brands.json` is the owner-approved brand list (brands and
+`owner-brands.json` is the owner-supplied brand list (brands and
 brand/category links only — no models), generated deterministically
-from `source/AVTOSH_owner_brand_category_map.json` by
-`scripts/catalog/generate-owner-brands.mts`. Rows the owner flagged
-with a `review_reason` are excluded and kept verbatim in
-`owner-brands-review-pending.json` until Product review resolves
-them — never import that file.
+from `source/AVTOSH_owner_brand_category_map.json` (status
+DRAFT_REVIEW) by `scripts/catalog/generate-owner-brands.mts`. All
+210 rows are included with their proposed categories; a display name
+whose canonical identity differs from its spelling keeps its stable
+identity slug via the generator's `SLUG_OVERRIDES` (e.g. Mercedes →
+`mercedes-benz`, Ssang Yong → `ssangyong`, iCar → `icaur`, Radar →
+`riddara`, Seres Aito → `aito`).
+
+Rows the owner flagged with a `review_reason` are QA flags, not
+exclusions: they are listed verbatim in
+`owner-brands-review-pending.json` and remain under Product review.
+The file is for local/UAT use — production import stays blocked
+until the mapping's DRAFT_REVIEW status and the flagged items are
+resolved.
 
 Never edit the generated files by hand: change the source mapping,
 re-run the generator, and commit all three together (the unit tests

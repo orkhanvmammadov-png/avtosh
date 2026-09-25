@@ -27,15 +27,15 @@ afterAll(async () => {
 });
 
 describe("owner brand catalog file against the real schema", () => {
-  it("dry-run imports all 180 brands with their category links", async () => {
+  it("dry-run imports all 210 brands with their category links", async () => {
     const sql = getSql();
     const data = parseCatalogImportFile(
       JSON.parse(readFileSync(IMPORT_PATH, "utf8")),
     );
     const summary = await runCatalogImport(sql, data, { dryRun: true });
     expect(summary.dryRun).toBe(true);
-    expect(summary.brands).toBe(180);
-    expect(summary.brandCategoryLinks).toBe(190); // 130 CAR + 60 MOTORCYCLE
+    expect(summary.brands).toBe(210);
+    expect(summary.brandCategoryLinks).toBe(222); // 158 CAR + 64 MOTORCYCLE
     // Nothing persisted: a distinctive owner-only brand must not exist.
     const rows = await sql`select 1 from brands where slug = 'abarth'`;
     expect(rows.length).toBe(0);

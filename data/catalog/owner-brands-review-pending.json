@@ -1,8 +1,8 @@
 {
-  "title": "Owner brand rows pending Product review",
+  "title": "Owner brand rows flagged for Product review",
   "status": "PRODUCT_REVIEW_PENDING",
   "source_file": "AVTOSH_owner_brand_category_map.json",
-  "note": "These rows carry a review_reason in the owner mapping and are excluded from data/catalog/owner-brands.json until Product review resolves each one. Do not import them.",
+  "note": "These rows carry a review_reason in the owner mapping (status DRAFT_REVIEW). The flags are QA notes, not exclusions: the brands are included in data/catalog/owner-brands.json for local/UAT use. Production import stays blocked while these items are under Product review.",
   "brands": [
     {
       "source_option_value": "859",

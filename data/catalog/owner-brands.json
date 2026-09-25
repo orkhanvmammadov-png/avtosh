@@ -28,10 +28,28 @@
       "sort_order": 0
     },
     {
+      "name": "Anyang Kinland",
+      "slug": "anyang-kinland",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "name": "Aston Martin",
       "slug": "aston-martin",
       "categories": [
         "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "ATV",
+      "slug": "atv",
+      "categories": [
+        "MOTORCYCLE"
       ],
       "is_active": true,
       "sort_order": 0
@@ -55,10 +73,29 @@
       "sort_order": 0
     },
     {
+      "name": "Avia",
+      "slug": "avia",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "name": "Baic",
       "slug": "baic",
       "categories": [
         "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Bajaj",
+      "slug": "bajaj",
+      "categories": [
+        "CAR",
+        "MOTORCYCLE"
       ],
       "is_active": true,
       "sort_order": 0
@@ -93,6 +130,15 @@
     {
       "name": "Bestune",
       "slug": "bestune",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "BMC",
+      "slug": "bmc",
       "categories": [
         "CAR"
       ],
@@ -159,6 +205,15 @@
       "slug": "can-am",
       "categories": [
         "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Cengo",
+      "slug": "cengo",
+      "categories": [
+        "CAR"
       ],
       "is_active": true,
       "sort_order": 0
@@ -247,6 +302,15 @@
     {
       "name": "Daewoo",
       "slug": "daewoo",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "DAF",
+      "slug": "daf",
       "categories": [
         "CAR"
       ],
@@ -435,6 +499,15 @@
       "sort_order": 0
     },
     {
+      "name": "General Auto",
+      "slug": "general-auto",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "name": "Genesis",
       "slug": "genesis",
       "categories": [
@@ -535,6 +608,15 @@
       "sort_order": 0
     },
     {
+      "name": "HOWO",
+      "slug": "howo",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "name": "Hummer",
       "slug": "hummer",
       "categories": [
@@ -554,7 +636,7 @@
     },
     {
       "name": "iCar",
-      "slug": "icar",
+      "slug": "icaur",
       "categories": [
         "CAR"
       ],
@@ -619,6 +701,15 @@
     {
       "name": "Isuzu",
       "slug": "isuzu",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Iveco",
+      "slug": "iveco",
       "categories": [
         "CAR"
       ],
@@ -726,6 +817,15 @@
       "sort_order": 0
     },
     {
+      "name": "KamAz",
+      "slug": "kamaz",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "name": "Kanuni",
       "slug": "kanuni",
       "categories": [
@@ -780,6 +880,15 @@
       "sort_order": 0
     },
     {
+      "name": "King Long",
+      "slug": "king-long",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "name": "KTM",
       "slug": "ktm",
       "categories": [
@@ -794,6 +903,15 @@
       "slug": "kuba",
       "categories": [
         "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "KYC",
+      "slug": "kyc",
+      "categories": [
+        "CAR"
       ],
       "is_active": true,
       "sort_order": 0
@@ -890,6 +1008,15 @@
       "sort_order": 0
     },
     {
+      "name": "Lvtong",
+      "slug": "lvtong",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "name": "Lynk & Co",
       "slug": "lynk-co",
       "categories": [
@@ -908,8 +1035,26 @@
       "sort_order": 0
     },
     {
+      "name": "Mack",
+      "slug": "mack",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "name": "Maextro",
       "slug": "maextro",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "MAN",
+      "slug": "man",
       "categories": [
         "CAR"
       ],
@@ -935,6 +1080,15 @@
       "sort_order": 0
     },
     {
+      "name": "MAZ",
+      "slug": "maz",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "name": "Mazda",
       "slug": "mazda",
       "categories": [
@@ -945,7 +1099,7 @@
     },
     {
       "name": "Mercedes",
-      "slug": "mercedes",
+      "slug": "mercedes-benz",
       "categories": [
         "CAR"
       ],
@@ -1097,6 +1251,15 @@
       "sort_order": 0
     },
     {
+      "name": "PAZ",
+      "slug": "paz",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "name": "Peugeot",
       "slug": "peugeot",
       "categories": [
@@ -1144,7 +1307,7 @@
     },
     {
       "name": "Radar",
-      "slug": "radar",
+      "slug": "riddara",
       "categories": [
         "CAR"
       ],
@@ -1233,6 +1396,24 @@
       "sort_order": 0
     },
     {
+      "name": "SamAuto",
+      "slug": "samauto",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Scania",
+      "slug": "scania",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "name": "Scion",
       "slug": "scion",
       "categories": [
@@ -1252,7 +1433,34 @@
     },
     {
       "name": "Seres Aito",
-      "slug": "seres-aito",
+      "slug": "aito",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Setra",
+      "slug": "setra",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Shacman",
+      "slug": "shacman",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Shaolin",
+      "slug": "shaolin",
       "categories": [
         "CAR"
       ],
@@ -1274,6 +1482,15 @@
       "categories": [
         "CAR",
         "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Shining Golf Cart",
+      "slug": "shining-golf-cart",
+      "categories": [
+        "CAR"
       ],
       "is_active": true,
       "sort_order": 0
@@ -1315,8 +1532,17 @@
       "sort_order": 0
     },
     {
+      "name": "Sport",
+      "slug": "sport",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "name": "Ssang Yong",
-      "slug": "ssang-yong",
+      "slug": "ssangyong",
       "categories": [
         "CAR"
       ],
@@ -1383,6 +1609,16 @@
       "slug": "toyota",
       "categories": [
         "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Triumph",
+      "slug": "triumph",
+      "categories": [
+        "CAR",
+        "MOTORCYCLE"
       ],
       "is_active": true,
       "sort_order": 0
@@ -1514,6 +1750,15 @@
       "sort_order": 0
     },
     {
+      "name": "XCMG",
+      "slug": "xcmg",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "name": "Xiaomi",
       "slug": "xiaomi",
       "categories": [
@@ -1559,6 +1804,15 @@
       "sort_order": 0
     },
     {
+      "name": "Yutong",
+      "slug": "yutong",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "name": "ZAZ",
       "slug": "zaz",
       "categories": [
@@ -1579,6 +1833,15 @@
     {
       "name": "ZEEKR",
       "slug": "zeekr",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Zhongtong",
+      "slug": "zhongtong",
       "categories": [
         "CAR"
       ],
@@ -1608,6 +1871,15 @@
       "slug": "zontes",
       "categories": [
         "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Zoomlion",
+      "slug": "zoomlion",
+      "categories": [
+        "CAR"
       ],
       "is_active": true,
       "sort_order": 0

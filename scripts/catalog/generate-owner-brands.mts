@@ -3,14 +3,16 @@
  *
  *   node scripts/catalog/generate-owner-brands.mts [--check]
  *
- * Reads the owner-approved mapping at
+ * Reads the owner brand mapping (status DRAFT_REVIEW) at
  * data/catalog/source/AVTOSH_owner_brand_category_map.json and emits:
  *
  *   data/catalog/owner-brands.json          importer-format file with
- *     every row that carries NO review_reason (exact names, generated
- *     slugs, proposed categories only — no models, cities or features)
- *   data/catalog/owner-brands-review-pending.json  every flagged row,
- *     verbatim, excluded from import until Product review resolves it
+ *     ALL rows (exact names, stable slugs, proposed categories only —
+ *     no models, cities or features)
+ *   data/catalog/owner-brands-review-pending.json  the review-flagged
+ *     rows, verbatim: QA flags under Product review. Flagged brands
+ *     are still included in the import file for local/UAT use, but
+ *     production import stays blocked while they are under review.
  *
  * Output is byte-deterministic (sorted by name, stable key order), so
  * `--check` can verify the committed files match the source exactly.
@@ -55,8 +57,28 @@ export const REVIEW_PATH = path.join(
   "data/catalog/owner-brands-review-pending.json",
 );
 
+/**
+ * Slugs are the importer's stable identity keys, so a display name
+ * whose canonical identity differs from its spelling must NOT get a
+ * name-derived slug. These overrides carry the reconciled identities:
+ * Mercedes and Ssang Yong follow the sealed O.15 identity decisions
+ * (canonical mercedes-benz; ssangyong as an identity separate from
+ * KGM), and iCar/Radar/Seres Aito use the owner-designated identity
+ * slugs (iCAUR, Riddara, AITO). Display names stay exactly as
+ * supplied — only the slug is reconciled.
+ */
+export const SLUG_OVERRIDES: Readonly<Record<string, string>> = {
+  Mercedes: "mercedes-benz",
+  "Ssang Yong": "ssangyong",
+  iCar: "icaur",
+  Radar: "riddara",
+  "Seres Aito": "aito",
+};
+
 /** ASCII-only kebab slug; the owner names are all plain ASCII. */
 export function brandSlug(name: string): string {
+  const override = SLUG_OVERRIDES[name];
+  if (override !== undefined) return override;
   const slug = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -90,14 +112,20 @@ export function generateOwnerBrandFiles(sourceRaw: string): {
 
   const byName = (a: OwnerBrand, b: OwnerBrand) =>
     a.display_name.localeCompare(b.display_name, "en");
-  const clean = source.brands.filter((b) => b.review_reason === null).sort(byName);
+  const all = [...source.brands].sort(byName);
   const flagged = source.brands.filter((b) => b.review_reason !== null).sort(byName);
 
+  for (const overridden of Object.keys(SLUG_OVERRIDES)) {
+    if (!all.some((b) => b.display_name === overridden)) {
+      throw new Error(`slug override for absent brand: ${overridden}`);
+    }
+  }
+
   const slugs = new Set<string>();
-  const importBrands = clean.map((brand) => {
+  const importBrands = all.map((brand) => {
     const slug = brandSlug(brand.display_name);
     if (slugs.has(slug)) {
-      throw new Error(`slug collision among clean brands: ${slug}`);
+      throw new Error(`slug collision: ${slug}`);
     }
     slugs.add(slug);
     return {
@@ -112,13 +140,16 @@ export function generateOwnerBrandFiles(sourceRaw: string): {
   const importFile = `${JSON.stringify({ brands: importBrands }, null, 2)}\n`;
   const reviewFile = `${JSON.stringify(
     {
-      title: "Owner brand rows pending Product review",
+      title: "Owner brand rows flagged for Product review",
       status: "PRODUCT_REVIEW_PENDING",
       source_file: path.basename(SOURCE_PATH),
       note:
-        "These rows carry a review_reason in the owner mapping and are " +
-        "excluded from data/catalog/owner-brands.json until Product " +
-        "review resolves each one. Do not import them.",
+        "These rows carry a review_reason in the owner mapping " +
+        "(status DRAFT_REVIEW). The flags are QA notes, not " +
+        "exclusions: the brands are included in " +
+        "data/catalog/owner-brands.json for local/UAT use. Production " +
+        "import stays blocked while these items are under Product " +
+        "review.",
       brands: flagged,
     },
     null,
