@@ -34,21 +34,21 @@ describe("owner model catalog data", () => {
     expect(readFileSync(PROVENANCE_PATH, "utf8")).toBe(generated.provenanceFile);
   });
 
-  it("preserves every source row: 2352 options → 1658 families + 694 variants, none excluded", () => {
+  it("preserves every source row: 2365 options → 1661 families + 704 variants, none excluded", () => {
     const rows = parseModelSource(sourceRaw);
-    expect(rows).toHaveLength(2352);
-    expect(provenance).toHaveLength(2352);
+    expect(rows).toHaveLength(2365);
+    expect(provenance).toHaveLength(2365);
     const roles = new Map<string, number>();
     for (const p of provenance) roles.set(p.role, (roles.get(p.role) ?? 0) + 1);
-    expect(roles.get("family")).toBe(1658);
-    expect(roles.get("variant")).toBe(694);
+    expect(roles.get("family")).toBe(1661);
+    expect(roles.get("variant")).toBe(704);
     expect(roles.get("excluded")).toBeUndefined();
-    expect(modelsFile.models).toHaveLength(1658);
-    expect(modelsFile.model_variants).toHaveLength(694);
+    expect(modelsFile.models).toHaveLength(1661);
+    expect(modelsFile.model_variants).toHaveLength(704);
     // Every source value appears exactly once in provenance.
     const sourceValues = new Set(rows.map((r) => r.source_value));
     const provValues = new Set(provenance.map((p) => p.source_value));
-    expect(provValues.size).toBe(2352);
+    expect(provValues.size).toBe(2365);
     expect([...sourceValues].filter((v) => !provValues.has(v))).toEqual([]);
   });
 
@@ -118,7 +118,7 @@ describe("owner model catalog data", () => {
       ...modelsFile.model_variants.map((v) => `${v.brand_slug}|${v.category}|${v.model_slug}|${v.slug}`),
     ];
     expect(new Set(importedKeys).size).toBe(importedKeys.length);
-    expect(importedKeys.length).toBe(2352); // every source row imported
+    expect(importedKeys.length).toBe(2365); // every source row imported
     // Triumph's one brand identity spans both categories via per-row decisions.
     const triumph = provenance.filter((p) => p.brand_slug === "triumph" && p.role !== "excluded");
     expect(triumph.map((p) => [p.label, p.category]).sort()).toEqual([
@@ -139,8 +139,8 @@ describe("owner model catalog data", () => {
 
   it("passes the catalog importer's own validation with valid unique slugs", () => {
     const parsed = parseCatalogImportFile(JSON.parse(readFileSync(MODELS_PATH, "utf8")));
-    expect(parsed.models).toHaveLength(1658);
-    expect(parsed.model_variants).toHaveLength(694);
+    expect(parsed.models).toHaveLength(1661);
+    expect(parsed.model_variants).toHaveLength(704);
     for (const m of modelsFile.models) expect(m.slug).toMatch(/^[a-z0-9-]{1,64}$/);
     for (const v of modelsFile.model_variants) expect(v.slug).toMatch(/^[a-z0-9-]{1,64}$/);
   });

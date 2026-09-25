@@ -1405,6 +1405,18 @@ Avtomobil & Moto Modelleri
                                 <option class="28" data-count="2" value="317">MDX</option>
                                 <option class="72" data-count="7" value="1172">MK</option>
                                 <option class="46" data-count="11" value="1082">MKZ</option>
+                                <option class="4" data-count="127" value="group19">ML-Class</option>
+                                <option class="4" data-group="19" data-count="2" value="5588">ML 250 4MATIC</option>
+                                <option class="4" data-group="19" data-count="8" value="190">ML 270</option>
+                                <option class="4" data-group="19" data-count="3" value="5590">ML 300 4MATIC</option>
+                                <option class="4" data-group="19" data-count="27" value="191">ML 320</option>
+                                <option class="4" data-group="19" data-count="2" value="5591">ML 320 4MATIC</option>
+                                <option class="4" data-group="19" data-count="3" value="192">ML 350</option>
+                                <option class="4" data-group="19" data-count="73" value="5592">ML 350 4MATIC</option>
+                                <option class="4" data-group="19" data-count="4" value="5593">ML 400 4MATIC</option>
+                                <option class="4" data-group="19" data-count="5" value="5596">ML 500 4MATIC</option>
+                                <option class="4" data-count="4" value="group244">ML-Class AMG</option>
+                                <option class="4" data-group="244" data-count="4" value="724">ML 63 AMG</option>
                                 <option class="85" data-count="2" value="2735">MMZ 45023</option>
                                 <option class="887" data-count="1" value="9421">MSKU1405117</option>
                                 <option class="138" data-count="1" value="8987">MT-03</option>
@@ -1623,6 +1635,7 @@ Avtomobil & Moto Modelleri
                                 <option class="8" data-count="2" value="585">Pregio</option>
                                 <option class="17" data-count="1" value="4962">Premium 460</option>
                                 <option class="23" data-count="2" value="500">Previa</option>
+                                <option class="8" data-count="29" value="126">Pride</option>
                                 <option class="223" data-count="2" value="3794">Primavera 150</option>
                                 <option class="7" data-count="8" value="221">Primera</option>
                                 <option class="5" data-count="183" value="642">Priora</option>

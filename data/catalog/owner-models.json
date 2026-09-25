@@ -7857,6 +7857,22 @@
       "sort_order": 0
     },
     {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "name": "ML-Class",
+      "slug": "ml-class",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "name": "ML-Class AMG",
+      "slug": "ml-class-amg",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
       "brand_slug": "zil",
       "category": "CAR",
       "name": "MMZ 45023",
@@ -8973,6 +8989,14 @@
       "category": "CAR",
       "name": "Previa",
       "slug": "previa",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "brand_slug": "kia",
+      "category": "CAR",
+      "name": "Pride",
+      "slug": "pride",
       "is_active": true,
       "sort_order": 0
     },
@@ -17925,6 +17949,96 @@
       "model_slug": "macan",
       "name": "Macan Turbo",
       "slug": "macan-turbo",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "ml-class",
+      "name": "ML 250 4MATIC",
+      "slug": "ml-250-4matic",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "ml-class",
+      "name": "ML 270",
+      "slug": "ml-270",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "ml-class",
+      "name": "ML 300 4MATIC",
+      "slug": "ml-300-4matic",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "ml-class",
+      "name": "ML 320",
+      "slug": "ml-320",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "ml-class",
+      "name": "ML 320 4MATIC",
+      "slug": "ml-320-4matic",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "ml-class",
+      "name": "ML 350",
+      "slug": "ml-350",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "ml-class",
+      "name": "ML 350 4MATIC",
+      "slug": "ml-350-4matic",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "ml-class",
+      "name": "ML 400 4MATIC",
+      "slug": "ml-400-4matic",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "ml-class",
+      "name": "ML 500 4MATIC",
+      "slug": "ml-500-4matic",
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "ml-class-amg",
+      "name": "ML 63 AMG",
+      "slug": "ml-63-amg",
       "is_active": true,
       "sort_order": 0
     },
