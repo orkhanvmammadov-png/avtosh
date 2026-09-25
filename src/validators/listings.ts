@@ -28,6 +28,7 @@ export const sellerContentPatchFields = {
   category: categoryCode.optional(),
     brand_id: z.uuid().nullable().optional(),
     model_id: z.uuid().nullable().optional(),
+    model_variant_id: z.uuid().nullable().optional(),
     year: z.number().int().min(LISTING_YEAR_MIN).max(listingYearMax()).nullable().optional(),
     price_minor: z
       .number()

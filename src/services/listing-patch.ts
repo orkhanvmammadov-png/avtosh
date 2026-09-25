@@ -6,6 +6,7 @@ import {
   findActiveCityById,
   findActiveModelInBrandCategory,
   findActiveReferenceOptionForCategory,
+  findActiveVariantInModel,
   filterActiveFeatureIdsForCategory,
 } from "@/repositories/catalog";
 import type { EditPatchInput } from "@/validators/listings";
@@ -23,6 +24,7 @@ export interface SellerPatchContext {
   categoryId: string;
   categoryCode: string;
   brandId: string | null;
+  modelId: string | null;
 }
 
 export interface ResolvedSellerPatch {
@@ -77,6 +79,7 @@ export async function resolveSellerContentPatch(
     changes.category = patch.category;
     changes.brand_id = null;
     changes.model_id = null;
+    changes.model_variant_id = null;
     changes.body_type_id = null;
     changes.motorcycle_type_id = null;
   }
@@ -87,6 +90,7 @@ export async function resolveSellerContentPatch(
     if (patch.brand_id === null) {
       changes.brand_id = null;
       changes.model_id = null;
+      changes.model_variant_id = null;
       effectiveBrandId = null;
     } else {
       const brand = await findActiveBrandInCategory(patch.brand_id, targetCategoryId);
@@ -98,6 +102,7 @@ export async function resolveSellerContentPatch(
       if (patch.brand_id !== current.brandId) {
         // Brand change invalidates the previously chosen model.
         changes.model_id = null;
+        changes.model_variant_id = null;
       }
       changes.brand_id = patch.brand_id;
       effectiveBrandId = patch.brand_id;
@@ -105,9 +110,15 @@ export async function resolveSellerContentPatch(
   }
 
   // Model: requires a valid effective brand in the target category.
+  let effectiveModelId = categoryChanged ? null : current.modelId;
+  if (changes.model_id === null) {
+    effectiveModelId = null;
+  }
   if (patch.model_id !== undefined) {
     if (patch.model_id === null) {
       changes.model_id = null;
+      changes.model_variant_id = null;
+      effectiveModelId = null;
     } else {
       if (effectiveBrandId === null) {
         throw invalidSelection("A brand must be selected before a model.");
@@ -122,7 +133,35 @@ export async function resolveSellerContentPatch(
           "Model is unknown, inactive, or does not belong to the brand and category.",
         );
       }
+      if (patch.model_id !== current.modelId) {
+        // Model change invalidates the previously chosen Alt model.
+        changes.model_variant_id = null;
+      }
       changes.model_id = patch.model_id;
+      effectiveModelId = patch.model_id;
+    }
+  }
+
+  // Alt model (variant): requires a valid effective model. Supplying
+  // one in the same request as its model overrides the dependent
+  // clearing above.
+  if (patch.model_variant_id !== undefined) {
+    if (patch.model_variant_id === null) {
+      changes.model_variant_id = null;
+    } else {
+      if (effectiveModelId === null) {
+        throw invalidSelection("A model must be selected before an Alt model.");
+      }
+      const variant = await findActiveVariantInModel(
+        patch.model_variant_id,
+        effectiveModelId,
+      );
+      if (variant === undefined) {
+        throw invalidSelection(
+          "Alt model is unknown, inactive, or does not belong to the model.",
+        );
+      }
+      changes.model_variant_id = patch.model_variant_id;
     }
   }
 

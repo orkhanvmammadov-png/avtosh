@@ -18,7 +18,7 @@ import {
  * mutation, no new state model).
  */
 
-import type { BrandDto, CategoryDto, CityDto, FeatureDto, ModelDto, ReferenceOptionDto } from "@/services/catalog";
+import type { BrandDto, CategoryDto, CityDto, FeatureDto, ModelDto, ModelVariantDto, ReferenceOptionDto } from "@/services/catalog";
 
 /** Catalog rows the chips (label lookup) need. */
 export interface FilterCatalog {
@@ -27,6 +27,7 @@ export interface FilterCatalog {
   years: number[];
   brands: BrandDto[];
   models: ModelDto[];
+  modelVariants: ModelVariantDto[];
   cities: CityDto[];
   options: Record<string, ReferenceOptionDto[]>;
   features: FeatureDto[];
@@ -56,11 +57,15 @@ export function appliedFilterChips(state: SearchFilterState, catalog: FilterCata
 
   const brand = name(catalog.brands, state.brand_id);
   if (brand !== undefined) {
-    chips.push({ key: "brand", label: brand, href: without(state, ["brand_id", "model_id"]) });
+    chips.push({ key: "brand", label: brand, href: without(state, ["brand_id", "model_id", "model_variant_id"]) });
   }
   const model = name(catalog.models, state.model_id);
   if (model !== undefined) {
-    chips.push({ key: "model", label: model, href: without(state, ["model_id"]) });
+    chips.push({ key: "model", label: model, href: without(state, ["model_id", "model_variant_id"]) });
+  }
+  const modelVariant = name(catalog.modelVariants, state.model_variant_id);
+  if (modelVariant !== undefined) {
+    chips.push({ key: "model_variant", label: modelVariant, href: without(state, ["model_variant_id"]) });
   }
   const city = name(catalog.cities, state.city_id);
   if (city !== undefined) {

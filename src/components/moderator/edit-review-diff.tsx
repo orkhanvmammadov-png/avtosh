@@ -15,6 +15,7 @@ const FIELD_LABELS: Record<string, string> = {
   category: "Kateqoriya",
   brand: "Marka",
   model: "Model",
+  model_variant: "Alt model",
   year: "Buraxılış ili",
   price: "Qiymət",
   mileage: "Yürüş",

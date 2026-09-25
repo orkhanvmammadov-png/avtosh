@@ -65,6 +65,7 @@ const STAGE_TITLES: Record<StageKey, string> = {
 const MISSING_CODE_SECTION: Record<string, StageKey> = {
   brand: "quickstart",
   model: "quickstart",
+  model_variant: "quickstart",
   year: "quickstart",
   price: "sale",
   mileage: "sale",
@@ -126,7 +127,7 @@ export function AxinFlow({
 }) {
   const isEdit = edit !== undefined;
   const editor = useListingEditor(initial, isEdit ? editEditorApi : draftEditorApi);
-  const catalog = useWizardCatalog(editor.dto.category, editor.dto.brandId);
+  const catalog = useWizardCatalog(editor.dto.category, editor.dto.brandId, editor.dto.modelId);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<SubmitErrorView | null>(null);
   const [result, setResult] = useState<SubmitResult | null>(null);
@@ -148,7 +149,12 @@ export function AxinFlow({
   // This is NOT visited state and NOT completion display: it only
   // gates the current stage's own Davam et and feeds needs-attention.
   const stageValid: Record<StageKey, boolean> = {
-    quickstart: dto.brandId !== null && dto.modelId !== null && dto.year !== null,
+    quickstart:
+      dto.brandId !== null &&
+      dto.modelId !== null &&
+      dto.year !== null &&
+      // Owner rule: a CAR family with active Alt models requires one.
+      (dto.category !== "CAR" || catalog.variants.length === 0 || dto.modelVariantId !== null),
     details: true, // ALWAYS continuable — including fully empty
     sale: dto.priceMinor !== null && dto.mileage !== null && dto.cityId !== null,
     photos: dto.images.length >= 3,
@@ -728,7 +734,7 @@ function EditResultScreen({
 // --- section summaries (one line, collapsed cards) --------------------------
 
 function quickStartSummary(dto: OwnerListingDto, catalog: WizardCatalog): string | null {
-  const parts = [catalog.nameOf(dto.brandId), catalog.nameOf(dto.modelId), dto.year === null ? null : String(dto.year)].filter(
+  const parts = [catalog.nameOf(dto.brandId), catalog.nameOf(dto.modelId), catalog.nameOf(dto.modelVariantId), dto.year === null ? null : String(dto.year)].filter(
     (p): p is string => p !== null,
   );
   return parts.length > 0 ? parts.join(" · ") : null;
@@ -792,6 +798,7 @@ function QuickStartSection({ editor, catalog }: { editor: ListingEditor; catalog
           const wouldLose =
             dto.brandId !== null ||
             dto.modelId !== null ||
+            dto.modelVariantId !== null ||
             dto.bodyTypeId !== null ||
             dto.motorcycleTypeId !== null;
           if (wouldLose && !window.confirm(SELLER.categorySwitchConfirm)) return;
@@ -816,6 +823,15 @@ function QuickStartSection({ editor, catalog }: { editor: ListingEditor; catalog
         loading={dto.brandId !== null && catalog.models.length === 0}
         onChange={(id) => editor.patch({ model_id: id }, { immediate: true })}
       />
+      {dto.modelId !== null && catalog.variants.length > 0 ? (
+        <TypeaheadField
+          id="wizard-model-variant"
+          label={SELLER.modelVariant}
+          value={dto.modelVariantId}
+          items={catalog.variants}
+          onChange={(id) => editor.patch({ model_variant_id: id }, { immediate: true })}
+        />
+      ) : null}
       <SellerListboxField
         id="wizard-year"
         label={SELLER.year}

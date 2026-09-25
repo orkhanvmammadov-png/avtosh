@@ -22,7 +22,7 @@ export function PendingEditView({
   listing: OwnerListingDto;
   submittedAt: string | null;
 }) {
-  const catalog = useWizardCatalog(listing.category, listing.brandId);
+  const catalog = useWizardCatalog(listing.category, listing.brandId, listing.modelId);
   const title = vehicleTitle({
     brand: catalog.nameOf(listing.brandId),
     model: catalog.nameOf(listing.modelId),

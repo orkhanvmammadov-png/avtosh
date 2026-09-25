@@ -26,6 +26,13 @@ export interface ModelRow {
   slug: string;
 }
 
+export interface ModelVariantRow {
+  id: string;
+  model_id: string;
+  name: string;
+  slug: string;
+}
+
 export interface CityRow {
   id: string;
   name_az: string;
@@ -110,6 +117,43 @@ export async function listActiveModels(
       and is_active
     order by sort_order, name
   `;
+}
+
+export async function listActiveModelVariants(
+  modelId: string,
+): Promise<ModelVariantRow[]> {
+  const sql = getSql();
+  return sql<ModelVariantRow[]>`
+    select id, model_id, name, slug
+    from model_variants
+    where model_id = ${modelId} and is_active
+    order by sort_order, name
+  `;
+}
+
+/** Point lookup: active variant belonging to the model. */
+export async function findActiveVariantInModel(
+  variantId: string,
+  modelId: string,
+): Promise<ModelVariantRow | undefined> {
+  const sql = getSql();
+  const rows = await sql<ModelVariantRow[]>`
+    select id, model_id, name, slug
+    from model_variants
+    where id = ${variantId} and model_id = ${modelId} and is_active
+  `;
+  return rows[0];
+}
+
+/** True when the family has at least one active variant. */
+export async function modelHasActiveVariants(modelId: string): Promise<boolean> {
+  const sql = getSql();
+  const rows = await sql<{ one: number }[]>`
+    select 1 as one from model_variants
+    where model_id = ${modelId} and is_active
+    limit 1
+  `;
+  return rows.length > 0;
 }
 
 export async function listActiveCities(): Promise<CityRow[]> {

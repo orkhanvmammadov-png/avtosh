@@ -76,6 +76,7 @@ export function ReviewSection({
   const ready =
     dto.brandId !== null &&
     dto.modelId !== null &&
+    (dto.category !== "CAR" || catalog.variants.length === 0 || dto.modelVariantId !== null) &&
     dto.year !== null &&
     dto.priceMinor !== null &&
     dto.mileage !== null &&

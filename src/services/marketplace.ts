@@ -10,6 +10,7 @@ import {
   findActiveCategoryByCode,
   findActiveCityById,
   findActiveModelInBrandCategory,
+  findActiveVariantInModel,
   findActiveReferenceOptionForCategory,
   filterActiveFeatureIdsForCategory,
 } from "@/repositories/catalog";
@@ -263,6 +264,19 @@ async function resolveFilters(query: SearchQuery): Promise<SearchFilters> {
     }
     filters.modelId = query.model_id;
   }
+  if (query.model_variant_id !== undefined) {
+    if (filters.modelId === undefined) {
+      throw new ApiError("VALIDATION_ERROR", "model_variant_id requires model_id.");
+    }
+    const variant = await findActiveVariantInModel(query.model_variant_id, filters.modelId);
+    if (variant === undefined) {
+      throw new ApiError(
+        "CATALOG_INVALID_BRAND",
+        "Alt model does not belong to the model.",
+      );
+    }
+    filters.modelVariantId = query.model_variant_id;
+  }
   if (query.city_id !== undefined) {
     if ((await findActiveCityById(query.city_id)) === undefined) {
       throw new ApiError("VALIDATION_ERROR", "Unknown or inactive city.");
@@ -444,6 +458,7 @@ export interface PublicDetailDto {
   category: string;
   brand: string | null;
   model: string | null;
+  modelVariant: string | null;
   year: number | null;
   priceMinor: number | null;
   currency: string;
@@ -527,6 +542,7 @@ export async function publicDetail(
     category: row.category,
     brand: row.brand,
     model: row.model,
+    modelVariant: row.model_variant,
     year: row.year,
     priceMinor: row.price_minor === null ? null : Number(row.price_minor),
     currency: row.currency,

@@ -15,6 +15,7 @@ export interface PatchBody {
   category?: string;
   brand_id?: string | null;
   model_id?: string | null;
+  model_variant_id?: string | null;
   year?: number | null;
   price_minor?: number | null;
   mileage?: number | null;

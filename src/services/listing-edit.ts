@@ -6,6 +6,8 @@ import {
   findActiveCategoryByCode,
   findActiveCityById,
   findActiveModelInBrandCategory,
+  findActiveVariantInModel,
+  modelHasActiveVariants,
   findActiveReferenceOptionForCategory,
   filterActiveFeatureIdsForCategory,
 } from "@/repositories/catalog";
@@ -109,6 +111,7 @@ async function toEditListingDto(
     category: dataString(data, "category") ?? listing.category_code,
     brandId: dataString(data, "brand_id"),
     modelId: dataString(data, "model_id"),
+    modelVariantId: dataString(data, "model_variant_id"),
     year: dataNumber(data, "year"),
     priceMinor: dataNumber(data, "price_minor"),
     currency: listing.currency,
@@ -276,6 +279,7 @@ export async function updateEditRevision(
         categoryId: category.id,
         categoryCode: currentCategoryCode,
         brandId: dataString(open.data, "brand_id"),
+        modelId: dataString(open.data, "model_id"),
       },
       patch,
     );
@@ -390,6 +394,19 @@ export async function assertContentSubmittable(
     category.id,
   );
   if (model === undefined) throw invalid("model");
+  const variantId = dataString(data, "model_variant_id");
+  if (variantId !== null) {
+    const variant = await findActiveVariantInModel(variantId, dataString(data, "model_id")!);
+    if (variant === undefined) throw invalid("model_variant");
+  } else if (
+    categoryCode === "CAR" &&
+    (await modelHasActiveVariants(dataString(data, "model_id")!))
+  ) {
+    // Owner rule: a CAR family with active Alt models requires one.
+    throw new ApiError("LISTING_INCOMPLETE", "The listing is incomplete.", {
+      details: { missing: ["model_variant"] },
+    });
+  }
   const city = await findActiveCityById(dataString(data, "city_id")!);
   if (city === undefined) throw invalid("city");
   for (const ref of SUBMIT_REFERENCE_FIELDS) {

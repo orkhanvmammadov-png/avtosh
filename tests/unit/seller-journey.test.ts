@@ -12,6 +12,7 @@ function dto(overrides: Partial<OwnerListingDto> = {}): OwnerListingDto {
     category: "CAR",
     brandId: "b",
     modelId: "m",
+    modelVariantId: null,
     year: 2021,
     priceMinor: null,
     currency: "AZN",

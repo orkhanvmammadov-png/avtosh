@@ -266,6 +266,10 @@ export async function getModerationDetail(listingId: string): Promise<Record<str
     category: row.category_code,
     brand: row.brand_id === null ? null : { id: row.brand_id, name: row.brand_name },
     model: row.model_id === null ? null : { id: row.model_id, name: row.model_name },
+    modelVariant:
+      row.model_variant_id === null
+        ? null
+        : { id: row.model_variant_id, name: row.model_variant_name },
     year: row.year,
     priceMinor: row.price_minor === null ? null : Number(row.price_minor),
     currency: row.currency,

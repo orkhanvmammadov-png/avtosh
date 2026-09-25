@@ -24,7 +24,7 @@ function dataNumber(data: Record<string, unknown>, key: string): number | null {
 /** Resolve display names for arbitrary catalog ids (both sides of the
     diff, including inactive rows — historical names must still render). */
 export async function nameMaps(sql: Sql): Promise<{
-  of: (table: "brands" | "models" | "cities" | "reference_options" | "features" | "categories", id: string | null) => Promise<string | null>;
+  of: (table: "brands" | "models" | "model_variants" | "cities" | "reference_options" | "features" | "categories", id: string | null) => Promise<string | null>;
 }> {
   const cache = new Map<string, string | null>();
   return {
@@ -37,6 +37,8 @@ export async function nameMaps(sql: Sql): Promise<{
         name = (await sql<{ name: string }[]>`select name from brands where id = ${id}`)[0]?.name ?? null;
       } else if (table === "models") {
         name = (await sql<{ name: string }[]>`select name from models where id = ${id}`)[0]?.name ?? null;
+      } else if (table === "model_variants") {
+        name = (await sql<{ name: string }[]>`select name from model_variants where id = ${id}`)[0]?.name ?? null;
       } else if (table === "cities") {
         name = (await sql<{ name_az: string }[]>`select name_az from cities where id = ${id}`)[0]?.name_az ?? null;
       } else if (table === "reference_options") {
@@ -82,6 +84,7 @@ export async function approvedContentSet(
     category_id: category.id,
     brand_id: dataString(data, "brand_id"),
     model_id: dataString(data, "model_id"),
+    model_variant_id: dataString(data, "model_variant_id"),
     year: dataNumber(data, "year"),
     price_minor: dataNumber(data, "price_minor"),
     mileage: dataNumber(data, "mileage"),

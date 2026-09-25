@@ -16,6 +16,7 @@ export interface ListingRow {
   category_code: string;
   brand_id: string | null;
   model_id: string | null;
+  model_variant_id: string | null;
   year: number | null;
   price_minor: string | null;
   currency: string;
@@ -66,7 +67,7 @@ export async function getOwnedListing(
     select
       l.id, l.public_id::text as public_id, l.owner_id, l.category_id,
       c.code as category_code,
-      l.brand_id, l.model_id, l.year, l.price_minor::text as price_minor,
+      l.brand_id, l.model_id, l.model_variant_id, l.year, l.price_minor::text as price_minor,
       l.currency, l.mileage, l.engine_cc, l.fuel_type_id, l.transmission_id,
       l.body_type_id, l.drive_type_id, l.motorcycle_type_id, l.color_id,
       l.city_id, l.credit_available, l.barter_available, l.no_accident, l.not_repainted, l.description,
@@ -217,7 +218,7 @@ export async function getOwnedListingRowForUpdate(
     select
       l.id, l.public_id::text as public_id, l.owner_id, l.category_id,
       c.code as category_code,
-      l.brand_id, l.model_id, l.year, l.price_minor::text as price_minor,
+      l.brand_id, l.model_id, l.model_variant_id, l.year, l.price_minor::text as price_minor,
       l.currency, l.mileage, l.engine_cc, l.fuel_type_id, l.transmission_id,
       l.body_type_id, l.drive_type_id, l.motorcycle_type_id, l.color_id,
       l.city_id, l.credit_available, l.barter_available, l.no_accident, l.not_repainted, l.description,

@@ -11,6 +11,7 @@ export const FILTER_KEYS = [
   "category",
   "brand_id",
   "model_id",
+  "model_variant_id",
   "city_id",
   "price_min",
   "price_max",
@@ -154,6 +155,7 @@ export function filtersForCategoryChange(state: SearchFilterState, category: str
   const next: SearchFilterState = { ...state, category };
   delete next.brand_id;
   delete next.model_id;
+  delete next.model_variant_id;
   delete next.feature_ids;
   const allowed = new Set(visibleFilterGroups(category).map((g) => GROUP_TO_PARAM[g]));
   for (const [group, param] of Object.entries(GROUP_TO_PARAM)) {

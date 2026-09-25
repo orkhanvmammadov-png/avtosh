@@ -16,7 +16,7 @@ import {
   visibleFilterGroups,
   type SearchFilterState,
 } from "@/lib/marketplace/search-params";
-import type { BrandDto, CategoryDto, CityDto, ModelDto, ReferenceOptionDto } from "@/services/catalog";
+import type { BrandDto, CategoryDto, CityDto, ModelDto, ModelVariantDto, ReferenceOptionDto } from "@/services/catalog";
 
 /**
  * Home search — approved Direction 1C (design_handoff_avtosh/
@@ -240,6 +240,7 @@ export function HomeSearch({
   mode = "home",
   initialState,
   initialModels,
+  initialVariants,
 }: {
   categories: CategoryDto[];
   initialBrands: BrandDto[];
@@ -257,6 +258,8 @@ export function HomeSearch({
   initialState?: SearchFilterState;
   /** Models for initialState.brand_id (server-loaded on Results). */
   initialModels?: ModelDto[];
+  /** Variants for initialState.model_id (server-loaded on Results). */
+  initialVariants?: ModelVariantDto[];
 }) {
   const init: SearchFilterState = mode === "results" ? (initialState ?? {}) : {};
   const router = useRouter();
@@ -264,8 +267,10 @@ export function HomeSearch({
   const [category, setCategory] = useState(init.category ?? categories[0]?.code ?? "CAR");
   const [brands, setBrands] = useState<BrandDto[]>(initialBrands);
   const [models, setModels] = useState<ModelDto[]>(initialModels ?? []);
+  const [variants, setVariants] = useState<ModelVariantDto[]>(initialVariants ?? []);
   const [brandId, setBrandId] = useState(init.brand_id ?? "");
   const [modelId, setModelId] = useState(init.model_id ?? "");
+  const [variantId, setVariantId] = useState(init.model_variant_id ?? "");
   const [loadingBrands, setLoadingBrands] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [priceMin, setPriceMin] = useState(init.price_min !== undefined ? minorToAznInput(init.price_min) : "");
@@ -297,7 +302,9 @@ export function HomeSearch({
     setCategory(code);
     setBrandId("");
     setModelId("");
+    setVariantId("");
     setModels([]);
+    setVariants([]);
     setBrands([]);
     setLoadingBrands(true);
     void loadBrands(code);
@@ -306,13 +313,30 @@ export function HomeSearch({
   async function selectBrand(nextBrandId: string) {
     setBrandId(nextBrandId);
     setModelId("");
+    setVariantId("");
     setModels([]);
+    setVariants([]);
     if (nextBrandId === "") return;
     try {
       const r = await publicFetch<ModelDto[]>(`/api/v1/catalog/models?category=${encodeURIComponent(category)}&brand_id=${encodeURIComponent(nextBrandId)}`);
       setModels(r.data);
     } catch {
       setModels([]);
+    }
+  }
+
+  async function selectModel(nextModelId: string) {
+    setModelId(nextModelId);
+    setVariantId("");
+    setVariants([]);
+    if (nextModelId === "" || brandId === "") return;
+    try {
+      const r = await publicFetch<ModelVariantDto[]>(
+        `/api/v1/catalog/variants?category=${encodeURIComponent(category)}&brand_id=${encodeURIComponent(brandId)}&model_id=${encodeURIComponent(nextModelId)}`,
+      );
+      setVariants(r.data);
+    } catch {
+      setVariants([]);
     }
   }
 
@@ -325,6 +349,7 @@ export function HomeSearch({
     if (mode === "results" && init.sort !== undefined) next.sort = init.sort;
     if (brandId !== "") next.brand_id = brandId;
     if (modelId !== "") next.model_id = modelId;
+    if (modelId !== "" && variantId !== "") next.model_variant_id = variantId;
     const data = new FormData(event.currentTarget);
     const scalar = ["city_id", "year_min", "year_max", "engine_cc_min", "engine_cc_max",
       "body_type_id", "drive_type_id", "motorcycle_type_id"] as const;
@@ -394,7 +419,9 @@ export function HomeSearch({
     formRef.current?.reset();
     setBrandId("");
     setModelId("");
+    setVariantId("");
     setModels([]);
+    setVariants([]);
     setPriceMin("");
     setPriceMax("");
     setMileage("");
@@ -472,11 +499,20 @@ export function HomeSearch({
           </label>
           <label className="block">
             <FieldLabel>{UI.modelLabel}</FieldLabel>
-            <select className={`${control} appearance-none pr-8 min-h-12`} value={modelId} onChange={(e) => setModelId(e.target.value)} disabled={brandId === ""} data-testid="home-model">
+            <select className={`${control} appearance-none pr-8 min-h-12`} value={modelId} onChange={(e) => void selectModel(e.target.value)} disabled={brandId === ""} data-testid="home-model">
               <option value="">{UI.any}</option>
               {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           </label>
+          {modelId !== "" && variants.length > 0 ? (
+            <label className="block md:col-span-1">
+              <FieldLabel>{UI.modelVariantLabel}</FieldLabel>
+              <select className={`${control} appearance-none pr-8 min-h-12`} value={variantId} onChange={(e) => setVariantId(e.target.value)} data-testid="home-model-variant">
+                <option value="">{UI.any}</option>
+                {variants.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+              </select>
+            </label>
+          ) : null}
           <label className="block" key={`city-${clearCount}`}>
             <FieldLabel>{UI.city}</FieldLabel>
             <select name="city_id" defaultValue={restored(init.city_id)} className={`${control} appearance-none pr-8 min-h-12`} data-testid="home-adv-city">

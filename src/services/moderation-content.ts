@@ -34,6 +34,7 @@ export interface ModerationContentDto {
   category: string;
   brandName: string | null;
   modelName: string | null;
+  modelVariantName: string | null;
   year: number | null;
   priceMinor: number | null;
   currency: string;

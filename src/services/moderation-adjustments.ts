@@ -8,6 +8,7 @@ import {
   findActiveCategoryByCode,
   findActiveCityById,
   findActiveModelInBrandCategory,
+  findActiveVariantInModel,
   findActiveReferenceOptionForCategory,
   filterActiveFeatureIdsForCategory,
 } from "@/repositories/catalog";
@@ -305,6 +306,7 @@ async function resolveAdjustedData(
       categoryId: category.id,
       categoryCode: category.code,
       brandId: dataString(base, "brand_id"),
+      modelId: dataString(base, "model_id"),
     },
     content,
   );
@@ -503,6 +505,13 @@ export async function assertAdjustedContentApprovable(
     if (brandId === null) throw invalid("model");
     if ((await findActiveModelInBrandCategory(modelId, brandId, category.id)) === undefined) {
       throw invalid("model");
+    }
+  }
+  const variantId = dataString(adjusted, "model_variant_id");
+  if (variantId !== null) {
+    if (modelId === null) throw invalid("model_variant");
+    if ((await findActiveVariantInModel(variantId, modelId)) === undefined) {
+      throw invalid("model_variant");
     }
   }
   const cityId = dataString(adjusted, "city_id");
@@ -950,6 +959,11 @@ async function buildChanges(
     "model",
     await names.of("models", dataString(submitted, "model_id")),
     await names.of("models", dataString(adjusted, "model_id")),
+  );
+  consider(
+    "model_variant",
+    await names.of("model_variants", dataString(submitted, "model_variant_id")),
+    await names.of("model_variants", dataString(adjusted, "model_variant_id")),
   );
   const num = (data: Record<string, unknown>, key: string, suffix: string): string | null => {
     const value = dataNumber(data, key);

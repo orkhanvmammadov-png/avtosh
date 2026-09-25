@@ -38,10 +38,15 @@ async function list(url: string): Promise<CatalogItem[]> {
  * a group that returns no options for the category simply isn't
  * rendered (the server already scopes options per category).
  */
-export function useWizardCatalog(category: string, brandId: string | null) {
+export function useWizardCatalog(
+  category: string,
+  brandId: string | null,
+  modelId: string | null = null,
+) {
   const [categories, setCategories] = useState<CatalogItem[]>([]);
   const [brands, setBrands] = useState<CatalogItem[]>([]);
   const [models, setModels] = useState<CatalogItem[]>([]);
+  const [variants, setVariants] = useState<CatalogItem[]>([]);
   const [cities, setCities] = useState<CatalogItem[]>([]);
   const [options, setOptions] = useState<Record<string, CatalogItem[]>>({});
   const [features, setFeatures] = useState<CatalogItem[]>([]);
@@ -84,15 +89,31 @@ export function useWizardCatalog(category: string, brandId: string | null) {
     };
   }, [category, brandId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const fetchVariants =
+      brandId === null || modelId === null
+        ? Promise.resolve<CatalogItem[]>([])
+        : list(
+            `/api/v1/catalog/variants?category=${encodeURIComponent(category)}&brand_id=${brandId}&model_id=${modelId}`,
+          );
+    void fetchVariants.then((r) => {
+      if (!cancelled) setVariants(r);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [category, brandId, modelId]);
+
   const nameOf = useMemo(() => {
     const all = new Map<string, string>();
-    for (const item of [...categories, ...brands, ...models, ...cities, ...features, ...Object.values(options).flat()]) {
+    for (const item of [...categories, ...brands, ...models, ...variants, ...cities, ...features, ...Object.values(options).flat()]) {
       all.set(item.id, item.name);
     }
     return (id: string | null): string | null => (id === null ? null : (all.get(id) ?? null));
-  }, [categories, brands, models, cities, features, options]);
+  }, [categories, brands, models, variants, cities, features, options]);
 
-  return { categories, brands, models, cities, options, features, nameOf };
+  return { categories, brands, models, variants, cities, options, features, nameOf };
 }
 
 export type WizardCatalog = ReturnType<typeof useWizardCatalog>;

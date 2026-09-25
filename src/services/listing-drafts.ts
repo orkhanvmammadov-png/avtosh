@@ -85,6 +85,7 @@ function invalidSelection(message: string): ApiError {
 const PATCH_KEY_COLUMNS: Record<string, string> = {
   brand_id: "brand_id",
   model_id: "model_id",
+  model_variant_id: "model_variant_id",
   fuel_type_id: "fuel_type_id",
   transmission_id: "transmission_id",
   body_type_id: "body_type_id",
@@ -126,6 +127,7 @@ export async function updateDraft(
       categoryId: listing.category_id,
       categoryCode: listing.category_code,
       brandId: listing.brand_id,
+      modelId: listing.model_id,
     },
     patch,
   );

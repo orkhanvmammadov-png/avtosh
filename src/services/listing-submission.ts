@@ -7,7 +7,9 @@ import {
   findActiveCityById,
   findActiveModelInBrandCategory,
   findActiveReferenceOptionForCategory,
+  findActiveVariantInModel,
   filterActiveFeatureIdsForCategory,
+  modelHasActiveVariants,
 } from "@/repositories/catalog";
 import { countListingImages } from "@/repositories/listing-images";
 import {
@@ -202,6 +204,21 @@ async function revalidateCatalog(tx: Sql, listing: ListingRow): Promise<void> {
     category.id,
   );
   if (model === undefined) throw invalid("model");
+  if (listing.model_variant_id !== null) {
+    const variant = await findActiveVariantInModel(
+      listing.model_variant_id,
+      listing.model_id!,
+    );
+    if (variant === undefined) throw invalid("model_variant");
+  } else if (
+    listing.category_code === "CAR" &&
+    (await modelHasActiveVariants(listing.model_id!))
+  ) {
+    // Owner rule: a CAR family with active Alt models requires one.
+    throw new ApiError("LISTING_INCOMPLETE", "The listing is incomplete.", {
+      details: { missing: ["model_variant"] },
+    });
+  }
   const city = await findActiveCityById(listing.city_id!);
   if (city === undefined) throw invalid("city");
   for (const ref of REFERENCE_COLUMNS) {

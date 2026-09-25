@@ -30,6 +30,7 @@ export interface SearchFilters {
   categoryId: string;
   brandId?: string;
   modelId?: string;
+  modelVariantId?: string;
   cityId?: string;
   priceMin?: number;
   priceMax?: number;
@@ -87,6 +88,8 @@ function filterFragment(sql: Sql, f: SearchFilters): Fragment {
   const parts: Fragment[] = [sql`l.category_id = ${f.categoryId}`];
   if (f.brandId !== undefined) parts.push(sql`l.brand_id = ${f.brandId}`);
   if (f.modelId !== undefined) parts.push(sql`l.model_id = ${f.modelId}`);
+  if (f.modelVariantId !== undefined)
+    parts.push(sql`l.model_variant_id = ${f.modelVariantId}`);
   if (f.cityId !== undefined) parts.push(sql`l.city_id = ${f.cityId}`);
   if (f.priceMin !== undefined) parts.push(sql`l.price_minor >= ${f.priceMin}`);
   if (f.priceMax !== undefined) parts.push(sql`l.price_minor <= ${f.priceMax}`);
@@ -315,6 +318,7 @@ export interface DetailRow {
   category: string;
   brand: string | null;
   model: string | null;
+  model_variant: string | null;
   year: number | null;
   price_minor: string | null;
   currency: string;
@@ -347,7 +351,8 @@ export async function getPublicDetail(
 ): Promise<DetailRow | undefined> {
   const rows = await sql<DetailRow[]>`
     select l.id, l.public_id::text as public_id, l.status, l.current_expires_at, l.seller_deactivated_at,
-           c.code as category, b.name as brand, m.name as model, l.year,
+           c.code as category, b.name as brand, m.name as model,
+           mv.name as model_variant, l.year,
            l.price_minor::text as price_minor, l.currency, l.mileage, l.engine_cc, l.no_accident, l.not_repainted,
            ft.name_az as fuel_type, tr.name_az as transmission, bt.name_az as body_type,
            dt.name_az as drive_type, mt.name_az as motorcycle_type, co.name_az as color,
@@ -366,6 +371,7 @@ export async function getPublicDetail(
     join users u on u.id = l.owner_id
     left join brands b on b.id = l.brand_id
     left join models m on m.id = l.model_id
+    left join model_variants mv on mv.id = l.model_variant_id
     left join cities ci on ci.id = l.city_id
     left join reference_options ft on ft.id = l.fuel_type_id
     left join reference_options tr on tr.id = l.transmission_id
