@@ -12,7 +12,7 @@ export function SiteFooter() {
   const link = "text-sm text-on-navy-muted transition-colors duration-150 hover:text-white";
   return (
     <footer className="mt-16 bg-navy text-white">
-      <Container className="grid gap-8 py-10 md:grid-cols-[2fr_1fr_1fr]">
+      <Container className="grid gap-8 py-10 md:grid-cols-[2fr_1fr_1fr_1fr]">
         <div>
           <BrandMark tone="dark" href={null} />
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-on-navy-muted">
@@ -33,6 +33,14 @@ export function SiteFooter() {
             <li><Link href="/elan-yerlesdir" className={link}>{UI.postListing}</Link></li>
             <li><Link href="/profil/elanlar" className={link}>{UI.myListings}</Link></li>
             <li><Link href="/profil/secilmisler" className={link}>{UI.favorites}</Link></li>
+          </ul>
+        </nav>
+        <nav aria-label="Hüquqi">
+          <p className="text-xs font-semibold uppercase tracking-wide text-on-navy-muted/70">Hüquqi</p>
+          <ul className="mt-3 space-y-2">
+            <li><Link href="/istifadeci-razilasmasi" className={link} data-testid="footer-terms">İstifadəçi razılaşması</Link></li>
+            <li><Link href="/qaydalar" className={link} data-testid="footer-rules">Qaydalar</Link></li>
+            <li><Link href="/mexfilik-siyaseti" className={link} data-testid="footer-privacy">Məxfilik siyasəti</Link></li>
           </ul>
         </nav>
       </Container>
