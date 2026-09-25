@@ -1,0 +1,1967 @@
+{
+  "title": "AVTOSH.AZ owner brand category mapping",
+  "status": "DRAFT_REVIEW",
+  "source_file": "AVTOSH_owner_brand_source.tsv",
+  "rules": [
+    "Names and numeric source option values copied from the owner source without spelling changes.",
+    "Proposed CAR/MOTORCYCLE membership is a separate field and does not create a second brand row.",
+    "Rows with review_reason require Product review before any production import.",
+    "Commercial-only, golf-cart and vehicle-type rows are retained in this owner mapping; proposed category is not proof of compatibility with current listing forms.",
+    "Evidence URLs are attached to selected non-obvious decisions, not a claim that every brand or product model was independently verified."
+  ],
+  "brands": [
+    {
+      "source_option_value": "280",
+      "display_name": "Abarth",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "28",
+      "display_name": "Acura",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "30",
+      "display_name": "Alfa Romeo",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "859",
+      "display_name": "Anyang Kinland",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "LSV_OR_GOLF_CART",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "86",
+      "display_name": "Aston Martin",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "268",
+      "display_name": "ATV",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": "GENERIC_VEHICLE_TYPE",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "9",
+      "display_name": "Audi",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "419",
+      "display_name": "Avatr",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "274",
+      "display_name": "Avia",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "218",
+      "display_name": "Baic",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "327",
+      "display_name": "Bajaj",
+      "proposed_categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "review_reason": "QUADRICYCLE_CAR_FIT",
+      "evidence_urls": [
+        "https://www.bajajauto.com/three-wheelers/qute"
+      ]
+    },
+    {
+      "source_option_value": "226",
+      "display_name": "BAW",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "642",
+      "display_name": "BENDA",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "19",
+      "display_name": "Bentley",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "387",
+      "display_name": "Bestune",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "136",
+      "display_name": "BMC",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "3",
+      "display_name": "BMW",
+      "proposed_categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://www.bmwgroup.com/en/company/brands-products.html"
+      ]
+    },
+    {
+      "source_option_value": "62",
+      "display_name": "BMW Alpina",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "84",
+      "display_name": "Buick",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "51",
+      "display_name": "BYD",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "395",
+      "display_name": "C.Moto",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://motom.az/"
+      ]
+    },
+    {
+      "source_option_value": "38",
+      "display_name": "Cadillac",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "220",
+      "display_name": "Can-Am",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://can-am.brp.com/on-road/us/en/"
+      ]
+    },
+    {
+      "source_option_value": "884",
+      "display_name": "Cengo",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "LSV_OR_GOLF_CART",
+      "evidence_urls": [
+        "https://www.cengocar.com/"
+      ]
+    },
+    {
+      "source_option_value": "259",
+      "display_name": "CFMOTO",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://www.cfmoto.com/allModel"
+      ]
+    },
+    {
+      "source_option_value": "879",
+      "display_name": "Champ",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://motom.az/"
+      ]
+    },
+    {
+      "source_option_value": "163",
+      "display_name": "Changan",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "52",
+      "display_name": "Chery",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "41",
+      "display_name": "Chevrolet",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "10",
+      "display_name": "Chrysler",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "27",
+      "display_name": "Citroen",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "76",
+      "display_name": "Dacia",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "180",
+      "display_name": "Dadi",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "11",
+      "display_name": "Daewoo",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "91",
+      "display_name": "DAF",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "66",
+      "display_name": "Daihatsu",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "148",
+      "display_name": "Dayun",
+      "proposed_categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://www.dayun.az/en/models/",
+        "https://www.dayun.cc/"
+      ]
+    },
+    {
+      "source_option_value": "471",
+      "display_name": "Denza",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "405",
+      "display_name": "DFSK",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "162",
+      "display_name": "Dnepr",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "60",
+      "display_name": "Dodge",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "877",
+      "display_name": "Dofern",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "117",
+      "display_name": "DongFeng",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "147",
+      "display_name": "Ducati",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "881",
+      "display_name": "Falcon",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "79",
+      "display_name": "FAW",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "42",
+      "display_name": "Ferrari",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "37",
+      "display_name": "Fiat",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "2",
+      "display_name": "Ford",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "478",
+      "display_name": "Forthing",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "49",
+      "display_name": "Foton",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "689",
+      "display_name": "Freedom",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://motom.az/"
+      ]
+    },
+    {
+      "source_option_value": "175",
+      "display_name": "GAC",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "21",
+      "display_name": "GAZ",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "72",
+      "display_name": "Geely",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "887",
+      "display_name": "General Auto",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "IDENTITY_UNVERIFIED",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "376",
+      "display_name": "Genesis",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "82",
+      "display_name": "GMC",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "466",
+      "display_name": "Grandmoto",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "847",
+      "display_name": "GST",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://turbo.az/autos?q%5Bmake%5D%5B%5D=847"
+      ]
+    },
+    {
+      "source_option_value": "50",
+      "display_name": "GWM (Great Wall Motor)",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "383",
+      "display_name": "Haima",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "142",
+      "display_name": "Haojue",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "140",
+      "display_name": "Harley-Davidson",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "242",
+      "display_name": "Haval",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "12",
+      "display_name": "Honda",
+      "proposed_categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://global.honda/en/"
+      ]
+    },
+    {
+      "source_option_value": "388",
+      "display_name": "Hongqi",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "110",
+      "display_name": "HOWO",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "13",
+      "display_name": "Hummer",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "1",
+      "display_name": "Hyundai",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "678",
+      "display_name": "iCar",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "772",
+      "display_name": "iHonzda",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://turbo.az/autos/10654464-ihonzda-fx37"
+      ]
+    },
+    {
+      "source_option_value": "64",
+      "display_name": "IJ",
+      "proposed_categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://turbo.az/autos/10248236-ij-2126-oda",
+        "https://turbo.az/autos/10633403-ij-planeta-5"
+      ]
+    },
+    {
+      "source_option_value": "424",
+      "display_name": "IM",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "411",
+      "display_name": "Indian Motorcycle",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "15",
+      "display_name": "Infiniti",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "116",
+      "display_name": "Iran Khodro",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "74",
+      "display_name": "Isuzu",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "67",
+      "display_name": "Iveco",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "124",
+      "display_name": "JAC",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "549",
+      "display_name": "JAECOO",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "35",
+      "display_name": "Jaguar",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "36",
+      "display_name": "Jeep",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "384",
+      "display_name": "JETOUR",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "462",
+      "display_name": "Jiangmen",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://motom.az/"
+      ]
+    },
+    {
+      "source_option_value": "337",
+      "display_name": "Jianshe",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "846",
+      "display_name": "Jinlang",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://motom.az/"
+      ]
+    },
+    {
+      "source_option_value": "109",
+      "display_name": "JMC",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "235",
+      "display_name": "Jonway",
+      "proposed_categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://www.jonway.com/english/about.aspx"
+      ]
+    },
+    {
+      "source_option_value": "390",
+      "display_name": "KAIYI",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "90",
+      "display_name": "KamAz",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "406",
+      "display_name": "Kanuni",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "420",
+      "display_name": "Karry",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "139",
+      "display_name": "Kawasaki",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "374",
+      "display_name": "Kayo",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "282",
+      "display_name": "Khazar",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "8",
+      "display_name": "Kia",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "468",
+      "display_name": "King Long",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "141",
+      "display_name": "KTM",
+      "proposed_categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://www.ktm.com/en-tr/X-BOW/x-bow-news/ktm-x-bow-gt-xr0.html"
+      ]
+    },
+    {
+      "source_option_value": "332",
+      "display_name": "Kuba",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "872",
+      "display_name": "KYC",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "5",
+      "display_name": "LADA (VAZ)",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "43",
+      "display_name": "Lamborghini",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "20",
+      "display_name": "Land Rover",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "459",
+      "display_name": "Leapmotor",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "14",
+      "display_name": "Lexus",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "412",
+      "display_name": "Li Auto",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "87",
+      "display_name": "Lifan",
+      "proposed_categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://www.lifanmotos.net/"
+      ]
+    },
+    {
+      "source_option_value": "46",
+      "display_name": "Lincoln",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "238",
+      "display_name": "Lotus",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "103",
+      "display_name": "LuAz",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "391",
+      "display_name": "Lvtong",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "LSV_OR_GOLF_CART",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "414",
+      "display_name": "Lynk & Co",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "677",
+      "display_name": "M-Hero",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "329",
+      "display_name": "Mack",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "867",
+      "display_name": "Maextro",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "112",
+      "display_name": "MAN",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "423",
+      "display_name": "Maple",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "44",
+      "display_name": "Maserati",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "100",
+      "display_name": "MAZ",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "26",
+      "display_name": "Mazda",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "4",
+      "display_name": "Mercedes",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "252",
+      "display_name": "Mercedes-Maybach",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "47",
+      "display_name": "Mercury",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "127",
+      "display_name": "MG",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "769",
+      "display_name": "Mikilon",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "31",
+      "display_name": "Mini",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "146",
+      "display_name": "Minsk",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "6",
+      "display_name": "Mitsubishi",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "81",
+      "display_name": "Moskvich",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "416",
+      "display_name": "Moto Guzzi",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "243",
+      "display_name": "Muravey",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "158",
+      "display_name": "MV Agusta",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "324",
+      "display_name": "Nama",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://turbo.az/autos/10406741-nama-48-2"
+      ]
+    },
+    {
+      "source_option_value": "409",
+      "display_name": "Neta",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "415",
+      "display_name": "Nio",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "7",
+      "display_name": "Nissan",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "29",
+      "display_name": "Opel",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "114",
+      "display_name": "PAZ",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "16",
+      "display_name": "Peugeot",
+      "proposed_categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://peugeot-motocycles.com/en/websites/"
+      ]
+    },
+    {
+      "source_option_value": "247",
+      "display_name": "Polaris",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://slingshot.polaris.com/en-us/"
+      ]
+    },
+    {
+      "source_option_value": "396",
+      "display_name": "Polestar",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "32",
+      "display_name": "Porsche",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "681",
+      "display_name": "QJMotor",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "467",
+      "display_name": "Radar",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "272",
+      "display_name": "Ravon",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "17",
+      "display_name": "Renault",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "595",
+      "display_name": "Renault Samsung",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "18",
+      "display_name": "Rolls-Royce",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "78",
+      "display_name": "Rover",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "477",
+      "display_name": "ROX (Polar Stone)",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "422",
+      "display_name": "Royal Enfield",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "80",
+      "display_name": "Saab",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "94",
+      "display_name": "Saipa",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "377",
+      "display_name": "SamAuto",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "108",
+      "display_name": "Scania",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "251",
+      "display_name": "Scion",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "59",
+      "display_name": "SEAT",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "460",
+      "display_name": "Seres Aito",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "115",
+      "display_name": "Setra",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "133",
+      "display_name": "Shacman",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "132",
+      "display_name": "Shaolin",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "690",
+      "display_name": "Sharmax",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "144",
+      "display_name": "Shineray",
+      "proposed_categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://www.shineray.com/page/list-13.html",
+        "https://shineraymoto.com/about/"
+      ]
+    },
+    {
+      "source_option_value": "889",
+      "display_name": "Shining Golf Cart",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "LSV_OR_GOLF_CART",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "400",
+      "display_name": "Sinotech",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "22",
+      "display_name": "Skoda",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "61",
+      "display_name": "Smart",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "402",
+      "display_name": "Soueast",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "264",
+      "display_name": "Sport",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": "GENERIC_LABEL",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "45",
+      "display_name": "Ssang Yong",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "34",
+      "display_name": "Subaru",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "33",
+      "display_name": "Suzuki",
+      "proposed_categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": [
+        "https://www.globalsuzuki.com/corporate/outline/"
+      ]
+    },
+    {
+      "source_option_value": "380",
+      "display_name": "SYM",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "98",
+      "display_name": "Tatra",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "245",
+      "display_name": "Tesla",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "39",
+      "display_name": "Tofas",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "23",
+      "display_name": "Toyota",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "233",
+      "display_name": "Triumph",
+      "proposed_categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "review_reason": "SAME_NAME_DISTINCT_HISTORY",
+      "evidence_urls": [
+        "https://www.triumphmotorcycles.com/our-story/brand-timeline"
+      ]
+    },
+    {
+      "source_option_value": "385",
+      "display_name": "Tufan",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "464",
+      "display_name": "TVS",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "53",
+      "display_name": "UAZ",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "145",
+      "display_name": "Ural",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "223",
+      "display_name": "Vespa",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "410",
+      "display_name": "VGV",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "854",
+      "display_name": "Vmoto",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "857",
+      "display_name": "Voge",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "24",
+      "display_name": "Volkswagen",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "386",
+      "display_name": "Volta",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "25",
+      "display_name": "Volvo",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "150",
+      "display_name": "Vosxod",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "417",
+      "display_name": "Voyah",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "404",
+      "display_name": "Wuling",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "219",
+      "display_name": "XCMG",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "CONSTRUCTION_EQUIPMENT_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "680",
+      "display_name": "Xiaomi",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "373",
+      "display_name": "Xinling",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "421",
+      "display_name": "XPeng",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "381",
+      "display_name": "Yadea",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "138",
+      "display_name": "Yamaha",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "331",
+      "display_name": "Yutong",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "57",
+      "display_name": "ZAZ",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "851",
+      "display_name": "Zaza",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "403",
+      "display_name": "ZEEKR",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "885",
+      "display_name": "Zhongtong",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "COMMERCIAL_VEHICLE_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "85",
+      "display_name": "ZIL",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "285",
+      "display_name": "Zonsen",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "143",
+      "display_name": "Zontes",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "164",
+      "display_name": "Zoomlion",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": "CONSTRUCTION_EQUIPMENT_FIT",
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "217",
+      "display_name": "ZX Auto",
+      "proposed_categories": [
+        "CAR"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    },
+    {
+      "source_option_value": "475",
+      "display_name": "ZXMCO",
+      "proposed_categories": [
+        "MOTORCYCLE"
+      ],
+      "review_reason": null,
+      "evidence_urls": []
+    }
+  ]
+}

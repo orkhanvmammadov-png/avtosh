@@ -69,3 +69,23 @@ Behavior:
 Run it only against a database you are entitled to change. Production
 imports should first be exercised with `--dry-run` and against
 staging.
+
+## Owner brand catalog
+
+`owner-brands.json` is the owner-approved brand list (brands and
+brand/category links only — no models), generated deterministically
+from `source/AVTOSH_owner_brand_category_map.json` by
+`scripts/catalog/generate-owner-brands.mts`. Rows the owner flagged
+with a `review_reason` are excluded and kept verbatim in
+`owner-brands-review-pending.json` until Product review resolves
+them — never import that file.
+
+Never edit the generated files by hand: change the source mapping,
+re-run the generator, and commit all three together (the unit tests
+fail on any drift).
+
+```bash
+node scripts/catalog/generate-owner-brands.mts          # regenerate
+node scripts/catalog/generate-owner-brands.mts --check  # verify
+DATABASE_URL=postgres://... pnpm catalog:import data/catalog/owner-brands.json
+```

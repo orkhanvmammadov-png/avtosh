@@ -1,0 +1,1634 @@
+{
+  "brands": [
+    {
+      "name": "Abarth",
+      "slug": "abarth",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Acura",
+      "slug": "acura",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Alfa Romeo",
+      "slug": "alfa-romeo",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Aston Martin",
+      "slug": "aston-martin",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Audi",
+      "slug": "audi",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Avatr",
+      "slug": "avatr",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Baic",
+      "slug": "baic",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "BAW",
+      "slug": "baw",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "BENDA",
+      "slug": "benda",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Bentley",
+      "slug": "bentley",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Bestune",
+      "slug": "bestune",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "BMW",
+      "slug": "bmw",
+      "categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "BMW Alpina",
+      "slug": "bmw-alpina",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Buick",
+      "slug": "buick",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "BYD",
+      "slug": "byd",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "C.Moto",
+      "slug": "c-moto",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Cadillac",
+      "slug": "cadillac",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Can-Am",
+      "slug": "can-am",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "CFMOTO",
+      "slug": "cfmoto",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Champ",
+      "slug": "champ",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Changan",
+      "slug": "changan",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Chery",
+      "slug": "chery",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Chevrolet",
+      "slug": "chevrolet",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Chrysler",
+      "slug": "chrysler",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Citroen",
+      "slug": "citroen",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Dacia",
+      "slug": "dacia",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Dadi",
+      "slug": "dadi",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Daewoo",
+      "slug": "daewoo",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Daihatsu",
+      "slug": "daihatsu",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Dayun",
+      "slug": "dayun",
+      "categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Denza",
+      "slug": "denza",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "DFSK",
+      "slug": "dfsk",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Dnepr",
+      "slug": "dnepr",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Dodge",
+      "slug": "dodge",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Dofern",
+      "slug": "dofern",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "DongFeng",
+      "slug": "dongfeng",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Ducati",
+      "slug": "ducati",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Falcon",
+      "slug": "falcon",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "FAW",
+      "slug": "faw",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Ferrari",
+      "slug": "ferrari",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Fiat",
+      "slug": "fiat",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Ford",
+      "slug": "ford",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Forthing",
+      "slug": "forthing",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Foton",
+      "slug": "foton",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Freedom",
+      "slug": "freedom",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "GAC",
+      "slug": "gac",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "GAZ",
+      "slug": "gaz",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Geely",
+      "slug": "geely",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Genesis",
+      "slug": "genesis",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "GMC",
+      "slug": "gmc",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Grandmoto",
+      "slug": "grandmoto",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "GST",
+      "slug": "gst",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "GWM (Great Wall Motor)",
+      "slug": "gwm-great-wall-motor",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Haima",
+      "slug": "haima",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Haojue",
+      "slug": "haojue",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Harley-Davidson",
+      "slug": "harley-davidson",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Haval",
+      "slug": "haval",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Honda",
+      "slug": "honda",
+      "categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Hongqi",
+      "slug": "hongqi",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Hummer",
+      "slug": "hummer",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Hyundai",
+      "slug": "hyundai",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "iCar",
+      "slug": "icar",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "iHonzda",
+      "slug": "ihonzda",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "IJ",
+      "slug": "ij",
+      "categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "IM",
+      "slug": "im",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Indian Motorcycle",
+      "slug": "indian-motorcycle",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Infiniti",
+      "slug": "infiniti",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Iran Khodro",
+      "slug": "iran-khodro",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Isuzu",
+      "slug": "isuzu",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "JAC",
+      "slug": "jac",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "JAECOO",
+      "slug": "jaecoo",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Jaguar",
+      "slug": "jaguar",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Jeep",
+      "slug": "jeep",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "JETOUR",
+      "slug": "jetour",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Jiangmen",
+      "slug": "jiangmen",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Jianshe",
+      "slug": "jianshe",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Jinlang",
+      "slug": "jinlang",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "JMC",
+      "slug": "jmc",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Jonway",
+      "slug": "jonway",
+      "categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "KAIYI",
+      "slug": "kaiyi",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Kanuni",
+      "slug": "kanuni",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Karry",
+      "slug": "karry",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Kawasaki",
+      "slug": "kawasaki",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Kayo",
+      "slug": "kayo",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Khazar",
+      "slug": "khazar",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Kia",
+      "slug": "kia",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "KTM",
+      "slug": "ktm",
+      "categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Kuba",
+      "slug": "kuba",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "LADA (VAZ)",
+      "slug": "lada-vaz",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Lamborghini",
+      "slug": "lamborghini",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Land Rover",
+      "slug": "land-rover",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Leapmotor",
+      "slug": "leapmotor",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Lexus",
+      "slug": "lexus",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Li Auto",
+      "slug": "li-auto",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Lifan",
+      "slug": "lifan",
+      "categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Lincoln",
+      "slug": "lincoln",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Lotus",
+      "slug": "lotus",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "LuAz",
+      "slug": "luaz",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Lynk & Co",
+      "slug": "lynk-co",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "M-Hero",
+      "slug": "m-hero",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Maextro",
+      "slug": "maextro",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Maple",
+      "slug": "maple",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Maserati",
+      "slug": "maserati",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Mazda",
+      "slug": "mazda",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Mercedes",
+      "slug": "mercedes",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Mercedes-Maybach",
+      "slug": "mercedes-maybach",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Mercury",
+      "slug": "mercury",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "MG",
+      "slug": "mg",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Mikilon",
+      "slug": "mikilon",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Mini",
+      "slug": "mini",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Minsk",
+      "slug": "minsk",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Mitsubishi",
+      "slug": "mitsubishi",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Moskvich",
+      "slug": "moskvich",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Moto Guzzi",
+      "slug": "moto-guzzi",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Muravey",
+      "slug": "muravey",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "MV Agusta",
+      "slug": "mv-agusta",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Nama",
+      "slug": "nama",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Neta",
+      "slug": "neta",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Nio",
+      "slug": "nio",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Nissan",
+      "slug": "nissan",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Opel",
+      "slug": "opel",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Peugeot",
+      "slug": "peugeot",
+      "categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Polaris",
+      "slug": "polaris",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Polestar",
+      "slug": "polestar",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Porsche",
+      "slug": "porsche",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "QJMotor",
+      "slug": "qjmotor",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Radar",
+      "slug": "radar",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Ravon",
+      "slug": "ravon",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Renault",
+      "slug": "renault",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Renault Samsung",
+      "slug": "renault-samsung",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Rolls-Royce",
+      "slug": "rolls-royce",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Rover",
+      "slug": "rover",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "ROX (Polar Stone)",
+      "slug": "rox-polar-stone",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Royal Enfield",
+      "slug": "royal-enfield",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Saab",
+      "slug": "saab",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Saipa",
+      "slug": "saipa",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Scion",
+      "slug": "scion",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "SEAT",
+      "slug": "seat",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Seres Aito",
+      "slug": "seres-aito",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Sharmax",
+      "slug": "sharmax",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Shineray",
+      "slug": "shineray",
+      "categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Sinotech",
+      "slug": "sinotech",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Skoda",
+      "slug": "skoda",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Smart",
+      "slug": "smart",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Soueast",
+      "slug": "soueast",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Ssang Yong",
+      "slug": "ssang-yong",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Subaru",
+      "slug": "subaru",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Suzuki",
+      "slug": "suzuki",
+      "categories": [
+        "CAR",
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "SYM",
+      "slug": "sym",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Tatra",
+      "slug": "tatra",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Tesla",
+      "slug": "tesla",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Tofas",
+      "slug": "tofas",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Toyota",
+      "slug": "toyota",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Tufan",
+      "slug": "tufan",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "TVS",
+      "slug": "tvs",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "UAZ",
+      "slug": "uaz",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Ural",
+      "slug": "ural",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Vespa",
+      "slug": "vespa",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "VGV",
+      "slug": "vgv",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Vmoto",
+      "slug": "vmoto",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Voge",
+      "slug": "voge",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Volkswagen",
+      "slug": "volkswagen",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Volta",
+      "slug": "volta",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Volvo",
+      "slug": "volvo",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Vosxod",
+      "slug": "vosxod",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Voyah",
+      "slug": "voyah",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Wuling",
+      "slug": "wuling",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Xiaomi",
+      "slug": "xiaomi",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Xinling",
+      "slug": "xinling",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "XPeng",
+      "slug": "xpeng",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Yadea",
+      "slug": "yadea",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Yamaha",
+      "slug": "yamaha",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "ZAZ",
+      "slug": "zaz",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Zaza",
+      "slug": "zaza",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "ZEEKR",
+      "slug": "zeekr",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "ZIL",
+      "slug": "zil",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Zonsen",
+      "slug": "zonsen",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "Zontes",
+      "slug": "zontes",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "ZX Auto",
+      "slug": "zx-auto",
+      "categories": [
+        "CAR"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    },
+    {
+      "name": "ZXMCO",
+      "slug": "zxmco",
+      "categories": [
+        "MOTORCYCLE"
+      ],
+      "is_active": true,
+      "sort_order": 0
+    }
+  ]
+}
