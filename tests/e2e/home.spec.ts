@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import postgres from "postgres";
-import { expectNoHorizontalOverflow, isMobile, seed } from "./helpers";
+import { expectNoHorizontalOverflow, isMobile, pickBrand, seed } from "./helpers";
 
 test.describe("Home", () => {
   test("renders hero, 24h count, categories and Premium section", async ({ page }) => {
@@ -23,7 +23,7 @@ test.describe("Home", () => {
   test("category + brand + model search navigates with URL params", async ({ page }) => {
     const s = seed();
     await page.goto("/");
-    await page.getByTestId("home-brand").selectOption(s.toyotaBrandId);
+    await pickBrand(page, "Toyota");
     await page.getByTestId("home-model-toggle").click();
     await page.getByTestId("home-model-family-corolla").check();
     await page.keyboard.press("Escape");
@@ -41,7 +41,7 @@ test.describe("Home", () => {
     await page.goto("/");
     await page.getByTestId("category-MOTORCYCLE").click();
     await expect(page.getByTestId("home-brand")).toBeEnabled();
-    await page.getByTestId("home-brand").selectOption(s.yamahaBrandId);
+    await pickBrand(page, "Yamaha");
     await page.getByTestId("home-search-submit").click();
     await page.waitForURL(/category=MOTORCYCLE/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Motosiklet");
@@ -238,7 +238,7 @@ test.describe("Home", () => {
     await page.goto("/");
     await page.getByTestId("home-advanced-toggle").click();
     // non-panel fields first (no overlay open), including the final blocks
-    await page.getByTestId("home-brand").selectOption(s.toyotaBrandId);
+    await pickBrand(page, "Toyota");
     await page.getByTestId("home-adv-city").selectOption(s.bakuCityId);
     await page.getByTestId("home-adv-price-min").fill("5000");
     await page.getByTestId("home-adv-year-min").selectOption("2015");
@@ -285,7 +285,7 @@ test.describe("Home", () => {
     expect(url.searchParams.get("not_repainted")).toBe("true");
     // Search Results (O.6 unified panel) restores everything via URL-as-state
     await page.getByTestId("home-advanced-toggle").click();
-    await expect(page.getByTestId("home-brand")).toHaveValue(s.toyotaBrandId);
+    await expect(page.getByTestId("home-brand")).toHaveValue("Toyota");
     await expect(page.getByTestId("home-adv-city")).toHaveValue(s.bakuCityId);
     await expect(page.getByTestId("home-adv-price-min")).toHaveValue("5 000"); // approved thousands display
     await expect(page.getByTestId("home-adv-year-min")).toHaveValue("2015");

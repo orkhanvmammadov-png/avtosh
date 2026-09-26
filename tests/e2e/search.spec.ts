@@ -1,6 +1,6 @@
 import postgres from "postgres";
 import { expect, test, type Page } from "@playwright/test";
-import { expectNoHorizontalOverflow, seed } from "./helpers";
+import { expectNoHorizontalOverflow, pickBrand, seed } from "./helpers";
 import { testPhone } from "./auth-helpers";
 import { insertListingFixture } from "./seller-helpers";
 
@@ -209,7 +209,7 @@ test.describe("Search", () => {
   test("filters update the URL and results; sort works; clear keeps category", async ({ page }) => {
     const s = seed();
     await page.goto("/elanlar?category=CAR");
-    await page.getByTestId("home-brand").selectOption(s.toyotaBrandId);
+    await pickBrand(page, "Toyota");
     await page.getByTestId("home-model-toggle").click();
     await page.getByTestId("home-model-family-corolla").check();
     await page.keyboard.press("Escape");
@@ -222,7 +222,7 @@ test.describe("Search", () => {
     expect(url.searchParams.get("price_max")).toBe("2000000"); // 20 000 AZN entered → minor units in the URL/API
     await expect(page.getByTestId("organic-card").first()).toBeVisible();
     // compact controls restored from the applied URL after remount
-    await expect(page.getByTestId("home-brand")).toHaveValue(s.toyotaBrandId);
+    await expect(page.getByTestId("home-brand")).toHaveValue("Toyota");
     await expect(page.getByTestId("home-model-toggle")).toContainText("Corolla");
 
     await page.getByTestId("sort-select").click();
@@ -351,7 +351,7 @@ test.describe("Search", () => {
     expect(restored.searchParams.get("sort")).toBe("PRICE_DESC");
     await expect(page.getByTestId("organic-card").first()).toBeVisible();
     // ...and the unified controls carry the restored state too
-    await expect(page.getByTestId("home-brand")).toHaveValue(s.toyotaBrandId);
+    await expect(page.getByTestId("home-brand")).toHaveValue("Toyota");
     await expect(page.getByTestId("sort-select")).toContainText("Qiymət: azalan");
   });
 

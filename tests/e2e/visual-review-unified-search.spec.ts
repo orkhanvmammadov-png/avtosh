@@ -1,6 +1,6 @@
 import postgres from "postgres";
 import { expect, test, type Page } from "@playwright/test";
-import { expectNoHorizontalOverflow, seed } from "./helpers";
+import { expectNoHorizontalOverflow, pickBrand, seed } from "./helpers";
 
 /**
  * Phase 4.17O.6 — unified search & boosted results captures for Owner
@@ -67,7 +67,7 @@ test.describe("unified search visual review", () => {
       await page.setViewportSize({ width: 1440, height: 900 });
       // realistic active-filter state built through the UI (URL-as-state)
       await page.goto("/elanlar?category=CAR");
-      await page.getByTestId("home-brand").selectOption(s.toyotaBrandId);
+      await pickBrand(page, "Toyota");
       await page.getByTestId("home-model-toggle").click();
       await page.getByTestId("home-model-family-corolla").check();
       await page.keyboard.press("Escape");

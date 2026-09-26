@@ -75,7 +75,7 @@ test("checking the family absorbs its child selections (normalization) and brand
   expect(url.searchParams.get("model_variant_ids")).toBeNull();
 
   // brand change clears every model selection
-  await page.getByTestId("home-brand").selectOption("");
+  await page.getByTestId("home-brand-clear").click();
   await expect(page.getByTestId("home-model-toggle")).not.toContainText("Tree Family");
 });
 

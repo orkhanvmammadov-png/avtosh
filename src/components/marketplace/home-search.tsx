@@ -7,6 +7,7 @@ import { aznInputToMinor, minorToAznInput } from "@/lib/format";
 import { CATEGORY_LABELS, GROUP_LABELS, UI } from "@/lib/marketplace/labels";
 import { publicFetch } from "@/lib/marketplace/public-api";
 import { engineCcOptions } from "@/lib/marketplace/engine-options";
+import { TypeaheadField } from "@/components/seller/axin/typeahead-field";
 import { ModelTreeSelect, type ModelTreeSelection } from "@/components/marketplace/model-tree-select";
 import { MultiSelectField } from "@/components/marketplace/multi-select";
 import {
@@ -286,6 +287,7 @@ export function HomeSearch({
   const [collapsedCount, setCollapsedCount] = useState(() => countStateFilters(init));
   const [clearCount, setClearCount] = useState(0); // remounts uncontrolled fields on Təmizlə
   const requestRef = useRef(0);
+  const modelsRequestRef = useRef(0);
   /** Restore value for a keyed field: Təmizlə wins over the URL value. */
   const restored = (value: string | undefined): string => (clearCount > 0 ? "" : (value ?? ""));
 
@@ -306,6 +308,7 @@ export function HomeSearch({
     setBrandId("");
     setModelSelection({ familyIds: [], variants: [] });
     setModels([]);
+    modelsRequestRef.current += 1; // invalidate in-flight model loads
     setBrands([]);
     setLoadingBrands(true);
     void loadBrands(code);
@@ -315,12 +318,15 @@ export function HomeSearch({
     setBrandId(nextBrandId);
     setModelSelection({ familyIds: [], variants: [] });
     setModels([]);
+    // Ticketed like loadBrands: a quick brand/category change must
+    // never let a slower older response show stale model families.
+    const ticket = ++modelsRequestRef.current;
     if (nextBrandId === "") return;
     try {
       const r = await publicFetch<ModelDto[]>(`/api/v1/catalog/models?category=${encodeURIComponent(category)}&brand_id=${encodeURIComponent(nextBrandId)}`);
-      setModels(r.data);
+      if (ticket === modelsRequestRef.current) setModels(r.data);
     } catch {
-      setModels([]);
+      if (ticket === modelsRequestRef.current) setModels([]);
     }
   }
 
@@ -476,13 +482,17 @@ export function HomeSearch({
           ))}
         </div>
         <div className="grid gap-2.5 md:grid-cols-[1fr_1fr_1fr_auto]">
-          <label className="block">
-            <FieldLabel>{UI.brandLabel}</FieldLabel>
-            <select className={`${control} appearance-none pr-8 min-h-12`} value={brandId} onChange={(e) => void selectBrand(e.target.value)} disabled={loadingBrands} data-testid="home-brand">
-              <option value="">{UI.any}</option>
-              {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-          </label>
+          <TypeaheadField
+            id="home-brand"
+            label={UI.brandLabel}
+            value={brandId === "" ? null : brandId}
+            items={brands}
+            placeholder={UI.any}
+            loading={loadingBrands}
+            clearable
+            clearOnDirtyClose
+            onChange={(id) => void selectBrand(id ?? "")}
+          />
           <ModelTreeSelect
             label={UI.modelLabel}
             category={category}
