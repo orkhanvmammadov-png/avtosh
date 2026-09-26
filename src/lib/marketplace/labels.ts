@@ -28,6 +28,7 @@ export const UI = {
   search: "Axtar",
   brandLabel: "Marka",
   modelLabel: "Model",
+  modelVariantLabel: "Alt model",
   city: "Şəhər",
   price: "Qiymət",
   year: "Buraxılış ili",
@@ -227,6 +228,9 @@ export const SELLER = {
   category: "Kateqoriya",
   brand: "Marka",
   model: "Model",
+  modelVariant: "Alt model",
+  modelFirstHint: "Model seçin",
+  modelVariantsLoadError: "Alt modellər yüklənmədi — yenidən cəhd edin.",
   year: "Buraxılış ili",
   price: "Qiymət, AZN",
   mileage: "Yürüş, km",
@@ -352,6 +356,7 @@ export const SELLER = {
 } as const;
 
 export const SPEC_LABELS = {
+  modelVariant: "Alt model",
   fuelType: "Yanacaq",
   transmission: "Sürətlər qutusu",
   bodyType: "Ban növü",

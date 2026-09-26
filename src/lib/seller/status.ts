@@ -48,6 +48,7 @@ export const REASON_LABELS: Record<string, string> = {
 export const MISSING_FIELD_LABELS: Record<string, string> = {
   brand: "Marka",
   model: "Model",
+  model_variant: "Alt model",
   year: "Buraxılış ili",
   price: "Qiymət",
   mileage: "Yürüş",

@@ -86,6 +86,7 @@ function keySpecTiles(listing: PublicDetailDto): [string, string][] {
 function specGroups(listing: PublicDetailDto): { title: string; rows: [string, string][] }[] {
   const engine = listing.engineCc === null ? null : `${listing.engineCc} sm³`;
   const vehicle: [string, string | null][] = [
+    [SPEC_LABELS.modelVariant, listing.modelVariant],
     [SPEC_LABELS.bodyType, listing.bodyType],
     [SPEC_LABELS.motorcycleType, listing.motorcycleType],
     [SPEC_LABELS.color, listing.color],

@@ -28,6 +28,7 @@ export interface OwnerListingDto {
   category: string;
   brandId: string | null;
   modelId: string | null;
+  modelVariantId: string | null;
   year: number | null;
   priceMinor: number | null;
   currency: string;
@@ -103,6 +104,7 @@ export async function toOwnerListingDto(
     category: row.category_code,
     brandId: row.brand_id,
     modelId: row.model_id,
+    modelVariantId: row.model_variant_id,
     year: row.year,
     priceMinor: row.price_minor === null ? null : Number(row.price_minor),
     currency: row.currency,

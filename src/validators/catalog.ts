@@ -23,6 +23,12 @@ export const modelsQuerySchema = z.object({
   brand_id: z.uuid("brand_id must be a UUID"),
 });
 
+export const variantsQuerySchema = z.object({
+  category: categoryCode,
+  brand_id: z.uuid("brand_id must be a UUID"),
+  model_id: z.uuid("model_id must be a UUID"),
+});
+
 export const optionsQuerySchema = z.object({
   group: referenceGroupCode,
   category: categoryCode.optional(),

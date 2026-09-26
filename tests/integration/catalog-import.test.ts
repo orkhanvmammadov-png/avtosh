@@ -34,6 +34,15 @@ function importData(): CatalogImportFile {
         slug: "imp-monster",
       },
     ],
+    model_variants: [
+      {
+        brand_slug: "imp-lada",
+        category: "CAR",
+        model_slug: "imp-niva",
+        name: "Niva Legend",
+        slug: "imp-niva-legend",
+      },
+    ],
     cities: [{ name_az: "İmp Xırdalan", slug: "imp-xirdalan", sort_order: 50 }],
     features: [
       { code: "IMP_TEST_FEATURE", name_az: "İmp Testi", category: "CAR" },
@@ -89,6 +98,12 @@ describe("catalog importer", () => {
     expect(brands.map((b) => b.slug)).toEqual(["imp-ducati", "imp-lada"]);
     const models = await sql`select 1 from models where slug like 'imp-%'`;
     expect(models.length).toBe(2);
+    const variants = await sql`
+      select 1 from model_variants
+      where model_id = (select id from models where slug = 'imp-niva')
+        and slug = 'imp-niva-legend'
+    `;
+    expect(variants.length).toBe(1);
     const cities = await sql`select 1 from cities where slug = 'imp-xirdalan'`;
     expect(cities.length).toBe(1);
     const features = await sql`

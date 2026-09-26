@@ -26,6 +26,13 @@ export interface ModelRow {
   slug: string;
 }
 
+export interface ModelVariantRow {
+  id: string;
+  model_id: string;
+  name: string;
+  slug: string;
+}
+
 export interface CityRow {
   id: string;
   name_az: string;
@@ -110,6 +117,74 @@ export async function listActiveModels(
       and is_active
     order by sort_order, name
   `;
+}
+
+export async function listActiveModelVariants(
+  modelId: string,
+): Promise<ModelVariantRow[]> {
+  const sql = getSql();
+  return sql<ModelVariantRow[]>`
+    select id, model_id, name, slug
+    from model_variants
+    where model_id = ${modelId} and is_active
+    order by sort_order, name
+  `;
+}
+
+/** Point lookup: active variant belonging to the model. */
+export async function findActiveVariantInModel(
+  variantId: string,
+  modelId: string,
+): Promise<ModelVariantRow | undefined> {
+  const sql = getSql();
+  const rows = await sql<ModelVariantRow[]>`
+    select id, model_id, name, slug
+    from model_variants
+    where id = ${variantId} and model_id = ${modelId} and is_active
+  `;
+  return rows[0];
+}
+
+/** Point lookups for a bounded id set (search filter validation). */
+export async function listActiveVariantsByIds(
+  variantIds: string[],
+): Promise<ModelVariantRow[]> {
+  if (variantIds.length === 0) return [];
+  const sql = getSql();
+  return sql<ModelVariantRow[]>`
+    select id, model_id, name, slug
+    from model_variants
+    where id = any(${variantIds}::uuid[]) and is_active
+  `;
+}
+
+/** Active models of the brand+category restricted to a bounded id set. */
+export async function listActiveModelsByIds(
+  modelIds: string[],
+  brandId: string,
+  categoryId: string,
+): Promise<ModelRow[]> {
+  if (modelIds.length === 0) return [];
+  const sql = getSql();
+  return sql<ModelRow[]>`
+    select id, brand_id, name, slug
+    from models
+    where id = any(${modelIds}::uuid[])
+      and brand_id = ${brandId}
+      and category_id = ${categoryId}
+      and is_active
+  `;
+}
+
+/** True when the family has at least one active variant. */
+export async function modelHasActiveVariants(modelId: string): Promise<boolean> {
+  const sql = getSql();
+  const rows = await sql<{ one: number }[]>`
+    select 1 as one from model_variants
+    where model_id = ${modelId} and is_active
+    limit 1
+  `;
+  return rows.length > 0;
 }
 
 export async function listActiveCities(): Promise<CityRow[]> {

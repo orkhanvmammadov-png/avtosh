@@ -87,6 +87,7 @@ export default async function ModerationReviewPage({
     category: detail.category,
     brandName: detail.brand?.name ?? null,
     modelName: detail.model?.name ?? null,
+    modelVariantName: detail.modelVariant?.name ?? null,
     year: detail.year,
     priceMinor: detail.priceMinor,
     currency: detail.currency,

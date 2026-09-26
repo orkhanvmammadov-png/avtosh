@@ -28,6 +28,13 @@ const toyota = await brand("Toyota", "toyota", ["CAR"]);
 const bmw = await brand("BMW", "bmw", ["CAR", "MOTORCYCLE"]);
 const yamaha = await brand("Yamaha", "yamaha", ["MOTORCYCLE"]);
 const corolla = await model(toyota, "CAR", "Corolla", "corolla");
+// O.15 hierarchical model tree: one Toyota family WITH variants for
+// multi-select OR-semantics and single-choice wizard specs.
+const treeFam = await model(toyota, "CAR", "Tree Family", "tree-family");
+const variant = async (modelId, name, slug, order) =>
+  (await sql`insert into model_variants (model_id, name, slug, sort_order) values (${modelId}, ${name}, ${slug}, ${order}) returning id`)[0].id;
+const tree100 = await variant(treeFam, "Tree 100", "tree-100", 1);
+const tree200 = await variant(treeFam, "Tree 200", "tree-200", 2);
 const camry = await model(toyota, "CAR", "Camry", "camry");
 const x5 = await model(bmw, "CAR", "X5", "x5");
 const gs = await model(bmw, "MOTORCYCLE", "R 1250 GS", "r-1250-gs");
@@ -49,10 +56,10 @@ const sedan = (await sql`select id from reference_options where group_code='BODY
 async function listing(spec) {
   const status = spec.status ?? "ACTIVE";
   const [row] = await sql`
-    insert into listings (owner_id, category_id, brand_id, model_id, city_id, year, price_minor, mileage,
+    insert into listings (owner_id, category_id, brand_id, model_id, model_variant_id, city_id, year, price_minor, mileage,
       fuel_type_id, transmission_id, body_type_id, credit_available, description, contact_phone_e164,
       status, submitted_at, published_at, current_expires_at, sold_at)
-    values (${seller.id}, ${cats[spec.category ?? "CAR"]}, ${spec.brand}, ${spec.model}, ${spec.city ?? baku},
+    values (${seller.id}, ${cats[spec.category ?? "CAR"]}, ${spec.brand}, ${spec.model}, ${spec.variant ?? null}, ${spec.city ?? baku},
       ${spec.year ?? 2020}, ${spec.price ?? 2500000}, ${spec.mileage ?? 60000},
       ${spec.category === "MOTORCYCLE" ? null : petrol}, ${spec.category === "MOTORCYCLE" ? null : auto},
       ${spec.category === "MOTORCYCLE" ? null : sedan}, ${spec.credit ?? false},
@@ -96,6 +103,12 @@ const expired = await listing({ brand: toyota, model: corolla, status: "EXPIRED"
 const suspended = await listing({ brand: toyota, model: corolla, status: "SUSPENDED" });
 const noImage = await listing({ brand: toyota, model: corolla, images: false, price: 1234500, publishedMinutesAgo: 1 });
 const noContact = await listing({ brand: toyota, model: camry, contact: null, price: 1999900, publishedMinutesAgo: 2 });
+// Tree family rows: two variant-tagged + one legacy NULL-variant listing.
+const tree = [
+  await listing({ brand: toyota, model: treeFam, variant: tree100, price: 2100000, publishedMinutesAgo: 11 }),
+  await listing({ brand: toyota, model: treeFam, variant: tree200, price: 2200000, publishedMinutesAgo: 12 }),
+  await listing({ brand: toyota, model: treeFam, price: 2300000, publishedMinutesAgo: 13 }),
+];
 
 Object.assign(out, {
   activeCar: cars[0].public_id, activeCarId: cars[0].id, sellerId: seller.id,
@@ -103,6 +116,8 @@ Object.assign(out, {
   sold: sold.public_id, expired: expired.public_id, suspended: suspended.public_id,
   noImage: noImage.public_id, noContact: noContact.public_id,
   toyotaBrandId: toyota, corollaModelId: corolla, yamahaBrandId: yamaha, bakuCityId: baku,
+  treeFamilyModelId: treeFam, tree100VariantId: tree100, tree200VariantId: tree200,
+  treeListings: tree.map((t) => t.public_id),
 });
 writeFileSync(".e2e-seed.json", JSON.stringify(out, null, 2));
 await sql.end();

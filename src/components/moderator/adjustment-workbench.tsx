@@ -41,6 +41,7 @@ interface WorkingContent {
   category: string;
   brand_id: string | null;
   model_id: string | null;
+  model_variant_id: string | null;
   year: number | null;
   price_minor: number | null;
   mileage: number | null;
@@ -77,6 +78,7 @@ function toWorking(data: Record<string, unknown>): WorkingContent {
     category: str(data, "category") ?? "CAR",
     brand_id: str(data, "brand_id"),
     model_id: str(data, "model_id"),
+    model_variant_id: str(data, "model_variant_id"),
     year: num(data, "year"),
     price_minor: num(data, "price_minor"),
     mileage: num(data, "mileage"),
@@ -106,6 +108,7 @@ const FIELD_LABELS: Record<string, string> = {
   category: "Kateqoriya",
   brand: "Marka",
   model: "Model",
+  model_variant: "Alt model",
   year: "Buraxılış ili",
   price: "Qiymət",
   mileage: "Yürüş",
@@ -409,7 +412,7 @@ function AdjustmentEditor({
   const [unsavedDialog, setUnsavedDialog] = useState(false);
   const [categoryDialog, setCategoryDialog] = useState<string | null>(null);
 
-  const catalog = useWizardCatalog(content.category, content.brand_id);
+  const catalog = useWizardCatalog(content.category, content.brand_id, content.model_id);
 
   const dirty = useMemo(
     () =>
@@ -469,6 +472,7 @@ function AdjustmentEditor({
       category: nextCode,
       brand_id: null,
       model_id: null,
+      model_variant_id: null,
       body_type_id: null,
       motorcycle_type_id: null,
       feature_ids: [],
@@ -573,7 +577,7 @@ function AdjustmentEditor({
               value={content.brand_id ?? ""}
               onChange={(e) => {
                 const value = e.target.value === "" ? null : e.target.value;
-                setContent((prev) => ({ ...prev, brand_id: value, model_id: null }));
+                setContent((prev) => ({ ...prev, brand_id: value, model_id: null, model_variant_id: null }));
               }}
             >
               <option value="">—</option>
@@ -591,7 +595,10 @@ function AdjustmentEditor({
               className={selectClass()}
               value={content.model_id ?? ""}
               disabled={content.brand_id === null}
-              onChange={(e) => set("model_id", e.target.value === "" ? null : e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value === "" ? null : e.target.value;
+                setContent((prev) => ({ ...prev, model_id: value, model_variant_id: null }));
+              }}
             >
               <option value="">—</option>
               {catalog.models.map((item) => (
@@ -601,6 +608,28 @@ function AdjustmentEditor({
               ))}
             </select>
           </FieldShell>
+          {content.model_id !== null && catalog.variants.length > 0 ? (
+            <FieldShell
+              label="Alt model"
+              htmlFor="adj-model-variant"
+              sellerValue={sellerWas("model_variant_id", (v) => nameOf(catalog.variants, v.model_variant_id))}
+            >
+              <select
+                id="adj-model-variant"
+                data-testid="adj-model-variant"
+                className={selectClass()}
+                value={content.model_variant_id ?? ""}
+                onChange={(e) => set("model_variant_id", e.target.value === "" ? null : e.target.value)}
+              >
+                <option value="">—</option>
+                {catalog.variants.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </FieldShell>
+          ) : null}
           <FieldShell label="Buraxılış ili" htmlFor="adj-year" sellerValue={sellerWas("year", (v) => (v.year === null ? null : String(v.year)))}>
             <input
               id="adj-year"

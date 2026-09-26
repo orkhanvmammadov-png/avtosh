@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, Loader2 } from "lucide-react";
+import { Check, ChevronDown, Loader2, X } from "lucide-react";
 import { SELLER } from "@/lib/marketplace/labels";
 
 export interface TypeaheadItem {
@@ -28,6 +28,8 @@ export function TypeaheadField({
   disabledHint,
   loading = false,
   error = null,
+  clearable = false,
+  clearOnDirtyClose = false,
   onChange,
 }: {
   id: string;
@@ -40,6 +42,12 @@ export function TypeaheadField({
   disabledHint?: string;
   loading?: boolean;
   error?: string | null;
+  /** Search surfaces: render an accessible ✕ that emits null. */
+  clearable?: boolean;
+  /** Search surfaces: closing with a typed, unselected query must
+      never silently keep the old selection — it emits null instead.
+      Listing creation keeps the sealed revert-on-close behavior. */
+  clearOnDirtyClose?: boolean;
   onChange: (id: string | null) => void;
 }) {
   const listboxId = useId();
@@ -57,18 +65,30 @@ export function TypeaheadField({
     return items.filter((i) => i.name.toLocaleLowerCase("az").includes(q));
   }, [items, query]);
 
+  function closeWithoutSelection() {
+    if (
+      clearOnDirtyClose &&
+      value !== null &&
+      query.trim() !== "" &&
+      query.trim() !== (selected?.name ?? "")
+    ) {
+      onChange(null);
+    }
+    setOpen(false);
+    setQuery("");
+  }
+
   // Outside click closes without selection.
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
       if (rootRef.current !== null && !rootRef.current.contains(event.target as Node)) {
-        setOpen(false);
-        setQuery("");
+        closeWithoutSelection();
       }
     };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open]);
+  });
 
   function select(item: TypeaheadItem) {
     onChange(item.id);
@@ -81,8 +101,7 @@ export function TypeaheadField({
     if (event.key === "Escape") {
       if (open) {
         event.preventDefault();
-        setOpen(false);
-        setQuery("");
+        closeWithoutSelection();
       }
       return;
     }
@@ -113,8 +132,7 @@ export function TypeaheadField({
       return;
     }
     if (event.key === "Tab") {
-      setOpen(false);
-      setQuery("");
+      closeWithoutSelection();
     }
   }
 
@@ -141,7 +159,7 @@ export function TypeaheadField({
           placeholder={showHint ? disabledHint : (placeholder ?? SELLER.searchTypeahead)}
           value={display}
           data-testid={id}
-          className={`h-11 w-full rounded-control desk:h-10 border bg-raised pl-3 pr-8 text-[13px] text-ink outline-none transition-colors duration-150 placeholder:text-muted focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 disabled:cursor-not-allowed disabled:bg-sunken disabled:text-muted ${
+          className={`h-11 w-full rounded-control desk:h-10 border bg-raised pl-3 ${clearable && value !== null && !open ? "pr-14" : "pr-8"} text-[13px] text-ink outline-none transition-colors duration-150 placeholder:text-muted focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 disabled:cursor-not-allowed disabled:bg-sunken disabled:text-muted ${
             error !== null ? "border-danger" : "border-line-strong"
           }`}
           onFocus={() => {
@@ -157,6 +175,20 @@ export function TypeaheadField({
           }}
           onKeyDown={onKeyDown}
         />
+        {clearable && value !== null && !open ? (
+          <button
+            type="button"
+            aria-label={`${label} — seçimi təmizlə`}
+            data-testid={`${id}-clear`}
+            onClick={() => {
+              setQuery("");
+              onChange(null);
+            }}
+            className="absolute right-7 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-[4px] text-muted transition-colors duration-150 hover:text-danger"
+          >
+            <X size={13} strokeWidth={2.5} aria-hidden="true" />
+          </button>
+        ) : null}
         <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted">
           {loading ? (
             <Loader2 size={15} className="animate-spin" aria-hidden="true" data-testid={`${id}-loading`} />

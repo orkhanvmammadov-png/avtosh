@@ -109,3 +109,22 @@ node scripts/catalog/generate-owner-brands.mts --check  # verify
 For local UAT import, use the ephemeral database started by
 `pnpm uat:dev` (see the harness output for its port) — not an
 arbitrary `DATABASE_URL`.
+
+## Owner model catalog
+
+`owner-models.json` holds the owner-supplied model families and Alt
+models (variants), generated deterministically from the immutable
+source `source/AVTOSH_owner_model_source.md` (an HTML option dump,
+status DRAFT_REVIEW) by `scripts/catalog/generate-owner-models.mts`.
+`owner-models-provenance.json` records every source option verbatim
+(value, class, data-group, data-count, label) with its resolution —
+brand, category + decision basis, role, slugs — including the five
+category-unresolved rows that are excluded pending Product review and
+the documented Suzuki VL800 Intruder malformed-reference ruling. The
+same generator/`--check`/no-hand-edit rules apply as for brands.
+Import the complete set together with the brands file into a local
+UAT database only; production import remains unauthorized.
+
+The import format's `model_variants` section is
+`{brand_slug, category, model_slug, name, slug, is_active, sort_order}`,
+upserted by `(model_id, slug)`.

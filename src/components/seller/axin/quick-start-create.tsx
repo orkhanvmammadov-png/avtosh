@@ -9,6 +9,7 @@ import { publicFetch } from "@/lib/marketplace/public-api";
 import { createListing, patchListing } from "@/lib/seller/owner-api";
 import { SellerListboxField } from "@/components/seller/listbox-field";
 import { TypeaheadField, type TypeaheadItem } from "@/components/seller/axin/typeahead-field";
+import { ModelPathField } from "@/components/seller/axin/model-path-field";
 
 /**
  * O.9 AXIN Quick Start (flow.md): the navy 30-second entry —
@@ -28,6 +29,8 @@ export function QuickStartCreate({
   const [category, setCategory] = useState(categories[0]?.code ?? "CAR");
   const [brandId, setBrandId] = useState<string | null>(null);
   const [modelId, setModelId] = useState<string | null>(null);
+  const [variantId, setVariantId] = useState<string | null>(null);
+  const [variantName, setVariantName] = useState<string | null>(null);
   const [year, setYear] = useState<number | null>(null);
   // Loaded lists are keyed by their request inputs so "loading" is
   // DERIVED (key mismatch), never set synchronously inside effects
@@ -82,6 +85,8 @@ export function QuickStartCreate({
     });
   }, []);
 
+  // The hierarchical model field always commits a complete selection
+  // (family alone only when it has zero active variants).
   const complete = brandId !== null && modelId !== null && year !== null;
 
   async function start() {
@@ -93,6 +98,7 @@ export function QuickStartCreate({
       await patchListing(listing.id, listing.revision, {
         brand_id: brandId,
         model_id: modelId,
+        model_variant_id: variantId,
         year,
       });
       router.push(`/elan-yerlesdir/${listing.id}`);
@@ -124,6 +130,8 @@ export function QuickStartCreate({
                   setCategory(item.code);
                   setBrandId(null);
                   setModelId(null);
+                  setVariantId(null);
+                  setVariantName(null);
                 }}
                 className={`inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-control border text-[13px] font-semibold transition-colors duration-150 ${
                   selected
@@ -148,17 +156,27 @@ export function QuickStartCreate({
           onChange={(id) => {
             setBrandId(id);
             setModelId(null); // stale model never survives a brand change
+            setVariantId(null);
+            setVariantName(null);
           }}
         />
-        <TypeaheadField
+        <ModelPathField
           id="quick-start-model"
           label={SELLER.model}
-          value={modelId}
-          items={models}
+          category={category}
+          brandId={brandId}
+          families={models}
+          valueModelId={modelId}
+          valueVariantId={variantId}
+          variantNames={(id) => (id !== null && id === variantId ? variantName : null)}
           disabled={brandId === null}
           disabledHint={SELLER.brandFirstHint}
           loading={modelsLoading}
-          onChange={setModelId}
+          onSelect={(nextModelId, nextVariantId, nextVariantName) => {
+            setModelId(nextModelId);
+            setVariantId(nextVariantId);
+            setVariantName(nextVariantName);
+          }}
         />
         <div className="desk:col-span-2 [&_button]:bg-raised">
           <SellerListboxField

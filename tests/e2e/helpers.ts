@@ -19,6 +19,10 @@ export interface Seed {
   corollaModelId: string;
   yamahaBrandId: string;
   bakuCityId: string;
+  treeFamilyModelId: string;
+  tree100VariantId: string;
+  tree200VariantId: string;
+  treeListings: string[];
 }
 
 export function seed(): Seed {
@@ -28,6 +32,17 @@ export function seed(): Seed {
 export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow, "page must not scroll horizontally").toBeLessThanOrEqual(1);
+}
+
+/** Selects a brand in the search card's seller-style typeahead. */
+export async function pickBrand(page: Page, name: string): Promise<void> {
+  await page.getByTestId("home-brand").click();
+  await page.getByTestId("home-brand").fill(name);
+  await page
+    .getByTestId("home-brand-listbox")
+    .getByRole("option", { name, exact: true })
+    .click();
+  await expect(page.getByTestId("home-brand")).toHaveValue(name);
 }
 
 export function isMobile(projectName: string): boolean {

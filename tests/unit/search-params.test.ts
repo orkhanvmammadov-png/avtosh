@@ -38,6 +38,35 @@ describe("URL filter model", () => {
     expect(next).toEqual({ category: "MOTORCYCLE", color_id: "c", price_max: "9" });
   });
 
+  it("canonicalizes legacy model params: a pair means that variant only", () => {
+    const pair = filtersFromSearchParams(
+      new URLSearchParams("category=CAR&brand_id=b&model_id=m1&model_variant_id=v1"),
+    );
+    expect(pair.model_variant_ids).toBe("v1");
+    expect(pair.model_ids).toBeUndefined();
+    expect(pair.model_id).toBeUndefined();
+    expect(pair.model_variant_id).toBeUndefined();
+
+    const lone = filtersFromSearchParams(new URLSearchParams("category=CAR&brand_id=b&model_id=m1"));
+    expect(lone.model_ids).toBe("m1");
+    expect(lone.model_id).toBeUndefined();
+
+    const merged = filtersFromSearchParams(
+      new URLSearchParams("category=CAR&brand_id=b&model_ids=m2,m3&model_id=m1"),
+    );
+    expect(merged.model_ids).toBe("m2,m3,m1");
+  });
+
+  it("drops every model selection on category change", () => {
+    const next = filtersForCategoryChange(
+      { category: "CAR", brand_id: "b", model_ids: "m1,m2", model_variant_ids: "v1" },
+      "MOTORCYCLE",
+    );
+    expect(next.model_ids).toBeUndefined();
+    expect(next.model_variant_ids).toBeUndefined();
+    expect(next.brand_id).toBeUndefined();
+  });
+
   it("maps Boost candidates to 2/3/4 visible slots by viewport", () => {
     expect(boostSlotClass(0)).toBe("");
     expect(boostSlotClass(1)).toBe("");

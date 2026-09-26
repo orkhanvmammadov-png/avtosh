@@ -38,6 +38,8 @@ export interface ModerationListingRow {
   brand_name: string | null;
   model_id: string | null;
   model_name: string | null;
+  model_variant_id: string | null;
+  model_variant_name: string | null;
   year: number | null;
   price_minor: string | null;
   currency: string;
@@ -172,6 +174,7 @@ export async function getModerationListing(
     select l.id, l.public_id::text as public_id, l.status, l.revision,
            c.code as category_code,
            l.brand_id, b.name as brand_name, l.model_id, m.name as model_name,
+           l.model_variant_id, mv.name as model_variant_name,
            l.year, l.price_minor::text as price_minor, l.currency, l.mileage, l.engine_cc,
            ft.name_az as fuel_type, tr.name_az as transmission, bt.name_az as body_type,
            dt.name_az as drive_type, mt.name_az as motorcycle_type, co.name_az as color,
@@ -186,6 +189,7 @@ export async function getModerationListing(
     join users u on u.id = l.owner_id
     left join brands b on b.id = l.brand_id
     left join models m on m.id = l.model_id
+    left join model_variants mv on mv.id = l.model_variant_id
     left join cities ci on ci.id = l.city_id
     left join reference_options ft on ft.id = l.fuel_type_id
     left join reference_options tr on tr.id = l.transmission_id

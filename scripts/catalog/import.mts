@@ -41,6 +41,19 @@ const importFileSchema = z.object({
       }),
     )
     .default([]),
+  model_variants: z
+    .array(
+      z.object({
+        brand_slug: slug,
+        category: categoryCode,
+        model_slug: slug,
+        name: z.string().min(1).max(100),
+        slug,
+        is_active: z.boolean().default(true),
+        sort_order: z.int().default(0),
+      }),
+    )
+    .default([]),
   cities: z
     .array(
       z.object({
@@ -77,6 +90,7 @@ export interface ImportSummary {
   brands: number;
   brandCategoryLinks: number;
   models: number;
+  modelVariants: number;
   cities: number;
   features: number;
   dryRun: boolean;
@@ -104,6 +118,7 @@ export async function runCatalogImport(
     brands: 0,
     brandCategoryLinks: 0,
     models: 0,
+    modelVariants: 0,
     cities: 0,
     features: 0,
     dryRun: options.dryRun,
@@ -114,6 +129,7 @@ export async function runCatalogImport(
     const referencedCategories = new Set<string>([
       ...data.brands.flatMap((b) => b.categories),
       ...data.models.map((m) => m.category),
+      ...data.model_variants.map((v) => v.category),
       ...data.features.flatMap((f) => (f.category === null ? [] : [f.category])),
     ]);
     const categoryIds = new Map<string, string>();
@@ -169,6 +185,33 @@ export async function runCatalogImport(
               sort_order = excluded.sort_order
       `;
       summary.models += 1;
+    }
+
+    for (const variant of data.model_variants) {
+      const modelRows = await tx<{ id: string }[]>`
+        select m.id
+        from models m
+        join brands b on b.id = m.brand_id
+        where b.slug = ${variant.brand_slug}
+          and m.category_id = ${categoryIds.get(variant.category)!}
+          and m.slug = ${variant.model_slug}
+      `;
+      if (modelRows.length === 0) {
+        throw new Error(
+          `Variant "${variant.slug}" references unknown model: ` +
+            `${variant.brand_slug}/${variant.category}/${variant.model_slug}`,
+        );
+      }
+      await tx`
+        insert into model_variants (model_id, name, slug, is_active, sort_order)
+        values (${modelRows[0].id}, ${variant.name}, ${variant.slug},
+                ${variant.is_active}, ${variant.sort_order})
+        on conflict (model_id, slug) do update
+          set name = excluded.name,
+              is_active = excluded.is_active,
+              sort_order = excluded.sort_order
+      `;
+      summary.modelVariants += 1;
     }
 
     for (const city of data.cities) {
@@ -246,7 +289,8 @@ async function main(): Promise<void> {
     console.log(
       `${dryRun ? "[dry-run] would apply" : "Applied"}: ` +
         `${summary.brands} brands, ${summary.brandCategoryLinks} brand/category links, ` +
-        `${summary.models} models, ${summary.cities} cities, ${summary.features} features.`,
+        `${summary.models} models, ${summary.modelVariants} model variants, ` +
+        `${summary.cities} cities, ${summary.features} features.`,
     );
   } finally {
     await sql.end();

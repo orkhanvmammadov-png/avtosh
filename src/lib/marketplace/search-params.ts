@@ -11,6 +11,9 @@ export const FILTER_KEYS = [
   "category",
   "brand_id",
   "model_id",
+  "model_variant_id",
+  "model_ids",
+  "model_variant_ids",
   "city_id",
   "price_min",
   "price_max",
@@ -72,6 +75,19 @@ export function filtersFromSearchParams(
     if (single === undefined) continue;
     state[plural] = [...new Set([...idsFromCsv(state[plural]), single])].join(",");
     delete state[singular];
+  }
+  // Legacy model params: a singular model_id+model_variant_id PAIR
+  // meant "that variant only", so the pair canonicalizes to the
+  // variant list alone; a lone model_id is a family selection.
+  if (state.model_variant_id !== undefined) {
+    state.model_variant_ids = [
+      ...new Set([...idsFromCsv(state.model_variant_ids), state.model_variant_id]),
+    ].join(",");
+    delete state.model_variant_id;
+    delete state.model_id;
+  } else if (state.model_id !== undefined) {
+    state.model_ids = [...new Set([...idsFromCsv(state.model_ids), state.model_id])].join(",");
+    delete state.model_id;
   }
   // Condition params carry positive claims only.
   if (state.no_accident !== "true") delete state.no_accident;
@@ -154,6 +170,9 @@ export function filtersForCategoryChange(state: SearchFilterState, category: str
   const next: SearchFilterState = { ...state, category };
   delete next.brand_id;
   delete next.model_id;
+  delete next.model_variant_id;
+  delete next.model_ids;
+  delete next.model_variant_ids;
   delete next.feature_ids;
   const allowed = new Set(visibleFilterGroups(category).map((g) => GROUP_TO_PARAM[g]));
   for (const [group, param] of Object.entries(GROUP_TO_PARAM)) {

@@ -2,11 +2,15 @@ import { ApiError } from "@/lib/api/errors";
 import {
   findActiveBrandInCategory,
   findActiveCategoryByCode,
+  findActiveModelInBrandCategory,
   listActiveBrandsByCategory,
   listActiveCategories,
   listActiveCities,
   listActiveFeatures,
+  listActiveModelVariants,
   listActiveModels,
+  listActiveModelsByIds,
+  listActiveVariantsByIds,
   listActiveReferenceOptions,
   referenceGroupExists,
   type CategoryRow,
@@ -37,6 +41,13 @@ export interface BrandDto {
 export interface ModelDto {
   id: string;
   brandId: string;
+  name: string;
+  slug: string;
+}
+
+export interface ModelVariantDto {
+  id: string;
+  modelId: string;
   name: string;
   slug: string;
 }
@@ -107,6 +118,82 @@ export async function getModels(
   return rows.map((row) => ({
     id: row.id,
     brandId: row.brand_id,
+    name: row.name,
+    slug: row.slug,
+  }));
+}
+
+/**
+ * Active Alt models (variants) of one model family. The full
+ * category → brand → model chain is validated so an id from another
+ * brand or category yields a typed 400, never a foreign list. A
+ * valid family with no variants returns an empty array — that is the
+ * signal to hide the Alt model field and store NULL.
+ */
+export async function getModelVariants(
+  categoryCode: string,
+  brandId: string,
+  modelId: string,
+): Promise<ModelVariantDto[]> {
+  const category = await resolveActiveCategory(categoryCode);
+  const brand = await findActiveBrandInCategory(brandId, category.id);
+  if (brand === undefined) {
+    throw new ApiError(
+      "CATALOG_INVALID_BRAND",
+      "Unknown, inactive, or not available in the requested category.",
+    );
+  }
+  const model = await findActiveModelInBrandCategory(modelId, brandId, category.id);
+  if (model === undefined) {
+    throw new ApiError(
+      "CATALOG_INVALID_MODEL",
+      "Unknown, inactive, or not available for the requested brand.",
+    );
+  }
+  const rows = await listActiveModelVariants(modelId);
+  return rows.map((row) => ({
+    id: row.id,
+    modelId: row.model_id,
+    name: row.name,
+    slug: row.slug,
+  }));
+}
+
+/**
+ * Validated variant rows for a bounded id set (search restore/chips):
+ * every id must be an active variant whose family belongs to the
+ * brand and category, otherwise a typed 400.
+ */
+export async function getModelVariantsByIds(
+  categoryCode: string,
+  brandId: string,
+  variantIds: string[],
+): Promise<ModelVariantDto[]> {
+  if (variantIds.length === 0) return [];
+  const category = await resolveActiveCategory(categoryCode);
+  const brand = await findActiveBrandInCategory(brandId, category.id);
+  if (brand === undefined) {
+    throw new ApiError(
+      "CATALOG_INVALID_BRAND",
+      "Unknown, inactive, or not available in the requested category.",
+    );
+  }
+  const unique = [...new Set(variantIds)];
+  const rows = await listActiveVariantsByIds(unique);
+  const parents = await listActiveModelsByIds(
+    [...new Set(rows.map((row) => row.model_id))],
+    brandId,
+    category.id,
+  );
+  if (rows.length !== unique.length || parents.length !== new Set(rows.map((r) => r.model_id)).size) {
+    throw new ApiError(
+      "CATALOG_INVALID_MODEL",
+      "Alt model is unknown, inactive, or not available for the requested brand.",
+    );
+  }
+  return rows.map((row) => ({
+    id: row.id,
+    modelId: row.model_id,
     name: row.name,
     slug: row.slug,
   }));

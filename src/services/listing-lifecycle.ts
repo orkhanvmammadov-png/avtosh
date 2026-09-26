@@ -47,6 +47,7 @@ export function buildEditSnapshot(
     category: listing.category_code,
     brand_id: listing.brand_id,
     model_id: listing.model_id,
+    model_variant_id: listing.model_variant_id,
     year: listing.year,
     price_minor: listing.price_minor === null ? null : Number(listing.price_minor),
     mileage: listing.mileage,

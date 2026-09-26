@@ -36,6 +36,7 @@ import { EquipmentSelector } from "@/components/seller/axin/equipment-selector";
 import { ReviewSection } from "@/components/seller/axin/review-section";
 import { SectionCard, type StageState } from "@/components/seller/axin/section-card";
 import { TypeaheadField } from "@/components/seller/axin/typeahead-field";
+import { ModelPathField } from "@/components/seller/axin/model-path-field";
 
 /**
  * O.9 AXIN seller flow (flow.md): ONE page of collapsing section
@@ -65,6 +66,7 @@ const STAGE_TITLES: Record<StageKey, string> = {
 const MISSING_CODE_SECTION: Record<string, StageKey> = {
   brand: "quickstart",
   model: "quickstart",
+  model_variant: "quickstart",
   year: "quickstart",
   price: "sale",
   mileage: "sale",
@@ -126,7 +128,7 @@ export function AxinFlow({
 }) {
   const isEdit = edit !== undefined;
   const editor = useListingEditor(initial, isEdit ? editEditorApi : draftEditorApi);
-  const catalog = useWizardCatalog(editor.dto.category, editor.dto.brandId);
+  const catalog = useWizardCatalog(editor.dto.category, editor.dto.brandId, editor.dto.modelId);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<SubmitErrorView | null>(null);
   const [result, setResult] = useState<SubmitResult | null>(null);
@@ -148,7 +150,12 @@ export function AxinFlow({
   // This is NOT visited state and NOT completion display: it only
   // gates the current stage's own Davam et and feeds needs-attention.
   const stageValid: Record<StageKey, boolean> = {
-    quickstart: dto.brandId !== null && dto.modelId !== null && dto.year !== null,
+    quickstart:
+      dto.brandId !== null &&
+      dto.modelId !== null &&
+      dto.year !== null &&
+      // Owner rule: a family with active Alt models requires one.
+      (catalog.variants.length === 0 || dto.modelVariantId !== null),
     details: true, // ALWAYS continuable — including fully empty
     sale: dto.priceMinor !== null && dto.mileage !== null && dto.cityId !== null,
     photos: dto.images.length >= 3,
@@ -728,7 +735,7 @@ function EditResultScreen({
 // --- section summaries (one line, collapsed cards) --------------------------
 
 function quickStartSummary(dto: OwnerListingDto, catalog: WizardCatalog): string | null {
-  const parts = [catalog.nameOf(dto.brandId), catalog.nameOf(dto.modelId), dto.year === null ? null : String(dto.year)].filter(
+  const parts = [catalog.nameOf(dto.brandId), catalog.nameOf(dto.modelId), catalog.nameOf(dto.modelVariantId), dto.year === null ? null : String(dto.year)].filter(
     (p): p is string => p !== null,
   );
   return parts.length > 0 ? parts.join(" · ") : null;
@@ -792,6 +799,7 @@ function QuickStartSection({ editor, catalog }: { editor: ListingEditor; catalog
           const wouldLose =
             dto.brandId !== null ||
             dto.modelId !== null ||
+            dto.modelVariantId !== null ||
             dto.bodyTypeId !== null ||
             dto.motorcycleTypeId !== null;
           if (wouldLose && !window.confirm(SELLER.categorySwitchConfirm)) return;
@@ -806,15 +814,21 @@ function QuickStartSection({ editor, catalog }: { editor: ListingEditor; catalog
         loading={catalog.brands.length === 0}
         onChange={(id) => editor.patch({ brand_id: id }, { immediate: true })}
       />
-      <TypeaheadField
+      <ModelPathField
         id="wizard-model"
         label={SELLER.model}
-        value={dto.modelId}
-        items={catalog.models}
+        category={dto.category}
+        brandId={dto.brandId}
+        families={catalog.models}
+        valueModelId={dto.modelId}
+        valueVariantId={dto.modelVariantId}
+        variantNames={catalog.nameOf}
         disabled={dto.brandId === null}
         disabledHint={SELLER.brandFirstHint}
         loading={dto.brandId !== null && catalog.models.length === 0}
-        onChange={(id) => editor.patch({ model_id: id }, { immediate: true })}
+        onSelect={(modelId, variantId) =>
+          editor.patch({ model_id: modelId, model_variant_id: variantId }, { immediate: true })
+        }
       />
       <SellerListboxField
         id="wizard-year"

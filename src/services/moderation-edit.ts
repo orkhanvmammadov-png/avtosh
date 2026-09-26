@@ -123,6 +123,7 @@ function formatAzn(minor: number | null): string | null {
 export interface ApprovedSideRow extends LifecycleListingRow {
   brand_name: string | null;
   model_name: string | null;
+  model_variant_name: string | null;
   city_name: string | null;
   fuel_type: string | null;
   transmission: string | null;
@@ -137,7 +138,7 @@ export async function approvedSide(sql: Sql, listingId: string): Promise<Approve
     select
       l.id, l.public_id::text as public_id, l.owner_id, l.category_id,
       c.code as category_code,
-      l.brand_id, l.model_id, l.year, l.price_minor::text as price_minor,
+      l.brand_id, l.model_id, l.model_variant_id, l.year, l.price_minor::text as price_minor,
       l.mileage, l.engine_cc, l.fuel_type_id, l.transmission_id,
       l.body_type_id, l.drive_type_id, l.motorcycle_type_id, l.color_id,
       l.city_id, l.credit_available, l.barter_available,
@@ -146,13 +147,15 @@ export async function approvedSide(sql: Sql, listingId: string): Promise<Approve
       l.status, l.revision, l.current_expires_at,
       l.seller_deactivated_at, l.seller_reactivation_requested_at,
       l.sold_at, l.deleted_at,
-      b.name as brand_name, m.name as model_name, ci.name_az as city_name,
+      b.name as brand_name, m.name as model_name, mv.name as model_variant_name,
+      ci.name_az as city_name,
       ft.name_az as fuel_type, tr.name_az as transmission, bt.name_az as body_type,
       dt.name_az as drive_type, mt.name_az as motorcycle_type, co.name_az as color
     from listings l
     join categories c on c.id = l.category_id
     left join brands b on b.id = l.brand_id
     left join models m on m.id = l.model_id
+    left join model_variants mv on mv.id = l.model_variant_id
     left join cities ci on ci.id = l.city_id
     left join reference_options ft on ft.id = l.fuel_type_id
     left join reference_options tr on tr.id = l.transmission_id
@@ -201,6 +204,7 @@ export async function buildEditReview(
   const proposed = {
     brandName: await names.of("brands", dataString(data, "brand_id")),
     modelName: await names.of("models", dataString(data, "model_id")),
+    modelVariantName: await names.of("model_variants", dataString(data, "model_variant_id")),
     year: dataNumber(data, "year"),
     priceMinor: dataNumber(data, "price_minor"),
     mileage: dataNumber(data, "mileage"),
@@ -228,6 +232,7 @@ export async function buildEditReview(
   );
   consider("brand", listing.brand_name, proposed.brandName);
   consider("model", listing.model_name, proposed.modelName);
+  consider("model_variant", listing.model_variant_name, proposed.modelVariantName);
   consider(
     "year",
     listing.year === null ? null : String(listing.year),
@@ -355,6 +360,7 @@ export async function buildEditReview(
       category: proposedCategory,
       brandName: proposed.brandName,
       modelName: proposed.modelName,
+      modelVariantName: proposed.modelVariantName,
       year: proposed.year,
       priceMinor: proposed.priceMinor,
       currency: listing.currency,

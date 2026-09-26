@@ -25,6 +25,7 @@ export interface FullReviewContent {
   category: string;
   brandName: string | null;
   modelName: string | null;
+  modelVariantName?: string | null;
   year: number | null;
   priceMinor: number | null;
   currency: string;
@@ -104,6 +105,7 @@ export function FullReviewSections({
     ["Kateqoriya", moto ? "Motosiklet" : "Avtomobil"],
     ["Marka", content.brandName],
     ["Model", content.modelName],
+    ["Alt model", content.modelVariantName ?? null],
     ["Buraxılış ili", content.year === null ? null : String(content.year)],
     ["Ban növü", content.bodyType],
     ["Moto növü", content.motorcycleType],

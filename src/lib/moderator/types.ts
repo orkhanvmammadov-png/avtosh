@@ -30,6 +30,7 @@ export interface ModerationDetailView {
   category: string;
   brand: { id: string; name: string } | null;
   model: { id: string; name: string } | null;
+  modelVariant: { id: string; name: string } | null;
   year: number | null;
   priceMinor: number | null;
   currency: string;

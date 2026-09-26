@@ -663,6 +663,7 @@ describe("snapshot builder purity", () => {
         "category",
         "brand_id",
         "model_id",
+        "model_variant_id",
         "year",
         "price_minor",
         "mileage",
