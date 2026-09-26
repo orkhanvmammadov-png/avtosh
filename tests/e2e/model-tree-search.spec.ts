@@ -103,3 +103,41 @@ test("quick-start: family with variants requires choosing ONE child; path displa
   await page.getByTestId("quick-start-model-option").first().click();
   await expect(page.getByTestId("quick-start-model")).toHaveValue("Tree Family → Tree 100");
 });
+
+test("a failed child load never reads as a confirmed empty family (tree) and is retryable", async ({ page }) => {
+  const s = seed();
+  await page.route("**/api/v1/catalog/model-variants*", (route) => route.abort());
+  await page.goto(`/elanlar?category=CAR&brand_id=${s.toyotaBrandId}`);
+  await openTree(page);
+  await page.getByTestId("home-model-expand-tree-family").click();
+  // error state, NOT "Alt model yoxdur", and no children rendered
+  await expect(page.getByTestId("home-model-retry-tree-family")).toBeVisible();
+  await expect(page.getByTestId("home-model-panel")).not.toContainText("Alt model yoxdur");
+  await expect(page.getByTestId("home-model-variant-tree-100")).toHaveCount(0);
+  // retry after the network recovers loads the real children
+  await page.unroute("**/api/v1/catalog/model-variants*");
+  await page.getByTestId("home-model-retry-tree-family").click();
+  await expect(page.getByTestId("home-model-variant-tree-100")).toBeVisible();
+});
+
+test("a failed load never commits a zero-variant selection (wizard) and is retryable", async ({ page, context }, testInfo) => {
+  await loginAs(context, testPhone(testInfo.project.name, 302));
+  await page.route("**/api/v1/catalog/model-variants*", (route) => route.abort());
+  await page.goto("/elan-yerlesdir");
+  await page.getByTestId("quick-start-brand").click();
+  await page.keyboard.type("Toyota");
+  await page.getByTestId("quick-start-brand-option").first().click();
+  await page.getByTestId("quick-start-model").click();
+  await page.keyboard.type("Tree");
+  await page.getByTestId("quick-start-model-option").first().click();
+  // failure: no selection committed, clear error, still on the family level
+  await expect(page.getByTestId("quick-start-model-load-error")).toBeVisible();
+  await expect(page.getByTestId("quick-start-model-back")).toHaveCount(0);
+  await expect(page.getByTestId("quick-start-model")).toHaveValue("Tree");
+  // retry after recovery expands the family for a real choice
+  await page.unroute("**/api/v1/catalog/model-variants*");
+  await page.getByTestId("quick-start-model-option").first().click();
+  await expect(page.getByTestId("quick-start-model-back")).toBeVisible();
+  await page.getByTestId("quick-start-model-option").first().click();
+  await expect(page.getByTestId("quick-start-model")).toHaveValue("Tree Family → Tree 100");
+});

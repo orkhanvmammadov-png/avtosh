@@ -52,7 +52,7 @@ export function ModelTreeSelect({
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [variantsByFamily, setVariantsByFamily] = useState<
-    Record<string, ModelVariantDto[] | "loading">
+    Record<string, ModelVariantDto[] | "loading" | "error">
   >({});
 
   useEffect(() => {
@@ -82,14 +82,16 @@ export function ModelTreeSelect({
     };
   }, [open]);
 
-  function loadVariants(familyId: string) {
-    if (variantsByFamily[familyId] !== undefined) return;
+  function loadVariants(familyId: string, force = false) {
+    const cached = variantsByFamily[familyId];
+    if (!force && cached !== undefined && cached !== "error") return;
     setVariantsByFamily((current) => ({ ...current, [familyId]: "loading" }));
     void publicFetch<ModelVariantDto[]>(
       `/api/v1/catalog/model-variants?category=${encodeURIComponent(category)}&brand_id=${encodeURIComponent(brandId)}&model_id=${encodeURIComponent(familyId)}`,
     )
       .then((r) => setVariantsByFamily((current) => ({ ...current, [familyId]: r.data })))
-      .catch(() => setVariantsByFamily((current) => ({ ...current, [familyId]: [] })));
+      // A failed load must never look like a confirmed empty family.
+      .catch(() => setVariantsByFamily((current) => ({ ...current, [familyId]: "error" })));
   }
 
   function toggleExpand(familyId: string) {
@@ -217,6 +219,18 @@ export function ModelTreeSelect({
               {isExpanded ? (
                 loaded === "loading" ? (
                   <p className="py-1.5 pl-12 text-[12px] text-muted">Yüklənir…</p>
+                ) : loaded === "error" ? (
+                  <p className="flex items-center gap-2 py-1.5 pl-12 text-[12px] text-danger" role="alert">
+                    Alt modellər yüklənmədi.
+                    <button
+                      type="button"
+                      onClick={() => loadVariants(family.id, true)}
+                      className="font-semibold text-primary transition-colors duration-150 hover:text-primary-hover"
+                      data-testid={`${testid}-retry-${family.slug}`}
+                    >
+                      Yenidən cəhd et
+                    </button>
+                  </p>
                 ) : children.length === 0 ? (
                   <p className="py-1.5 pl-12 text-[12px] text-muted">Alt model yoxdur</p>
                 ) : (

@@ -57,6 +57,7 @@ export function ModelPathField({
     { kind: "families" } | { kind: "variants"; family: TypeaheadItem; items: TypeaheadItem[] }
   >({ kind: "families" });
   const [loadingFamilyId, setLoadingFamilyId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -84,6 +85,7 @@ export function ModelPathField({
     setQuery("");
     setLevel({ kind: "families" });
     setActiveIndex(0);
+    setLoadError(null);
   }
 
   function commit(modelId: string, variantId: string | null, variantName: string | null) {
@@ -95,18 +97,21 @@ export function ModelPathField({
   async function pickFamily(family: TypeaheadItem) {
     if (brandId === null || loadingFamilyId !== null) return;
     setLoadingFamilyId(family.id);
+    setLoadError(null);
     try {
       const r = await publicFetch<TypeaheadItem[]>(
         `/api/v1/catalog/model-variants?category=${encodeURIComponent(category)}&brand_id=${encodeURIComponent(brandId)}&model_id=${encodeURIComponent(family.id)}`,
       );
       if (r.data.length === 0) {
-        commit(family.id, null, null); // zero-variant family: direct selection
+        commit(family.id, null, null); // CONFIRMED zero-variant family
       } else {
         setLevel({ kind: "variants", family, items: r.data });
         setActiveIndex(0);
       }
     } catch {
-      commit(family.id, null, null);
+      // A failed request is NOT a confirmed zero-variant family: keep
+      // the previous selection, surface the error, allow retry.
+      setLoadError(SELLER.modelVariantsLoadError);
     } finally {
       setLoadingFamilyId(null);
     }
@@ -221,6 +226,11 @@ export function ModelPathField({
           )}
         </span>
       </div>
+      {loadError !== null ? (
+        <p role="alert" className="mt-1 text-xs text-danger" data-testid={`${id}-load-error`}>
+          {loadError}
+        </p>
+      ) : null}
       {open && !disabled ? (
         <ul
           ref={listRef}

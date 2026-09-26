@@ -230,6 +230,7 @@ export const SELLER = {
   model: "Model",
   modelVariant: "Alt model",
   modelFirstHint: "Model seçin",
+  modelVariantsLoadError: "Alt modellər yüklənmədi — yenidən cəhd edin.",
   year: "Buraxılış ili",
   price: "Qiymət, AZN",
   mileage: "Yürüş, km",
