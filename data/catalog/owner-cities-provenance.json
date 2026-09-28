@@ -1,0 +1,440 @@
+{
+  "title": "AVTOSH.AZ owner city source provenance",
+  "source_file": "AVTOSH_owner_city_source.tsv",
+  "source_sha256": "aeed546c8783eed0ac0db210da8305f76ad2a040905c7936d3ec2a5df6a9fbd1",
+  "note": "source_option_value is the owner's external source key, not the cities.id UUID; database identity is keyed by slug.",
+  "rows": [
+    {
+      "source_option_value": "7",
+      "name_az": "Ağcabədi",
+      "slug": "agcabedi",
+      "sort_order": 1
+    },
+    {
+      "source_option_value": "4",
+      "name_az": "Ağdam",
+      "slug": "agdam",
+      "sort_order": 2
+    },
+    {
+      "source_option_value": "6",
+      "name_az": "Ağdaş",
+      "slug": "agdas",
+      "sort_order": 3
+    },
+    {
+      "source_option_value": "8",
+      "name_az": "Ağstafa",
+      "slug": "agstafa",
+      "sort_order": 4
+    },
+    {
+      "source_option_value": "10",
+      "name_az": "Ağsu",
+      "slug": "agsu",
+      "sort_order": 5
+    },
+    {
+      "source_option_value": "9",
+      "name_az": "Astara",
+      "slug": "astara",
+      "sort_order": 6
+    },
+    {
+      "source_option_value": "78",
+      "name_az": "Babək",
+      "slug": "babek",
+      "sort_order": 7
+    },
+    {
+      "source_option_value": "1",
+      "name_az": "Bakı",
+      "slug": "baki",
+      "sort_order": 8
+    },
+    {
+      "source_option_value": "14",
+      "name_az": "Balakən",
+      "slug": "balaken",
+      "sort_order": 9
+    },
+    {
+      "source_option_value": "13",
+      "name_az": "Beyləqan",
+      "slug": "beyleqan",
+      "sort_order": 10
+    },
+    {
+      "source_option_value": "12",
+      "name_az": "Bərdə",
+      "slug": "berde",
+      "sort_order": 11
+    },
+    {
+      "source_option_value": "15",
+      "name_az": "Biləsuvar",
+      "slug": "bilesuvar",
+      "sort_order": 12
+    },
+    {
+      "source_option_value": "26",
+      "name_az": "Cəbrayıl",
+      "slug": "cebrayil",
+      "sort_order": 13
+    },
+    {
+      "source_option_value": "25",
+      "name_az": "Cəlilabad",
+      "slug": "celilabad",
+      "sort_order": 14
+    },
+    {
+      "source_option_value": "27",
+      "name_az": "Culfa",
+      "slug": "culfa",
+      "sort_order": 15
+    },
+    {
+      "source_option_value": "24",
+      "name_az": "Daşkəsən",
+      "slug": "daskesen",
+      "sort_order": 16
+    },
+    {
+      "source_option_value": "23",
+      "name_az": "Dəliməmmədli",
+      "slug": "delimemmedli",
+      "sort_order": 17
+    },
+    {
+      "source_option_value": "60",
+      "name_az": "Füzuli",
+      "slug": "fuzuli",
+      "sort_order": 18
+    },
+    {
+      "source_option_value": "36",
+      "name_az": "Gədəbəy",
+      "slug": "gedebey",
+      "sort_order": 19
+    },
+    {
+      "source_option_value": "2",
+      "name_az": "Gəncə",
+      "slug": "gence",
+      "sort_order": 20
+    },
+    {
+      "source_option_value": "18",
+      "name_az": "Goranboy",
+      "slug": "goranboy",
+      "sort_order": 21
+    },
+    {
+      "source_option_value": "17",
+      "name_az": "Göyçay",
+      "slug": "goycay",
+      "sort_order": 22
+    },
+    {
+      "source_option_value": "19",
+      "name_az": "Göygöl",
+      "slug": "goygol",
+      "sort_order": 23
+    },
+    {
+      "source_option_value": "20",
+      "name_az": "Göytəpə",
+      "slug": "goytepe",
+      "sort_order": 24
+    },
+    {
+      "source_option_value": "77",
+      "name_az": "Hacıqabul",
+      "slug": "haciqabul",
+      "sort_order": 25
+    },
+    {
+      "source_option_value": "22",
+      "name_az": "Horadiz",
+      "slug": "horadiz",
+      "sort_order": 26
+    },
+    {
+      "source_option_value": "32",
+      "name_az": "İmişli",
+      "slug": "imisli",
+      "sort_order": 27
+    },
+    {
+      "source_option_value": "33",
+      "name_az": "İsmayıllı",
+      "slug": "ismayilli",
+      "sort_order": 28
+    },
+    {
+      "source_option_value": "37",
+      "name_az": "Kəlbəcər",
+      "slug": "kelbecer",
+      "sort_order": 29
+    },
+    {
+      "source_option_value": "41",
+      "name_az": "Kürdəmir",
+      "slug": "kurdemir",
+      "sort_order": 30
+    },
+    {
+      "source_option_value": "42",
+      "name_az": "Laçın",
+      "slug": "lacin",
+      "sort_order": 31
+    },
+    {
+      "source_option_value": "43",
+      "name_az": "Lerik",
+      "slug": "lerik",
+      "sort_order": 32
+    },
+    {
+      "source_option_value": "11",
+      "name_az": "Lənkəran",
+      "slug": "lenkeran",
+      "sort_order": 33
+    },
+    {
+      "source_option_value": "45",
+      "name_az": "Masallı",
+      "slug": "masalli",
+      "sort_order": 34
+    },
+    {
+      "source_option_value": "46",
+      "name_az": "Mingəçevir",
+      "slug": "mingecevir",
+      "sort_order": 35
+    },
+    {
+      "source_option_value": "47",
+      "name_az": "Naftalan",
+      "slug": "naftalan",
+      "sort_order": 36
+    },
+    {
+      "source_option_value": "48",
+      "name_az": "Naxçıvan",
+      "slug": "naxcivan",
+      "sort_order": 37
+    },
+    {
+      "source_option_value": "49",
+      "name_az": "Neftçala",
+      "slug": "neftcala",
+      "sort_order": 38
+    },
+    {
+      "source_option_value": "50",
+      "name_az": "Oğuz",
+      "slug": "oguz",
+      "sort_order": 39
+    },
+    {
+      "source_option_value": "51",
+      "name_az": "Ordubad",
+      "slug": "ordubad",
+      "sort_order": 40
+    },
+    {
+      "source_option_value": "35",
+      "name_az": "Qax",
+      "slug": "qax",
+      "sort_order": 41
+    },
+    {
+      "source_option_value": "34",
+      "name_az": "Qazax",
+      "slug": "qazax",
+      "sort_order": 42
+    },
+    {
+      "source_option_value": "16",
+      "name_az": "Qəbələ",
+      "slug": "qebele",
+      "sort_order": 43
+    },
+    {
+      "source_option_value": "21",
+      "name_az": "Qobustan",
+      "slug": "qobustan",
+      "sort_order": 44
+    },
+    {
+      "source_option_value": "38",
+      "name_az": "Quba",
+      "slug": "quba",
+      "sort_order": 45
+    },
+    {
+      "source_option_value": "40",
+      "name_az": "Qusar",
+      "slug": "qusar",
+      "sort_order": 46
+    },
+    {
+      "source_option_value": "52",
+      "name_az": "Saatlı",
+      "slug": "saatli",
+      "sort_order": 47
+    },
+    {
+      "source_option_value": "53",
+      "name_az": "Sabirabad",
+      "slug": "sabirabad",
+      "sort_order": 48
+    },
+    {
+      "source_option_value": "68",
+      "name_az": "Şabran",
+      "slug": "sabran",
+      "sort_order": 49
+    },
+    {
+      "source_option_value": "54",
+      "name_az": "Salyan",
+      "slug": "salyan",
+      "sort_order": 50
+    },
+    {
+      "source_option_value": "73",
+      "name_az": "Şamaxı",
+      "slug": "samaxi",
+      "sort_order": 51
+    },
+    {
+      "source_option_value": "55",
+      "name_az": "Samux",
+      "slug": "samux",
+      "sort_order": 52
+    },
+    {
+      "source_option_value": "72",
+      "name_az": "Şəki",
+      "slug": "seki",
+      "sort_order": 53
+    },
+    {
+      "source_option_value": "69",
+      "name_az": "Şəmkir",
+      "slug": "semkir",
+      "sort_order": 54
+    },
+    {
+      "source_option_value": "70",
+      "name_az": "Şərur",
+      "slug": "serur",
+      "sort_order": 55
+    },
+    {
+      "source_option_value": "74",
+      "name_az": "Şirvan",
+      "slug": "sirvan",
+      "sort_order": 56
+    },
+    {
+      "source_option_value": "56",
+      "name_az": "Siyəzən",
+      "slug": "siyezen",
+      "sort_order": 57
+    },
+    {
+      "source_option_value": "3",
+      "name_az": "Sumqayıt",
+      "slug": "sumqayit",
+      "sort_order": 58
+    },
+    {
+      "source_option_value": "75",
+      "name_az": "Şuşa",
+      "slug": "susa",
+      "sort_order": 59
+    },
+    {
+      "source_option_value": "58",
+      "name_az": "Tərtər",
+      "slug": "terter",
+      "sort_order": 60
+    },
+    {
+      "source_option_value": "57",
+      "name_az": "Tovuz",
+      "slug": "tovuz",
+      "sort_order": 61
+    },
+    {
+      "source_option_value": "59",
+      "name_az": "Ucar",
+      "slug": "ucar",
+      "sort_order": 62
+    },
+    {
+      "source_option_value": "62",
+      "name_az": "Xaçmaz",
+      "slug": "xacmaz",
+      "sort_order": 63
+    },
+    {
+      "source_option_value": "61",
+      "name_az": "Xankəndi",
+      "slug": "xankendi",
+      "sort_order": 64
+    },
+    {
+      "source_option_value": "67",
+      "name_az": "Xırdalan",
+      "slug": "xirdalan",
+      "sort_order": 65
+    },
+    {
+      "source_option_value": "66",
+      "name_az": "Xızı",
+      "slug": "xizi",
+      "sort_order": 66
+    },
+    {
+      "source_option_value": "64",
+      "name_az": "Xocalı",
+      "slug": "xocali",
+      "sort_order": 67
+    },
+    {
+      "source_option_value": "65",
+      "name_az": "Xudat",
+      "slug": "xudat",
+      "sort_order": 68
+    },
+    {
+      "source_option_value": "76",
+      "name_az": "Yardımlı",
+      "slug": "yardimli",
+      "sort_order": 69
+    },
+    {
+      "source_option_value": "28",
+      "name_az": "Yevlax",
+      "slug": "yevlax",
+      "sort_order": 70
+    },
+    {
+      "source_option_value": "29",
+      "name_az": "Zaqatala",
+      "slug": "zaqatala",
+      "sort_order": 71
+    },
+    {
+      "source_option_value": "31",
+      "name_az": "Zərdab",
+      "slug": "zerdab",
+      "sort_order": 72
+    }
+  ]
+}
