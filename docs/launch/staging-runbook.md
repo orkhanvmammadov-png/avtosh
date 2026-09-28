@@ -62,14 +62,37 @@ pipelining, and `max_pipeline: 0` breaks `sql.begin()` upstream.
 
 `scripts/db/check-supabase-pooler.mjs` is a **bounded smoke/stress
 test, not proof of complete compatibility**: it exercises one risky
-shape (saturated pool, interleaved queries + transactions) within
-fixed bounds and verifies every reply. Run it against BOTH pooler
-URLs (it only SELECTs; a hang fails via timeout):
+shape (saturated pool, interleaved queries + transactions) and
+verifies every reply against its unique tag. Run it against BOTH
+pooler URLs, labeled with `POOLER_KIND` so the output and any advice
+name the pooler that was actually tested (it only SELECTs; the
+connection string is never printed):
 
 ```bash
-run_staging sh -c 'DATABASE_URL="$SESSION_POOLER_URL" node scripts/db/check-supabase-pooler.mjs'
-run_staging sh -c 'DATABASE_URL="$TRANSACTION_POOLER_URL" node scripts/db/check-supabase-pooler.mjs'
+run_staging sh -c 'DATABASE_URL="$SESSION_POOLER_URL" POOLER_KIND=SESSION node scripts/db/check-supabase-pooler.mjs'
+run_staging sh -c 'DATABASE_URL="$TRANSACTION_POOLER_URL" POOLER_KIND=TRANSACTION node scripts/db/check-supabase-pooler.mjs'
 ```
+
+How to read the result — the checker distinguishes a hang from a
+slow remote database:
+- **STALL** — no round completed within the inactivity window
+  (default 30 s, resets after every completed round). This is the
+  signature of the pipelining hang.
+- **TOTAL_BUDGET_EXCEEDED** — rounds kept completing but the run
+  passed the absolute safety ceiling (default 10 min). This points
+  at latency/throughput, **not** a proven hang: re-run with a higher
+  `POOLER_CHECK_TOTAL_BUDGET_MS` or fewer `POOLER_CHECK_ROUNDS`
+  before drawing conclusions.
+- **MISMATCH** — a reply carried the wrong tag: hard evidence of the
+  documented truncation/mismatch failure. Do not use that pooler.
+
+Both PASS and FAIL print completed rounds and elapsed time. Load is
+tunable via validated env vars: `POOLER_CHECK_CONCURRENCY`
+(default 24), `POOLER_CHECK_ROUNDS` (rounds per worker, default 40),
+`POOLER_CHECK_STALL_TIMEOUT_MS` (default 30000),
+`POOLER_CHECK_TOTAL_BUDGET_MS` (default 600000). On a high-latency
+link, raise the budget or lower the rounds rather than concluding
+from a ceiling trip.
 
 Decision rule:
 - **Provisional preference: the session pooler (port 5432)** — it is
