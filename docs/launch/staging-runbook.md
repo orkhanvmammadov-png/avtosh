@@ -16,15 +16,24 @@ the Vercel/Supabase dashboards — never in chat, never committed.
 
 ## 1. Supabase project (staging) and local secret handling
 
-1. Create a dedicated staging project. You will use THREE connection
-   strings from the dashboard (Settings → Database):
-   - **Direct connection** (db.<ref>.supabase.co:5432) — migrations only.
+1. Create a dedicated staging project **in `eu-central-1`
+   (Frankfurt)** — the Azerbaijan launch pairs it with Vercel
+   Functions pinned to `fra1` (see §6), keeping compute and database
+   colocated instead of Vercel's default `iad1`. You will use THREE
+   connection strings from the dashboard (Settings → Database):
+   - **Direct connection** (db.<ref>.supabase.co:5432) — migrations
+     only. NOTE: the direct connection is **IPv6 by default**; on a
+     local network that cannot resolve or reach it, the **session
+     pooler (port 5432) is the supported IPv4-compatible migration
+     fallback**.
    - **Session pooler** (…pooler.supabase.com:5432).
    - **Transaction pooler** (…pooler.supabase.com:6543).
 2. Keep runtime and migration connections SEPARATE:
-   - `DATABASE_URL` (Vercel runtime) → pooler URL chosen in step 2 below.
+   - `DATABASE_URL` (Vercel runtime) → the session pooler URL
+     (selected in §2 below).
    - `MIGRATION_DATABASE_URL` (local file only, never in Vercel) →
-     the direct connection.
+     the direct connection, or on an IPv4-only network the session
+     pooler.
 3. **Local secret file — never in shell history, logs, the repo, or
    chat.** Create a private env file OUTSIDE the repository and open
    it in your editor (do not build it with `echo`/`printf`, which
@@ -34,13 +43,26 @@ the Vercel/Supabase dashboards — never in chat, never committed.
    install -m 600 /dev/null ~/.avtosh/staging.env && open -t ~/.avtosh/staging.env
    ```
 
-   Fill it in the editor with (values from the Supabase dashboard):
+   Fill it in the editor with (values from the Supabase dashboard —
+   never place a connection string or password directly in a
+   command, document, log, commit, or the PR):
 
    ```
-   MIGRATION_DATABASE_URL=...direct connection...
    SESSION_POOLER_URL=...session pooler...
    TRANSACTION_POOLER_URL=...transaction pooler...
+   MIGRATION_DATABASE_URL=...direct connection...
    ```
+
+   On an IPv4-only network where the direct connection is
+   unreachable, point migrations at the session pooler instead by
+   referencing the variable (no value is retyped):
+
+   ```
+   MIGRATION_DATABASE_URL="$SESSION_POOLER_URL"
+   ```
+
+   (Define `SESSION_POOLER_URL` first — the file is sourced top to
+   bottom.)
 
    Every command below loads it in a subshell so nothing leaks into
    your interactive environment or history:
@@ -94,22 +116,28 @@ tunable via validated env vars: `POOLER_CHECK_CONCURRENCY`
 link, raise the budget or lower the rounds rather than concluding
 from a ceiling trip.
 
-Decision rule:
-- **Provisional preference: the session pooler (port 5432)** — it is
-  not subject to the transaction-mode pipelining truncation. This
-  remains PROVISIONAL until the real application's queries and
-  transactions have been exercised against staging; a smoke-test
-  PASS is necessary, not sufficient.
-- Use the transaction pooler (6543) only if its check PASSES
-  repeatedly and Supavisor on the project is a version with native
-  pipelining support; otherwise avoid it.
+Decision rule and current status:
+- **Selected runtime for this staging release: the session pooler
+  (port 5432)** — it is not subject to the transaction-mode
+  pipelining truncation. On the Frankfurt staging project
+  (2026-09-28) the bounded checker PASSED on both pooler kinds
+  (SESSION 960/960 rounds, TRANSACTION 960/960 rounds), and beyond
+  the smoke test, **actual application reads and a real catalog
+  importer transaction have succeeded over the session pooler**. A
+  bounded checker PASS remains necessary but not sufficient on its
+  own; the session-pooler selection rests on that plus the real
+  application exercise.
+- The transaction pooler (6543) is a **separately tested candidate
+  only**, not the selected runtime — consider it in a later release
+  only if its check PASSES repeatedly and Supavisor on the project
+  is a version with native pipelining support.
 - Record in the release notes: the chosen URL kind, the check
   output, the project's client-connection limits for its compute
   size, and any failures observed. If both fail, stop and
   investigate before deploying. No connection mode may be described
   as "verified" without an actual staging run.
 
-## 3. Migrations (direct connection, tracked runner)
+## 3. Migrations (tracked runner)
 
 Apply the committed migrations with the tracked, fail-fast runner —
 never with an ad-hoc loop, and never edit a migration a shared
@@ -118,6 +146,25 @@ environment has already recorded:
 ```bash
 run_staging scripts/db/apply-migrations.sh
 ```
+
+**Variable precedence (deliberate, migration-specific):** the runner
+uses `MIGRATION_DATABASE_URL` whenever it is set, and falls back to
+`DATABASE_URL` only when it is not. Prefixing the command with
+`DATABASE_URL=...` does **not** override a `MIGRATION_DATABASE_URL`
+already loaded from the env file — a run redirected that way still
+targets the env-file value (this exact mistake failed against an
+unreachable IPv6 direct connection on an IPv4-only network). The
+runner announces which variable it selected at the start of every
+run; check that line. To redirect a run — e.g. to the
+IPv4-compatible session pooler — set `MIGRATION_DATABASE_URL`
+itself:
+
+```bash
+run_staging sh -c 'MIGRATION_DATABASE_URL="$SESSION_POOLER_URL" scripts/db/apply-migrations.sh'
+```
+
+(or set `MIGRATION_DATABASE_URL="$SESSION_POOLER_URL"` in the env
+file as §1 shows, and run the plain command above).
 
 The runner keeps a `schema_migrations` history table, skips files
 already recorded (non-idempotent files are never blindly re-run),
@@ -164,10 +211,17 @@ open; the import being technically possible is not their resolution.
    UAT/OTP dev values in staging or production; the dev routes are
    additionally disabled whenever `NODE_ENV=production`.
 
-## 6. Vercel project env (staging)
+## 6. Vercel project (staging)
+
+**Region:** `vercel.json` pins Functions to `"regions": ["fra1"]`
+(Frankfurt), colocated with the `eu-central-1` Supabase project;
+without the pin Vercel defaults to `iad1`, far from the database.
+Keep `"crons": []` for this release — both are enforced by
+`tests/unit/vercel-config.test.ts`.
 
 Set in the dashboard (Owner enters values directly):
-- `DATABASE_URL` — the VERIFIED pooler URL from step 2.
+- `DATABASE_URL` — the SESSION pooler URL (the selected runtime
+  connection from step 2).
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STORAGE_DRIVER=supabase`.
 - Do not set `CRON_SECRET` for this release (jobs must not run; the
   job endpoints also refuse in read-only mode even with a secret).
@@ -198,7 +252,30 @@ Set in the dashboard (Owner enters values directly):
 - Migrations: never rolled back in place on a shared environment;
   ship a new forward migration instead.
 
-## 9. Restoring the scheduled jobs (later FULL release)
+## 9. Staging evidence (2026-09-28, Frankfurt staging project)
+
+Recorded from the Owner's verified staging runs — **staging
+evidence, not universal performance guarantees**. No URL, project
+reference, username or secret is recorded here. No production
+deployment has occurred and no production database exists.
+
+- Pooler checks: SESSION PASS 960/960 rounds in 130944 ms;
+  TRANSACTION PASS 960/960 rounds in 134878 ms.
+- Migrations: fresh apply 29 applied / 0 already recorded; re-run
+  0 applied / 29 already recorded.
+- Imported and directly counted: 210 brands, 222 brand_categories,
+  1661 models, 704 model_variants, 72 cities, 29 schema_migrations.
+- Real local application with `DATABASE_URL` = session pooler and
+  `LAUNCH_MODE=READ_ONLY`: `GET /` 200; warm home total ≈1.45 s in
+  `next dev` from the Owner's Azerbaijan connection; health ≈6 ms;
+  cities catalog ≈84 ms; CAR brands catalog ≈332 ms; legal rules
+  page ≈71 ms; mutation gate 503 `SERVICE_READ_ONLY`.
+- Owner visual UAT: PASS.
+
+The former Seoul staging project is not the selected environment; it
+is left untouched (do not access or delete it yet).
+
+## 10. Restoring the scheduled jobs (later FULL release)
 
 `vercel.json` intentionally ships with `"crons": []` for this
 release. The full release restores exactly this configuration

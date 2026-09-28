@@ -29,8 +29,20 @@ set -euo pipefail
 #      recreate the database and re-run this script from zero.
 
 DIR="${1:-supabase/migrations}"
-URL="${MIGRATION_DATABASE_URL:-${DATABASE_URL:-}}"
-if [ -z "$URL" ]; then
+# Variable precedence is deliberate and migration-specific:
+# MIGRATION_DATABASE_URL always wins when set. Prefixing a run with
+# DATABASE_URL=... does NOT override an already-defined
+# MIGRATION_DATABASE_URL (e.g. one loaded from an env file) — to
+# redirect a run, set MIGRATION_DATABASE_URL itself. The selected
+# source is announced below so a wrong target is visible immediately;
+# the URL value is never printed.
+if [ -n "${MIGRATION_DATABASE_URL:-}" ]; then
+  URL="$MIGRATION_DATABASE_URL"
+  echo "connecting via: MIGRATION_DATABASE_URL"
+elif [ -n "${DATABASE_URL:-}" ]; then
+  URL="$DATABASE_URL"
+  echo "connecting via: DATABASE_URL (fallback; MIGRATION_DATABASE_URL not set)"
+else
   echo "MIGRATION_DATABASE_URL (or DATABASE_URL) is not set." >&2
   exit 1
 fi
