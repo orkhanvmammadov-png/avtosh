@@ -1,4 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { buttonClasses } from "@/components/ui/button";
+import { isReadOnlyLaunch } from "@/lib/config/launch";
+import { LAUNCH } from "@/lib/marketplace/labels";
 import { Container } from "@/components/ui/container";
 import { redirect } from "next/navigation";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
@@ -23,6 +27,22 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const returnTo = sanitizeReturnTo(params.return_to);
+  if (isReadOnlyLaunch()) {
+    // Read-only launch: login is not available; explain honestly.
+    return (
+      <Container>
+        <div className="mx-auto max-w-md py-10 md:py-16" data-testid="login-readonly-notice">
+          <div className="rounded-[10px] border border-line bg-raised px-5 py-6 text-center">
+            <h1 className="text-xl font-bold text-ink">{LAUNCH.comingSoonTitle}</h1>
+            <p className="mt-2 text-sm leading-relaxed text-slate-strong">{LAUNCH.comingSoonHint}</p>
+            <Link href="/" className={`${buttonClasses("primary", "px-6")} mt-5`}>
+              {UI.backHome}
+            </Link>
+          </div>
+        </div>
+      </Container>
+    );
+  }
   const auth = await getCurrentAuthFromCookies();
   if (auth !== null) {
     redirect(returnTo ?? "/profil");

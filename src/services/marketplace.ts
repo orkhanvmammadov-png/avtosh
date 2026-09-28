@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { maskPhone } from "@/auth/phone";
 import { ApiError } from "@/lib/api/errors";
+import { isReadOnlyLaunch } from "@/lib/config/launch";
 import { listingImageConfig } from "@/lib/config/listing-images";
 import { marketplaceConfig, type SearchSort } from "@/lib/config/marketplace";
 import { getSql } from "@/lib/server/db/client";
@@ -592,8 +593,11 @@ export async function publicDetail(
     };
   }
   const features = await listPublicFeatureNames(sql, row.id);
-  // Best-effort aggregate view count — never required for serving.
-  await incrementViewCount(sql, row.id).catch(() => undefined);
+  // Best-effort aggregate view count — never required for serving,
+  // and suppressed entirely in the read-only launch (no writes).
+  if (!isReadOnlyLaunch()) {
+    await incrementViewCount(sql, row.id).catch(() => undefined);
+  }
   return {
     cacheControl,
     listing: {

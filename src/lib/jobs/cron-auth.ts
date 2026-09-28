@@ -1,5 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { ApiError } from "@/lib/api/errors";
+import { readOnlyLaunchError } from "@/lib/api/handler";
+import { isReadOnlyLaunch } from "@/lib/config/launch";
 
 /**
  * Authorization for scheduled-job HTTP endpoints. Vercel Cron invokes
@@ -11,6 +13,11 @@ import { ApiError } from "@/lib/api/errors";
  * get one uniform 401 regardless of the refusal reason.
  */
 export function assertCronAuthorized(request: Request): void {
+  // READ-ONLY launch: scheduled jobs must not run at all — even a
+  // caller holding a valid CRON_SECRET is refused (fail closed).
+  if (isReadOnlyLaunch()) {
+    throw readOnlyLaunchError();
+  }
   const secret = process.env.CRON_SECRET;
   const refused = () => new ApiError("AUTH_REQUIRED", "Unauthorized.");
   if (secret === undefined || secret.length < 16) {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isReadOnlyLaunch } from "@/lib/config/launch";
 import { BrandMark } from "@/components/shared/brand-mark";
 import { Container } from "@/components/ui/container";
 import { UI } from "@/lib/marketplace/labels";
@@ -8,11 +9,12 @@ import { UI } from "@/lib/marketplace/labels";
  * Server-rendered (never hydrated), so the year is safe.
  */
 export function SiteFooter() {
+  const readOnly = isReadOnlyLaunch();
   const year = new Date().getFullYear();
   const link = "text-sm text-on-navy-muted transition-colors duration-150 hover:text-white";
   return (
     <footer className="mt-16 bg-navy text-white">
-      <Container className="grid gap-8 py-10 md:grid-cols-[2fr_1fr_1fr_1fr]">
+      <Container className={`grid gap-8 py-10 ${readOnly ? "md:grid-cols-[2fr_1fr_1fr]" : "md:grid-cols-[2fr_1fr_1fr_1fr]"}`}>
         <div>
           <BrandMark tone="dark" href={null} />
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-on-navy-muted">
@@ -27,6 +29,7 @@ export function SiteFooter() {
             <li><Link href="/elanlar?category=MOTORCYCLE" className={link}>{UI.motorcycles}</Link></li>
           </ul>
         </nav>
+        {readOnly ? null : (
         <nav aria-label="Hesab">
           <p className="text-xs font-semibold uppercase tracking-wide text-on-navy-muted/70">Hesab</p>
           <ul className="mt-3 space-y-2">
@@ -35,6 +38,7 @@ export function SiteFooter() {
             <li><Link href="/profil/secilmisler" className={link}>{UI.favorites}</Link></li>
           </ul>
         </nav>
+        )}
         <nav aria-label="Hüquqi">
           <p className="text-xs font-semibold uppercase tracking-wide text-on-navy-muted/70">Hüquqi</p>
           <ul className="mt-3 space-y-2">

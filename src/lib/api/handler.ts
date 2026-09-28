@@ -2,6 +2,16 @@ import { z } from "zod";
 import { ApiError } from "@/lib/api/errors";
 import { apiFailure } from "@/lib/api/response";
 import { resolveRequestId } from "@/lib/api/request-id";
+import { isReadOnlyLaunch } from "@/lib/config/launch";
+
+/** Thrown by the read-only launch gate; also reusable by wrappers
+    that do not go through createApiHandler (jobs, webhooks). */
+export function readOnlyLaunchError(): ApiError {
+  return new ApiError(
+    "SERVICE_READ_ONLY",
+    "This function is not available yet — the marketplace is running in read-only launch mode.",
+  );
+}
 
 export interface ApiHandlerContext {
   request: Request;
@@ -26,6 +36,16 @@ export function createApiHandler(
   return async (request: Request, context?: RouteContext): Promise<Response> => {
     const requestId = resolveRequestId(request);
     try {
+      // READ-ONLY launch gate: every non-read method fails closed at
+      // the server for ALL routes built on this factory. Side-effecting
+      // GET entry points (cron jobs, payment verification) carry their
+      // own gate because they bypass this factory or read via GET.
+      if (isReadOnlyLaunch()) {
+        const method = request.method.toUpperCase();
+        if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+          throw readOnlyLaunchError();
+        }
+      }
       const params = context === undefined ? {} : await context.params;
       return await handler({ request, requestId, params });
     } catch (error) {

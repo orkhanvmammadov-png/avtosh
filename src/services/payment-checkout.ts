@@ -1,4 +1,6 @@
 import type { AuthContext } from "@/auth/current-user";
+import { readOnlyLaunchError } from "@/lib/api/handler";
+import { isReadOnlyLaunch } from "@/lib/config/launch";
 import { ApiError } from "@/lib/api/errors";
 import { appOrigin } from "@/lib/config/kapital";
 import { minorToMajorString } from "@/lib/payments/money";
@@ -673,6 +675,13 @@ export async function handleKapitalCallback(
   auth: AuthContext | null,
   providerOrderIdRaw: string | undefined,
 ): Promise<CallbackView> {
+  // READ-ONLY launch: no payments exist and the render-time provider
+  // verification (an external call + idempotent fulfillment write)
+  // must not run. The page shows the launch notice before calling
+  // here; this guard keeps the service fail-closed for any caller.
+  if (isReadOnlyLaunch()) {
+    throw readOnlyLaunchError();
+  }
   const providerOrderId = (providerOrderIdRaw ?? "").trim();
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(providerOrderId)) {
     return { view: "GENERIC" };

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isReadOnlyLaunch } from "@/lib/config/launch";
 import {
   verifyStorageSignature,
   writeLocalObject,
@@ -16,7 +17,7 @@ const MAX_BYTES = 12_582_912; // mirrors the bucket-side 12MB limit
  * client-shaped input.
  */
 export async function PUT(request: Request): Promise<Response> {
-  if (process.env.STORAGE_DRIVER !== "local" || process.env.NODE_ENV === "production") {
+  if (process.env.STORAGE_DRIVER !== "local" || process.env.NODE_ENV === "production" || isReadOnlyLaunch()) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   const params = new URL(request.url).searchParams;

@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { isReadOnlyLaunch } from "@/lib/config/launch";
 import { authConfig } from "@/auth/config";
 import { readSessionToken } from "@/auth/cookies";
 import { hashSessionToken } from "@/auth/otp-crypto";
@@ -26,6 +27,11 @@ export interface AuthContext {
 export async function getCurrentAuth(
   request: Request,
 ): Promise<AuthContext | null> {
+  // READ-ONLY launch: login is unavailable, so every request is
+  // treated as anonymous — no session lookup and no last-seen write.
+  if (isReadOnlyLaunch()) {
+    return null;
+  }
   const token = readSessionToken(request);
   if (token === null) {
     return null;
@@ -130,6 +136,9 @@ export async function requireStaff(request: Request): Promise<AuthContext> {
  * query-time validity checks. Null for anonymous visitors.
  */
 export async function getCurrentAuthFromCookies(): Promise<AuthContext | null> {
+  if (isReadOnlyLaunch()) {
+    return null; // read-only launch renders every page anonymously
+  }
   const store = await cookies();
   const token = store.get(authConfig().sessionCookieName)?.value;
   if (token === undefined || token.length === 0) {

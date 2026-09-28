@@ -355,6 +355,15 @@ export const SELLER = {
   renewalNewExpiry: "Yeni bitmə tarixi",
 } as const;
 
+/** Read-only launch notices (initial public release). */
+export const LAUNCH = {
+  comingSoonTitle: "Tezliklə",
+  comingSoonHint:
+    "Giriş, elan yerləşdirmə və ödənişlər hazırda hazırlanır. Platforma ilkin buraxılışda yalnız baxış rejimindədir — elanlara baxa və axtara bilərsiniz.",
+  headerBadge: "Baxış rejimi — giriş və elan yerləşdirmə tezliklə",
+  contactSoon: "Əlaqə funksiyası tezliklə aktiv olacaq.",
+} as const;
+
 export const SPEC_LABELS = {
   modelVariant: "Alt model",
   fuelType: "Yanacaq",
