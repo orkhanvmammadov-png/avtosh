@@ -12,7 +12,7 @@ import { UI } from "@/lib/marketplace/labels";
 import { myFavoriteCards } from "@/services/favorites";
 
 export const metadata: Metadata = {
-  title: `${UI.favorites} — ${UI.brand}`,
+  title: UI.favorites,
   robots: { index: false },
 };
 

@@ -119,6 +119,9 @@ Object.assign(out, {
   treeFamilyModelId: treeFam, tree100VariantId: tree100, tree200VariantId: tree200,
   treeListings: tree.map((t) => t.public_id),
 });
-writeFileSync(".e2e-seed.json", JSON.stringify(out, null, 2));
+// Each Playwright webServer seeds its own database; the read-only
+// server writes elsewhere (E2E_SEED_OUT) so it cannot clobber the
+// FULL server's IDs that tests/e2e/helpers.ts reads.
+writeFileSync(process.env.E2E_SEED_OUT || ".e2e-seed.json", JSON.stringify(out, null, 2));
 await sql.end();
 console.log(`[e2e-seed] ${cars.length + boosted.length + premium.length + motos.length + 5} listings seeded`);

@@ -91,7 +91,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   return (
     <Container>
       <div className="py-5 md:py-6">
-        <h1 className="sr-only">{`${categoryLabel} ${UI.listings.toLowerCase()}`}</h1>
+        <h1 className="sr-only">{`${categoryLabel} elanları`}</h1>
         {/* Unified search card — remounted per query string so URL
             navigation (apply, chips, clear, sort, Back/Forward) always
             re-initializes the controls from the parsed URL. */}

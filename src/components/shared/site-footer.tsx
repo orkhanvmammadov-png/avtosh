@@ -2,7 +2,7 @@ import Link from "next/link";
 import { isReadOnlyLaunch } from "@/lib/config/launch";
 import { BrandMark } from "@/components/shared/brand-mark";
 import { Container } from "@/components/ui/container";
-import { UI } from "@/lib/marketplace/labels";
+import { LAUNCH, UI } from "@/lib/marketplace/labels";
 
 /**
  * Approved navy footer strip — brand + existing-route links + © line.
@@ -18,8 +18,9 @@ export function SiteFooter() {
         <div>
           <BrandMark tone="dark" href={null} />
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-on-navy-muted">
-            Azərbaycanda avtomobil və motosiklet elanları — yoxlanılmış elanlar, birbaşa əlaqə,
-            təhlükəsiz onlayn ödəniş.
+            {readOnly
+              ? LAUNCH.footerDescription
+              : "Azərbaycanda avtomobil və motosiklet elanları — yoxlanılmış elanlar, birbaşa əlaqə, təhlükəsiz onlayn ödəniş."}
           </p>
         </div>
         <nav aria-label="Kateqoriyalar">

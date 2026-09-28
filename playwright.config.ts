@@ -22,11 +22,14 @@ export default defineConfig({
   // rate limiter (which the dev server activates via its own
   // x-forwarded-for) treats projects as independent sources.
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, extraHTTPHeaders: { "x-forwarded-for": "203.0.113.1" } } },
-    { name: "tablet", use: { ...devices["Desktop Chrome"], viewport: { width: 768, height: 1024 }, extraHTTPHeaders: { "x-forwarded-for": "203.0.113.2" } } },
-    { name: "mobile", use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, extraHTTPHeaders: { "x-forwarded-for": "203.0.113.3" } } },
+    { name: "desktop", testIgnore: /read-only-ui\.spec\.ts/, use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, extraHTTPHeaders: { "x-forwarded-for": "203.0.113.1" } } },
+    { name: "tablet", testIgnore: /read-only-ui\.spec\.ts/, use: { ...devices["Desktop Chrome"], viewport: { width: 768, height: 1024 }, extraHTTPHeaders: { "x-forwarded-for": "203.0.113.2" } } },
+    { name: "mobile", testIgnore: /read-only-ui\.spec\.ts/, use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, extraHTTPHeaders: { "x-forwarded-for": "203.0.113.3" } } },
+    // Read-only launch UI runs against the second (READ_ONLY) server.
+    { name: "read-only-desktop", testMatch: /read-only-ui\.spec\.ts/, use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, baseURL: "http://localhost:3001", extraHTTPHeaders: { "x-forwarded-for": "203.0.113.4" } } },
+    { name: "read-only-mobile", testMatch: /read-only-ui\.spec\.ts/, use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, baseURL: "http://localhost:3001", extraHTTPHeaders: { "x-forwarded-for": "203.0.113.5" } } },
   ],
-  webServer: {
+  webServer: [{
     command: "./scripts/db/with-temp-postgres.sh sh -c 'node scripts/e2e/seed.mjs && pnpm dev'",
     env: {
       OTP_PEPPER: "e2e-test-pepper-0123456789abcdef", // test-only; enables hashed-IP rate limiting paths
@@ -53,5 +56,23 @@ export default defineConfig({
     url: "http://localhost:3000/api/v1/health",
     reuseExistingServer: false,
     timeout: 240_000,
-  },
+  }, {
+    // Second server in READ_ONLY launch mode (own ephemeral DB +
+    // seed) so the read-only public UI is tested against real pages.
+    command: "./scripts/db/with-temp-postgres.sh sh -c 'node scripts/e2e/seed.mjs && pnpm dev -p 3001'",
+    env: {
+      LAUNCH_MODE: "READ_ONLY",
+      // Separate dist dir: Next's dev-server lock lives in distDir,
+      // and the FULL server on :3000 already holds .next.
+      NEXT_DIST_DIR: ".next-readonly-e2e",
+      // Keep the FULL server's .e2e-seed.json (used by helpers) intact.
+      E2E_SEED_OUT: ".e2e-seed-readonly.json",
+      OTP_PEPPER: "e2e-test-pepper-0123456789abcdef",
+      STORAGE_DRIVER: "local",
+      LOCAL_STORAGE_SUBDIR: "e2e-readonly",
+    },
+    url: "http://localhost:3001/api/v1/health",
+    reuseExistingServer: false,
+    timeout: 240_000,
+  }],
 });

@@ -5,11 +5,11 @@ import { getCurrentAuthFromCookies } from "@/auth/current-user";
 import { AxinFlow } from "@/components/seller/axin/axin-flow";
 import { PendingEditView } from "@/components/seller/axin/pending-edit-view";
 import { isApiError } from "@/lib/api/errors";
-import { SELLER, UI } from "@/lib/marketplace/labels";
+import { SELLER } from "@/lib/marketplace/labels";
 import { getEditView } from "@/services/listing-edit";
 
 export const metadata: Metadata = {
-  title: `${SELLER.editHeader} — ${UI.brand}`,
+  title: SELLER.editHeader,
   robots: { index: false },
 };
 
