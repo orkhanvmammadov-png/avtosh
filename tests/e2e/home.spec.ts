@@ -37,7 +37,6 @@ test.describe("Home", () => {
   });
 
   test("motorcycle category loads motorcycle brands and searches", async ({ page }) => {
-    const s = seed();
     await page.goto("/");
     await page.getByTestId("category-MOTORCYCLE").click();
     await expect(page.getByTestId("home-brand")).toBeEnabled();

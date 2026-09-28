@@ -125,6 +125,19 @@ same generator/`--check`/no-hand-edit rules apply as for brands.
 Import the complete set together with the brands file into a local
 UAT database only; production import remains unauthorized.
 
+## Owner city catalog
+
+`owner-cities.json` holds the 72 owner-supplied cities, generated
+deterministically from the sealed TSV source
+`source/AVTOSH_owner_city_source.tsv` (SHA-256 pinned in the
+generator) by `scripts/catalog/generate-owner-cities.mts`. Names stay
+byte-exact, `sort_order` follows the Owner's file order, and
+`owner-cities-provenance.json` maps each numeric
+`source_option_value` (an external key, never `cities.id`) to its
+slug. The slug-keyed upsert preserves existing rows (Bakı → `baki`,
+Gəncə → `gence`) — UUIDs and listing references survive the import.
+The same generator/`--check`/no-hand-edit rules apply.
+
 The import format's `model_variants` section is
 `{brand_slug, category, model_slug, name, slug, is_active, sort_order}`,
 upserted by `(model_id, slug)`.
