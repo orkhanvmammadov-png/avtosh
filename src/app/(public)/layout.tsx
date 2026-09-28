@@ -1,5 +1,7 @@
+import { LaunchModeProvider } from "@/components/shared/launch-mode-context";
 import { SiteFooter } from "@/components/shared/site-footer";
 import { SiteHeader } from "@/components/shared/site-header";
+import { isReadOnlyLaunch } from "@/lib/config/launch";
 
 /**
  * Public marketplace shell. The main region is intentionally
@@ -8,12 +10,14 @@ import { SiteHeader } from "@/components/shared/site-header";
  */
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-dvh flex-col">
-      <SiteHeader />
-      <main id="main" className="w-full flex-1">
-        {children}
-      </main>
-      <SiteFooter />
-    </div>
+    <LaunchModeProvider readOnly={isReadOnlyLaunch()}>
+      <div className="flex min-h-dvh flex-col">
+        <SiteHeader />
+        <main id="main" className="w-full flex-1">
+          {children}
+        </main>
+        <SiteFooter />
+      </div>
+    </LaunchModeProvider>
   );
 }

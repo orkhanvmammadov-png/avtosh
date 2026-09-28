@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isReadOnlyLaunch } from "@/lib/config/launch";
 import { Suspense } from "react";
 import { Plus } from "lucide-react";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
@@ -7,7 +8,7 @@ import { HeaderNav } from "@/components/shared/header-nav";
 import { LogoutButton } from "@/components/shared/logout-button";
 import { MobileNav } from "@/components/shared/mobile-nav";
 import { Container } from "@/components/ui/container";
-import { UI } from "@/lib/marketplace/labels";
+import { LAUNCH, UI } from "@/lib/marketplace/labels";
 
 /**
  * Approved navy public header (screens.md Home): brand · nav with
@@ -16,7 +17,8 @@ import { UI } from "@/lib/marketplace/labels";
  * cookie session is the single source of truth.
  */
 export async function SiteHeader() {
-  const auth = await getCurrentAuthFromCookies();
+  const readOnly = isReadOnlyLaunch();
+  const auth = readOnly ? null : await getCurrentAuthFromCookies();
   const authed = auth !== null;
   const quietLink =
     "hidden min-h-12 items-center px-3 text-sm font-medium text-on-navy-muted transition-colors duration-150 hover:text-white lg:inline-flex";
@@ -28,7 +30,14 @@ export async function SiteHeader() {
           <HeaderNav authed={authed} />
         </Suspense>
         <div className="flex items-center gap-1.5" data-testid={authed ? "header-authed" : "header-anonymous"}>
-          {authed ? (
+          {readOnly ? (
+            <span
+              className="inline-flex min-h-10 items-center rounded-pill border border-white/20 px-3 text-[12px] font-medium text-on-navy-muted max-sm:hidden"
+              data-testid="header-launch-badge"
+            >
+              {LAUNCH.headerBadge}
+            </span>
+          ) : authed ? (
             <>
               <Link href="/profil/elanlar" className={quietLink} data-testid="header-my-listings">
                 {UI.myListings}
@@ -50,6 +59,7 @@ export async function SiteHeader() {
               {UI.login}
             </Link>
           )}
+          {readOnly ? null : (
           <Link
             href={authed ? "/elan-yerlesdir" : "/giris?return_to=%2Felan-yerlesdir"}
             aria-label={UI.postListing}
@@ -58,7 +68,8 @@ export async function SiteHeader() {
             <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
             <span className="hidden sm:inline">{UI.postListing}</span>
           </Link>
-          <MobileNav authed={authed} buttonClassName={authed ? "lg:hidden" : "md:hidden"} />
+          )}
+          <MobileNav authed={authed} readOnly={readOnly} buttonClassName={authed ? "lg:hidden" : "md:hidden"} />
         </div>
       </Container>
     </header>

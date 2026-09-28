@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useReadOnlyLaunch } from "@/components/shared/launch-mode-context";
 import { useEffect, useRef, useState } from "react";
 import { UI } from "@/lib/marketplace/labels";
 import {
@@ -32,6 +33,7 @@ export function FavoriteButton({
       callers keep the default round card treatment. */
   skin?: "card" | "panel" | "sticky";
 }) {
+  const readOnlyLaunch = useReadOnlyLaunch();
   const router = useRouter();
   const [favorited, setFavorited] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
@@ -94,6 +96,9 @@ export function FavoriteButton({
   // button stays disabled (a click would otherwise toggle from an
   // assumed "false" and could send the opposite mutation) and the DOM
   // says so honestly instead of claiming "false".
+  if (readOnlyLaunch) {
+    return null; // read-only launch: favorites are not operating
+  }
   return (
     <button
       type="button"

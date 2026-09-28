@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { isReadOnlyLaunch } from "@/lib/config/launch";
 import { Container } from "@/components/ui/container";
 import Link from "next/link";
 import { getCurrentAuthFromCookies } from "@/auth/current-user";
 import { formatDateAz } from "@/lib/format";
 import { buttonClasses } from "@/components/ui/button";
-import { SELLER, UI } from "@/lib/marketplace/labels";
+import { LAUNCH, SELLER, UI } from "@/lib/marketplace/labels";
 import { ResultPanel, type ResultTone } from "@/components/ui/result-panel";
 import { handleKapitalCallback } from "@/services/payment-checkout";
 
@@ -34,6 +35,26 @@ export default async function KapitalReturnPage({
 }) {
   const params = await searchParams;
   const providerOrderId = params.ID;
+  if (isReadOnlyLaunch()) {
+    // Read-only launch: payments are not operating; render the honest
+    // notice without any provider verification or session read.
+    return (
+      <Container>
+        <ResultPanel
+          tone="neutral"
+          title={LAUNCH.comingSoonTitle}
+          hint={LAUNCH.comingSoonHint}
+          data-testid="payment-result"
+          data-state="READ_ONLY"
+          actions={
+            <Link href="/" className={buttonClasses("primary", "px-6")}>
+              {UI.backHome}
+            </Link>
+          }
+        />
+      </Container>
+    );
+  }
   const auth = await getCurrentAuthFromCookies();
   const result = await handleKapitalCallback(auth, providerOrderId);
 

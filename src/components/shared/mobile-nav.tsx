@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { UI } from "@/lib/marketplace/labels";
+import { LAUNCH, UI } from "@/lib/marketplace/labels";
 
 const LINKS = [
   { href: "/elanlar?category=CAR", label: UI.cars },
@@ -10,7 +10,7 @@ const LINKS = [
 ];
 
 /** Native <dialog> drawer: focus trapped by the browser, Esc closes. */
-export function MobileNav({ authed = false, buttonClassName = "md:hidden" }: { authed?: boolean; buttonClassName?: string }) {
+export function MobileNav({ authed = false, readOnly = false, buttonClassName = "md:hidden" }: { authed?: boolean; readOnly?: boolean; buttonClassName?: string }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -71,6 +71,11 @@ export function MobileNav({ authed = false, buttonClassName = "md:hidden" }: { a
               </Link>
             </>
           ) : null}
+          {readOnly ? (
+            <p className="mt-2 rounded-control bg-sunken px-3 py-3 text-sm text-slate-strong" data-testid="mobile-launch-note">
+              {LAUNCH.comingSoonHint}
+            </p>
+          ) : (
           <Link
             href={authed ? "/elan-yerlesdir" : "/giris?return_to=%2Felan-yerlesdir"}
             className="mt-2 rounded-control bg-primary px-3 py-3 text-center text-base font-semibold text-white"
@@ -78,7 +83,8 @@ export function MobileNav({ authed = false, buttonClassName = "md:hidden" }: { a
           >
             {UI.postListing}
           </Link>
-          {authed ? null : (
+          )}
+          {readOnly || authed ? null : (
             <Link href="/giris" className="rounded-control px-3 py-3 text-base font-medium text-ink hover:bg-primary-tint" onClick={() => dialogRef.current?.close()} data-testid="mobile-login">
               {UI.login}
             </Link>

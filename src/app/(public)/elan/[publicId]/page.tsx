@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { isReadOnlyLaunch } from "@/lib/config/launch";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Check } from "lucide-react";
@@ -12,7 +13,7 @@ import { Notice } from "@/components/ui/notice";
 import { PromotionBadge } from "@/components/ui/promotion-badge";
 import { ApiError } from "@/lib/api/errors";
 import { formatDateAz, formatFreshness, formatMileage, formatPriceMinor, formatYear, vehicleTitle } from "@/lib/format";
-import { CATEGORY_LABELS, SPEC_LABELS, STATUS_LABELS, UI } from "@/lib/marketplace/labels";
+import { LAUNCH, CATEGORY_LABELS, SPEC_LABELS, STATUS_LABELS, UI } from "@/lib/marketplace/labels";
 import { publicDetail, type PublicDetailDto } from "@/services/marketplace";
 import { publicIdParamSchema } from "@/validators/marketplace";
 
@@ -126,6 +127,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const { listing, nowMs } = loaded;
   const title = detailTitle(listing);
   const limited = !listing.contactable;
+  const readOnly = isReadOnlyLaunch();
   const contactable = !limited && listing.seller !== null;
   const freshness = listing.publishedAt === null ? null : formatFreshness(listing.publishedAt, nowMs);
   const meta = [
@@ -152,7 +154,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             >
               ← Geri
             </Link>
-            {listing.status !== "SOLD" ? <FavoriteButton publicId={listing.publicId} skin="panel" /> : null}
+            {listing.status !== "SOLD" && !readOnly ? <FavoriteButton publicId={listing.publicId} skin="panel" /> : null}
           </div>
           <nav aria-label="Naviqasiya yolu" className="mb-3 hidden flex-wrap items-center gap-1.5 py-2 text-xs text-on-navy-muted md:flex">
             <Link href="/" className="hover:text-white">Əsas səhifə</Link>
@@ -223,7 +225,16 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               ) : null}
               </div>
               <div className="mt-4 md:mt-0 md:flex md:shrink-0 md:items-center md:gap-2 desk:mt-3 desk:block xl:mt-4">
-                {contactable && listing.seller ? (
+                {readOnly && contactable ? (
+                  <div
+                    role="status"
+                    className="rounded-lg bg-[#FBEED8] px-4 py-3.5"
+                    data-testid="contact-readonly-notice"
+                  >
+                    <p className="text-[13.5px] font-bold text-[#9A5B06]">{LAUNCH.comingSoonTitle}</p>
+                    <p className="mt-0.5 text-[12.5px] text-[#9A5B06]">{LAUNCH.contactSoon}</p>
+                  </div>
+                ) : contactable && listing.seller ? (
                   <ContactCard
                     publicId={listing.publicId}
                     displayName={listing.seller.displayName}
@@ -254,7 +265,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                     </Link>
                   </div>
                 )}
-                {listing.status !== "SOLD" ? (
+                {listing.status !== "SOLD" && !readOnly ? (
                   <span className="hidden md:static md:block desk:absolute desk:right-4 desk:top-4 xl:right-5 xl:top-5">
                     <FavoriteButton publicId={listing.publicId} skin="panel" autoIntent />
                   </span>
@@ -276,9 +287,11 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   Elan № {listing.publicId}
                   {listing.publishedAt !== null ? ` · ${formatDateAz(listing.publishedAt)}` : ""}
                 </span>
-                <a href="#report" className="text-[#D08A82] transition-colors duration-150 hover:underline" data-testid="panel-report-link">
-                  Şikayət et
-                </a>
+                {readOnly ? null : (
+                  <a href="#report" className="text-[#D08A82] transition-colors duration-150 hover:underline" data-testid="panel-report-link">
+                    Şikayət et
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -372,9 +385,11 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                 </p>
               </div>
             </div>
-            <a href="#report" className="shrink-0 text-[11.5px] font-medium text-[#B3261E] hover:underline">
-              Şikayət et
-            </a>
+            {readOnly ? null : (
+              <a href="#report" className="shrink-0 text-[11.5px] font-medium text-[#B3261E] hover:underline">
+                Şikayət et
+              </a>
+            )}
           </section>
         ) : null}
         {!limited ? (
@@ -383,9 +398,11 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             əvvəl beh göndərməyin.
           </Notice>
         ) : null}
-        <div className="mt-5 pt-1" id="report">
-          <ReportListing publicId={listing.publicId} />
-        </div>
+        {readOnly ? null : (
+          <div className="mt-5 pt-1" id="report">
+            <ReportListing publicId={listing.publicId} />
+          </div>
+        )}
       </Container>
     </article>
   );
