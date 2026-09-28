@@ -14,17 +14,43 @@ the Vercel/Supabase dashboards — never in chat, never committed.
 - The later full release enables the marketplace by deliberately
   setting `LAUNCH_MODE=FULL` after review. Nothing else flips it.
 
-## 1. Supabase project (staging)
+## 1. Supabase project (staging) and local secret handling
 
-1. Create a dedicated staging project. Note THREE connection strings
-   from the dashboard (Settings → Database):
+1. Create a dedicated staging project. You will use THREE connection
+   strings from the dashboard (Settings → Database):
    - **Direct connection** (db.<ref>.supabase.co:5432) — migrations only.
    - **Session pooler** (…pooler.supabase.com:5432).
    - **Transaction pooler** (…pooler.supabase.com:6543).
 2. Keep runtime and migration connections SEPARATE:
    - `DATABASE_URL` (Vercel runtime) → pooler URL chosen in step 2 below.
-   - `MIGRATION_DATABASE_URL` (local shell only, never in Vercel) →
+   - `MIGRATION_DATABASE_URL` (local file only, never in Vercel) →
      the direct connection.
+3. **Local secret file — never in shell history, logs, the repo, or
+   chat.** Create a private env file OUTSIDE the repository and open
+   it in your editor (do not build it with `echo`/`printf`, which
+   land in shell history):
+
+   ```bash
+   install -m 600 /dev/null ~/.avtosh/staging.env && open -t ~/.avtosh/staging.env
+   ```
+
+   Fill it in the editor with (values from the Supabase dashboard):
+
+   ```
+   MIGRATION_DATABASE_URL=...direct connection...
+   SESSION_POOLER_URL=...session pooler...
+   TRANSACTION_POOLER_URL=...transaction pooler...
+   ```
+
+   Every command below loads it in a subshell so nothing leaks into
+   your interactive environment or history:
+
+   ```bash
+   run_staging() ( set -a; . ~/.avtosh/staging.env; set +a; "$@" )
+   ```
+
+   Define `run_staging` once per terminal session. Never paste any of
+   these values into chat, commits, or the PR.
 
 ## 2. Choose and VERIFY the runtime connection mode
 
@@ -34,38 +60,58 @@ pooler** this can **hang queries or return mismatched rows**;
 `prepare: false` (which this app already sets) does **not** disable
 pipelining, and `max_pipeline: 0` breaks `sql.begin()` upstream.
 
-Run the repository's compatibility check against BOTH pooler URLs
-(it only SELECTs; a hang fails via timeout):
+`scripts/db/check-supabase-pooler.mjs` is a **bounded smoke/stress
+test, not proof of complete compatibility**: it exercises one risky
+shape (saturated pool, interleaved queries + transactions) within
+fixed bounds and verifies every reply. Run it against BOTH pooler
+URLs (it only SELECTs; a hang fails via timeout):
 
 ```bash
-DATABASE_URL='<session pooler url>' node scripts/db/check-supabase-pooler.mjs
-DATABASE_URL='<transaction pooler url>' node scripts/db/check-supabase-pooler.mjs
+run_staging sh -c 'DATABASE_URL="$SESSION_POOLER_URL" node scripts/db/check-supabase-pooler.mjs'
+run_staging sh -c 'DATABASE_URL="$TRANSACTION_POOLER_URL" node scripts/db/check-supabase-pooler.mjs'
 ```
 
 Decision rule:
-- **Recommended for this release: the session pooler (port 5432)** —
-  it is not subject to the transaction-mode pipelining truncation.
-  Keep the app's pool small (`max: 5` per instance, already set) and
-  watch Supabase's client-connection limit for the instance size.
+- **Provisional preference: the session pooler (port 5432)** — it is
+  not subject to the transaction-mode pipelining truncation. This
+  remains PROVISIONAL until the real application's queries and
+  transactions have been exercised against staging; a smoke-test
+  PASS is necessary, not sufficient.
 - Use the transaction pooler (6543) only if its check PASSES
   repeatedly and Supavisor on the project is a version with native
   pipelining support; otherwise avoid it.
-- Record the chosen URL kind and the check output in the release
-  notes. If both fail, stop and investigate before deploying.
+- Record in the release notes: the chosen URL kind, the check
+  output, the project's client-connection limits for its compute
+  size, and any failures observed. If both fail, stop and
+  investigate before deploying. No connection mode may be described
+  as "verified" without an actual staging run.
 
-## 3. Migrations (direct connection, local shell)
+## 3. Migrations (direct connection, tracked runner)
 
-Apply the committed migrations in filename order — never edit a
-migration already applied to a shared environment:
+Apply the committed migrations with the tracked, fail-fast runner —
+never with an ad-hoc loop, and never edit a migration a shared
+environment has already recorded:
 
 ```bash
-for f in supabase/migrations/*.sql; do
-  psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$f" || break
-done
+run_staging scripts/db/apply-migrations.sh
 ```
 
-Verify: `psql "$MIGRATION_DATABASE_URL" -c '\dt'` shows the expected
-tables (brands, models, model_variants, cities, listings, …).
+The runner keeps a `schema_migrations` history table, skips files
+already recorded (non-idempotent files are never blindly re-run),
+applies each pending file in ONE transaction together with its
+history row, exits nonzero on the first failure and names the failed
+file. A failed file is fully rolled back and unrecorded; recovery on
+a fresh staging database is documented in the script header
+(inspect `schema_migrations`, fix forward via a reviewed migration,
+or drop and recreate the fresh database). The runner is verified in
+CI-adjacent tooling against an ephemeral database, including an
+intentionally failing migration.
+
+Verify afterwards:
+
+```bash
+run_staging sh -c 'psql "$MIGRATION_DATABASE_URL" -c "select count(*) from schema_migrations"'
+```
 
 ## 4. Approved catalog import (dry-run first, then import)
 
@@ -74,8 +120,8 @@ listings, no UAT seed data, no fake rows.
 
 ```bash
 python3 -c "import json; b=json.load(open('data/catalog/owner-brands.json')); m=json.load(open('data/catalog/owner-models.json')); c=json.load(open('data/catalog/owner-cities.json')); json.dump({**b, **m, **c}, open('/tmp/owner-full-catalog.json','w'))"
-DATABASE_URL="$MIGRATION_DATABASE_URL" pnpm catalog:import /tmp/owner-full-catalog.json --dry-run
-DATABASE_URL="$MIGRATION_DATABASE_URL" pnpm catalog:import /tmp/owner-full-catalog.json
+run_staging sh -c 'DATABASE_URL="$MIGRATION_DATABASE_URL" pnpm catalog:import /tmp/owner-full-catalog.json --dry-run'
+run_staging sh -c 'DATABASE_URL="$MIGRATION_DATABASE_URL" pnpm catalog:import /tmp/owner-full-catalog.json'
 ```
 
 Expected: `210 brands, 222 brand/category links, 1661 models,

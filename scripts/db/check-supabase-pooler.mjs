@@ -7,12 +7,16 @@
 // pooler (Supavisor transaction mode), this can hang queries or
 // return mismatched rows; `prepare: false` alone does not disable
 // pipelining, and `max_pipeline: 0` breaks sql.begin() upstream.
-// This script exercises exactly the risky shape — saturated pool,
-// concurrent interleaved queries and transactions — against the URL
-// you provide, and verifies every reply matches its query. Run it
-// against the STAGING pooler URL (session and transaction ports)
-// before choosing the runtime connection string. It only SELECTs;
-// nothing is written. A hang is a failure: the script times out.
+// This script is a BOUNDED SMOKE/STRESS TEST, not proof of complete
+// compatibility: it exercises one risky shape — a saturated pool
+// with concurrent interleaved queries and transactions — and checks
+// every reply against its query. A PASS means this shape did not
+// hang or mismatch within the bounds below; real application queries
+// and transactions must still be exercised against staging before a
+// connection mode is treated as verified. Record the outcome, the
+// pooler kind/port, and the project's client-connection limits in
+// the release notes. It only SELECTs; nothing is written. A hang is
+// a failure: the script times out and force-closes the pool.
 import postgres from "postgres";
 
 const url = process.env.DATABASE_URL;
@@ -28,12 +32,13 @@ const ROUNDS = 40;
 const sql = postgres(url, { max: 5, prepare: false, onnotice: () => {} });
 
 function withTimeout(promise, label) {
+  let timer;
   return Promise.race([
     promise,
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`TIMEOUT (hang): ${label}`)), TIMEOUT_MS),
-    ),
-  ]);
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`TIMEOUT (hang): ${label}`)), TIMEOUT_MS);
+    }),
+  ]).finally(() => clearTimeout(timer));
 }
 
 async function worker(id) {
@@ -62,10 +67,14 @@ try {
     `${CONCURRENCY} workers x ${ROUNDS} rounds`,
   );
   console.log(
-    `PASS: ${CONCURRENCY * ROUNDS} interleaved query+transaction rounds, ` +
-      `no hang, no mismatched rows (${Date.now() - started}ms).`,
+    `PASS (bounded smoke test): ${CONCURRENCY * ROUNDS} interleaved ` +
+      `query+transaction rounds, no hang, no mismatched rows ` +
+      `(${Date.now() - started}ms).`,
   );
-  process.exit(0);
+  console.log(
+    "PASS here is necessary, not sufficient: exercise the real application " +
+      "against staging before treating this connection mode as verified.",
+  );
 } catch (error) {
   console.error(`FAIL: ${error instanceof Error ? error.message : error}`);
   console.error(
@@ -76,3 +85,4 @@ try {
 } finally {
   await sql.end({ timeout: 5 });
 }
+process.exit(0); // success path: force exit past any stray timers

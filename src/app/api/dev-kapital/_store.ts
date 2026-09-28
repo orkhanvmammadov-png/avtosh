@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { isReadOnlyLaunch } from "@/lib/config/launch";
 import path from "node:path";
 
 /**
@@ -23,7 +24,11 @@ export interface FakeKapitalOrder {
 }
 
 export function fakeKapitalEnabled(): boolean {
-  return process.env.PAYMENT_FAKE_KAPITAL === "1" && process.env.NODE_ENV !== "production";
+  return (
+    process.env.PAYMENT_FAKE_KAPITAL === "1" &&
+    process.env.NODE_ENV !== "production" &&
+    !isReadOnlyLaunch()
+  );
 }
 
 /** Basic-auth guard mirroring the real provider's behavior. */
