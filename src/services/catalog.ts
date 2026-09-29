@@ -1,4 +1,5 @@
 import { ApiError } from "@/lib/api/errors";
+import { withTransientReadRetry } from "@/lib/server/db/read-retry";
 import {
   findActiveBrandInCategory,
   findActiveCategoryByCode,
@@ -86,7 +87,7 @@ async function resolveActiveCategory(code: string): Promise<CategoryRow> {
   return category;
 }
 
-export async function getCategories(): Promise<CategoryDto[]> {
+async function getCategoriesLookup(): Promise<CategoryDto[]> {
   const rows = await listActiveCategories();
   return rows.map((row) => ({
     id: row.id,
@@ -96,13 +97,13 @@ export async function getCategories(): Promise<CategoryDto[]> {
   }));
 }
 
-export async function getBrands(categoryCode: string): Promise<BrandDto[]> {
+async function getBrandsLookup(categoryCode: string): Promise<BrandDto[]> {
   const category = await resolveActiveCategory(categoryCode);
   const rows = await listActiveBrandsByCategory(category.id);
   return rows.map((row) => ({ id: row.id, name: row.name, slug: row.slug }));
 }
 
-export async function getModels(
+async function getModelsLookup(
   categoryCode: string,
   brandId: string,
 ): Promise<ModelDto[]> {
@@ -130,7 +131,7 @@ export async function getModels(
  * valid family with no variants returns an empty array — that is the
  * signal to hide the Alt model field and store NULL.
  */
-export async function getModelVariants(
+async function getModelVariantsLookup(
   categoryCode: string,
   brandId: string,
   modelId: string,
@@ -164,7 +165,7 @@ export async function getModelVariants(
  * every id must be an active variant whose family belongs to the
  * brand and category, otherwise a typed 400.
  */
-export async function getModelVariantsByIds(
+async function getModelVariantsByIdsLookup(
   categoryCode: string,
   brandId: string,
   variantIds: string[],
@@ -199,12 +200,12 @@ export async function getModelVariantsByIds(
   }));
 }
 
-export async function getCities(): Promise<CityDto[]> {
+async function getCitiesLookup(): Promise<CityDto[]> {
   const rows = await listActiveCities();
   return rows.map((row) => ({ id: row.id, name: row.name_az, slug: row.slug }));
 }
 
-export async function getReferenceOptions(
+async function getReferenceOptionsLookup(
   groupCode: string,
   categoryCode?: string,
 ): Promise<ReferenceOptionDto[]> {
@@ -220,7 +221,7 @@ export async function getReferenceOptions(
   return rows.map((row) => ({ id: row.id, code: row.code, name: row.name_az, swatch: row.swatch ?? null }));
 }
 
-export async function getFeatures(
+async function getFeaturesLookup(
   categoryCode?: string,
 ): Promise<FeatureDto[]> {
   const category =
@@ -230,3 +231,27 @@ export async function getFeatures(
   const rows = await listActiveFeatures(category?.id);
   return rows.map((row) => ({ id: row.id, code: row.code, name: row.name_az, group: row.group_code }));
 }
+
+/**
+ * RETRY ALLOWLIST — the only operations in the codebase that opt in
+ * to the bounded transient-read retry. Every function above is a
+ * pure catalog lookup (SELECT-only repositories plus typed ApiError
+ * throws); running one twice has no side effect. Do NOT wrap
+ * anything that authenticates, touches sessions, counts views,
+ * writes, or runs a transaction.
+ */
+function pureCatalogRead<A extends unknown[], R>(
+  operation: string,
+  lookup: (...args: A) => Promise<R>,
+): (...args: A) => Promise<R> {
+  return (...args) => withTransientReadRetry(operation, () => lookup(...args));
+}
+
+export const getCategories = pureCatalogRead("catalog.getCategories", getCategoriesLookup);
+export const getBrands = pureCatalogRead("catalog.getBrands", getBrandsLookup);
+export const getModels = pureCatalogRead("catalog.getModels", getModelsLookup);
+export const getModelVariants = pureCatalogRead("catalog.getModelVariants", getModelVariantsLookup);
+export const getModelVariantsByIds = pureCatalogRead("catalog.getModelVariantsByIds", getModelVariantsByIdsLookup);
+export const getCities = pureCatalogRead("catalog.getCities", getCitiesLookup);
+export const getReferenceOptions = pureCatalogRead("catalog.getReferenceOptions", getReferenceOptionsLookup);
+export const getFeatures = pureCatalogRead("catalog.getFeatures", getFeaturesLookup);

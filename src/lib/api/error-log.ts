@@ -19,7 +19,7 @@ import { errorChain, isTransientConnectionError } from "@/lib/server/db/transien
 // SQLSTATE). Anything else — including free text — is dropped.
 const SAFE_CODE = /^[A-Z0-9_]{2,40}$/;
 
-export type RetryOutcome = "not_eligible" | "failed";
+export type RetryOutcome = "not_attempted" | "failed";
 
 interface ChainEntry {
   name: string;
@@ -75,21 +75,19 @@ export function logUnexpectedApiError(input: {
   );
 }
 
-/** A transient read failure that succeeded on its single retry. */
-export function logTransientReadRecovered(input: {
-  error: unknown;
-  requestId: string;
-  method: string;
-  route: string;
-}): void {
+/**
+ * A transient failure inside an explicitly opted-in pure read that
+ * succeeded on its single retry. Keyed by operation name (the
+ * service-level retry has no request context); the operation label
+ * is a static code identifier, never derived from data.
+ */
+export function logTransientReadRecovered(input: { operation: string; error: unknown }): void {
   const chain = describeChain(input.error);
   console.warn(
     JSON.stringify({
       level: "warn",
       event: "api_transient_read_recovered",
-      request_id: input.requestId,
-      method: input.method,
-      route: input.route,
+      operation: input.operation,
       error_name: chain[0]?.name ?? "unknown",
       error_code: chain[0]?.code,
       cause_chain: chain.slice(1),

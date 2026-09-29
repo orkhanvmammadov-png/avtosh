@@ -3,13 +3,8 @@ import { ApiError, isApiError } from "@/lib/api/errors";
 import { apiFailure } from "@/lib/api/response";
 import { resolveRequestId } from "@/lib/api/request-id";
 import { isReadOnlyLaunch } from "@/lib/config/launch";
-import {
-  logTransientReadRecovered,
-  logUnexpectedApiError,
-  normalizeRoute,
-  type RetryOutcome,
-} from "@/lib/api/error-log";
-import { isTransientConnectionError } from "@/lib/server/db/transient-error";
+import { logUnexpectedApiError, normalizeRoute } from "@/lib/api/error-log";
+import { didTransientReadRetryFail } from "@/lib/server/db/read-retry";
 
 /** Thrown by the read-only launch gate; also reusable by wrappers
     that do not go through createApiHandler (jobs, webhooks). */
@@ -44,7 +39,6 @@ export function createApiHandler(
     const requestId = resolveRequestId(request);
     const method = request.method.toUpperCase();
     let params: Record<string, string> = {};
-    let retry: RetryOutcome = "not_eligible";
     try {
       // READ-ONLY launch gate: every non-read method fails closed at
       // the server for ALL routes built on this factory. Side-effecting
@@ -56,34 +50,13 @@ export function createApiHandler(
         }
       }
       params = context === undefined ? {} : await context.params;
-      const handlerContext = { request, requestId, params };
-      try {
-        return await handler(handlerContext);
-      } catch (error) {
-        // Bounded transient-read retry: exactly ONE retry, only for
-        // idempotent read methods (never mutations — non-GET/HEAD
-        // rethrows immediately), and only for allowlisted transient
-        // connection/transport failures (never SQL, validation,
-        // permission or unknown errors). postgres.js evicts the
-        // failed connection from its pool, so the retry runs on a
-        // fresh connection rather than reusing the stale socket. A
-        // second failure falls through as an ordinary error — no
-        // false success, no added waiting.
-        const eligible =
-          (method === "GET" || method === "HEAD") && isTransientConnectionError(error);
-        if (!eligible) {
-          throw error;
-        }
-        retry = "failed";
-        const response = await handler(handlerContext);
-        logTransientReadRecovered({
-          error,
-          requestId,
-          method,
-          route: normalizeRoute(new URL(request.url).pathname, params),
-        });
-        return response;
-      }
+      // NO request-level retry: HTTP method is not an idempotency
+      // boundary here (/api/jobs/* are mutating GETs; detail GETs can
+      // count views; authenticated GETs touch last_seen_at in FULL
+      // mode). Handlers run exactly once. The bounded transient-read
+      // retry exists only inside explicitly opted-in pure reads
+      // (the wrapper in src/lib/server/db/read-retry.ts).
+      return await handler({ request, requestId, params });
     } catch (error) {
       // Structured sanitized log for UNEXPECTED failures only —
       // ApiErrors are intentional business responses. The public
@@ -94,7 +67,7 @@ export function createApiHandler(
           requestId,
           method,
           route: normalizeRoute(new URL(request.url).pathname, params),
-          retry,
+          retry: didTransientReadRetryFail(error) ? "failed" : "not_attempted",
         });
       }
       return apiFailure(error, requestId);
