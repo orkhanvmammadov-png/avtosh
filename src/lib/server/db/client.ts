@@ -45,6 +45,18 @@ export function getSql(): Sql {
     globalForDb.avtoshSql = postgres(databaseUrl, {
       max: 5,
       prepare: false,
+      // Serverless connection lifecycle: the platform freezes function
+      // instances between invocations and the pooler drops idle
+      // clients, silently severing pooled TCP connections (postgres.js
+      // default keeps idle connections open forever). Close idle
+      // connections proactively and recycle long-lived ones so a
+      // thawed instance holds as few stale sockets as possible, and
+      // fail connects fast instead of the 30s default. A severed
+      // connection is evicted by postgres.js when its query fails; the
+      // API layer's bounded read retry then acquires a fresh one.
+      idle_timeout: 20,
+      max_lifetime: 60 * 30,
+      connect_timeout: 10,
       onnotice: () => {},
     });
   }
