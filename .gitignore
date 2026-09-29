@@ -40,3 +40,7 @@ pnpm-debug.log*
 .e2e-seed.json
 .uat-seed.json
 .dev-storage/
+
+# E2E read-only server dist dir (playwright.config.ts)
+/.next-readonly-e2e/
+/.e2e-seed-readonly.json

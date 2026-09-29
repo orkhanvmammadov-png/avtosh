@@ -16,7 +16,7 @@ import {
 } from "@/services/promotion-purchases";
 
 export const metadata: Metadata = {
-  title: `${SELLER.promotionTitle} — ${UI.brand}`,
+  title: SELLER.promotionTitle,
   robots: { index: false },
 };
 

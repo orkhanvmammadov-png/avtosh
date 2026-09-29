@@ -13,7 +13,7 @@ import { isSellerEditable } from "@/services/listing-states";
 import { paymentRequiredFor, sellerFeedbackFor } from "@/services/my-listings";
 
 export const metadata: Metadata = {
-  title: `${UI.postListing} — ${UI.brand}`,
+  title: UI.postListing,
   robots: { index: false },
 };
 

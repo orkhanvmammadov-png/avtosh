@@ -12,7 +12,7 @@ import { SELLER, UI } from "@/lib/marketplace/labels";
 import { renewalState } from "@/services/renewals";
 
 export const metadata: Metadata = {
-  title: `${SELLER.renewalTitle} — ${UI.brand}`,
+  title: SELLER.renewalTitle,
   robots: { index: false },
 };
 

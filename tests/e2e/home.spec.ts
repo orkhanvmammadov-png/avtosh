@@ -20,6 +20,23 @@ test.describe("Home", () => {
     await expectNoHorizontalOverflow(page);
   });
 
+  test("FULL mode keeps the exact title and the normal product copy", async ({ page }) => {
+    await page.goto("/");
+    await expect(page).toHaveTitle("AVTOSH.AZ — avtomobil və motosiklet elanları");
+    await expect(page).not.toHaveTitle(/— AVTOSH\.AZ — AVTOSH\.AZ/);
+    // Trust row: present-tense product copy, no "tezliklə" suffixes.
+    await expect(page.getByText("WhatsApp ilə giriş", { exact: true })).toBeVisible();
+    await expect(page.getByText("Şifrəsiz, birdəfəlik kod ilə daxil olun.")).toBeVisible();
+    await expect(page.getByText("İlk 3 elan pulsuz", { exact: true })).toBeVisible();
+    await expect(page.getByText("Sonrakı elanlar üçün sabit dərc haqqı.")).toBeVisible();
+    await expect(page.getByText("WhatsApp ilə giriş — tezliklə")).toHaveCount(0);
+    // Footer: full product description including payments.
+    await expect(page.getByText(/birbaşa əlaqə,\s*təhlükəsiz onlayn ödəniş/)).toBeVisible();
+    // Login page title carries exactly one brand suffix.
+    await page.goto("/giris");
+    await expect(page).toHaveTitle("Daxil ol və ya qeydiyyatdan keç — AVTOSH.AZ");
+  });
+
   test("category + brand + model search navigates with URL params", async ({ page }) => {
     const s = seed();
     await page.goto("/");

@@ -12,7 +12,7 @@ import { myListings } from "@/services/my-listings";
 import { isSellerEditable } from "@/services/listing-states";
 
 export const metadata: Metadata = {
-  title: `${UI.postListing} — ${UI.brand}`,
+  title: UI.postListing,
   robots: { index: false },
 };
 

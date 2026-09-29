@@ -362,6 +362,13 @@ export const LAUNCH = {
     "Giriş, elan yerləşdirmə və ödənişlər hazırda hazırlanır. Platforma ilkin buraxılışda yalnız baxış rejimindədir — elanlara baxa və axtara bilərsiniz.",
   headerBadge: "Baxış rejimi — giriş və elan yerləşdirmə tezliklə",
   contactSoon: "Əlaqə funksiyası tezliklə aktiv olacaq.",
+  // Read-only launch: deferred features are described in future
+  // tense so public copy never implies they are usable today.
+  trustWhatsappTitle: "WhatsApp ilə giriş — tezliklə",
+  trustWhatsappHint: "Tam versiyada birdəfəlik WhatsApp kodu ilə daxil ola biləcəksiniz.",
+  trustFreeTitle: "İlk 3 elan pulsuz — tezliklə",
+  trustFreeHint: "Elan yerləşdirmə açıldıqda ilk 3 elan pulsuz olacaq.",
+  footerDescription: "Azərbaycanda avtomobil və motosiklet elanlarına baxış və axtarış platforması.",
 } as const;
 
 export const SPEC_LABELS = {

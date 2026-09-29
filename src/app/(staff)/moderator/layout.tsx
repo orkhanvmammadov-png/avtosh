@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { StaffShell } from "@/components/staff/staff-shell";
-import { STAFF, UI } from "@/lib/marketplace/labels";
+import { STAFF } from "@/lib/marketplace/labels";
 import { requireStaffPage, staffRoleLabel } from "@/lib/moderator/staff-page";
 
 export const metadata: Metadata = {
-  title: `${STAFF.portal} — ${UI.brand}`,
+  title: STAFF.portal,
   robots: { index: false },
 };
 

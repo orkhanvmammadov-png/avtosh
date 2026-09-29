@@ -14,7 +14,7 @@ import {
 } from "@/services/my-listings";
 
 export const metadata: Metadata = {
-  title: `${UI.myListings} — ${UI.brand}`,
+  title: UI.myListings,
   robots: { index: false },
 };
 

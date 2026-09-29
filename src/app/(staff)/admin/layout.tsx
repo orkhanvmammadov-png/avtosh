@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StaffShell } from "@/components/staff/staff-shell";
-import { ADMIN, UI } from "@/lib/marketplace/labels";
+import { ADMIN } from "@/lib/marketplace/labels";
 import { isSuperAdmin, requireAdminPage } from "@/lib/admin/admin-page";
 
 export const metadata: Metadata = {
-  title: `${ADMIN.panel} — ${UI.brand}`,
+  title: ADMIN.panel,
   robots: { index: false },
 };
 

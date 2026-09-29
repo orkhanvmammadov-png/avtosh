@@ -11,7 +11,7 @@ import { UI } from "@/lib/marketplace/labels";
 import { sanitizeReturnTo } from "@/lib/security/return-to";
 
 export const metadata: Metadata = {
-  title: `${UI.loginTitle} — ${UI.brand}`,
+  title: UI.loginTitle,
   robots: { index: false },
 };
 

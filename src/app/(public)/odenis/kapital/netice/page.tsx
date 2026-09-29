@@ -10,7 +10,7 @@ import { ResultPanel, type ResultTone } from "@/components/ui/result-panel";
 import { handleKapitalCallback } from "@/services/payment-checkout";
 
 export const metadata: Metadata = {
-  title: `${SELLER.payCheckingTitle} — ${UI.brand}`,
+  title: SELLER.payCheckingTitle,
   robots: { index: false },
 };
 

@@ -14,7 +14,7 @@ import { getListingQuota } from "@/services/listing-submission";
 import type { ListingQuotaDto } from "@/services/listing-submission";
 
 export const metadata: Metadata = {
-  title: `${UI.account} — ${UI.brand}`,
+  title: UI.account,
   robots: { index: false },
 };
 

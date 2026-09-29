@@ -8,11 +8,15 @@ import { PromotionBadge } from "@/components/ui/promotion-badge";
 import { getBrands } from "@/services/catalog";
 import { loadAdvancedCatalog } from "@/services/advanced-catalog";
 import { homeData } from "@/services/marketplace";
+import { isReadOnlyLaunch } from "@/lib/config/launch";
+import { LAUNCH } from "@/lib/marketplace/labels";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "AVTOSH.AZ — avtomobil və motosiklet elanları",
+  // The root layout template would append the brand again; the home
+  // page intentionally carries the brand-first absolute title.
+  title: { absolute: "AVTOSH.AZ — avtomobil və motosiklet elanları" },
   alternates: { canonical: "/" },
 };
 
@@ -23,7 +27,15 @@ const TRUST = [
   { title: "İlk 3 elan pulsuz", hint: "Sonrakı elanlar üçün sabit dərc haqqı." },
 ];
 
+/** Read-only launch: deferred features stated in future tense. */
+const TRUST_READ_ONLY = [
+  { title: "Hər elan yoxlanılır", hint: "Dərc olunmazdan əvvəl moderasiyadan keçir." },
+  { title: LAUNCH.trustWhatsappTitle, hint: LAUNCH.trustWhatsappHint },
+  { title: LAUNCH.trustFreeTitle, hint: LAUNCH.trustFreeHint },
+];
+
 export default async function HomePage() {
+  const trust = isReadOnlyLaunch() ? TRUST_READ_ONLY : TRUST;
   const { home } = await homeData();
   const defaultCategory = home.categories[0]?.code ?? "CAR";
   const [initialBrands, advanced] = await Promise.all([
@@ -81,7 +93,7 @@ export default async function HomePage() {
         ) : null}
 
         <section aria-label="Niyə AVTOSH" className="mt-10 grid gap-6 border-t border-line pt-8 md:mt-14 md:grid-cols-3">
-          {TRUST.map((point) => (
+          {trust.map((point) => (
             <div key={point.title} className="flex gap-3">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-tint text-primary">
                 <Check size={16} strokeWidth={2.5} aria-hidden="true" />
