@@ -246,10 +246,10 @@ export function ModelPathField({
               aria-selected={false}
               data-testid={`${id}-back`}
               className="flex h-11 cursor-pointer items-center gap-1.5 border-b border-sunken px-3 text-[13px] font-semibold text-slate-strong desk:h-9"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                back();
-              }}
+              // Click-only activation (see typeahead-field): a swipe that
+              // starts on this row must scroll, not navigate back.
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => back()}
             >
               <ChevronLeft size={14} aria-hidden="true" />
               <span className="truncate">{level.family.name}</span>
@@ -274,8 +274,12 @@ export function ModelPathField({
                     index === activeIndex ? "bg-row-hover" : ""
                   } ${level.kind === "variants" ? "pl-6" : ""}`}
                   onPointerEnter={() => setActiveIndex(index)}
-                  onPointerDown={(e) => {
-                    e.preventDefault();
+                  // Click-only activation: pointerdown would select at the
+                  // start of a swipe; a synthesized click only follows a
+                  // completed tap, so the list can scroll natively. The
+                  // mousedown guard keeps the input focused.
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
                     if (level.kind === "families") {
                       void pickFamily(item);
                     } else {

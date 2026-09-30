@@ -224,10 +224,16 @@ export function TypeaheadField({
                     index === activeIndex ? "bg-row-hover" : ""
                   }`}
                   onPointerEnter={() => setActiveIndex(index)}
-                  onPointerDown={(e) => {
-                    e.preventDefault(); // keep input focus
-                    select(item);
-                  }}
+                  // Activate on click, never on pointerdown: pointerdown
+                  // fires the instant a finger lands, so a vertical swipe
+                  // that starts on a row would select it instead of
+                  // scrolling the list. A click is synthesized only for a
+                  // completed tap (or fired by a real mouse press), so
+                  // native scrolling stays free. The mousedown guard keeps
+                  // the input focused (mousedown is only synthesized after
+                  // a completed tap, never during a scroll gesture).
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => select(item)}
                 >
                   <span className="truncate">{item.name}</span>
                   {isSelected ? <Check size={14} className="shrink-0 text-primary" aria-hidden="true" /> : null}
