@@ -41,12 +41,18 @@ async function openBrandList(page: Page) {
   return { input, listbox };
 }
 
+// CDP drags need Chromium ("mobile"); tap-sequence tests also run on
+// the WebKit mobile project (WebKit touch pipeline — closer to iOS,
+// but still not proof of physical iOS Safari behavior).
+const TOUCH_PROJECTS = ["mobile", "mobile-webkit"];
+
 test.describe("dropdown swipe scrolls, tap selects", () => {
   test.beforeEach(async ({}, testInfo) => {
-    test.skip(testInfo.project.name !== "mobile", "touch gestures — mobile project only");
+    test.skip(!TOUCH_PROJECTS.includes(testInfo.project.name), "touch projects only");
   });
 
   test("brand: upward and downward drags starting on rows scroll without selecting", async ({ page }) => {
+    test.skip(test.info().project.name !== "mobile", "CDP touch drags need Chromium");
     await page.goto("/");
     const { input, listbox } = await openBrandList(page);
     const box = (await listbox.boundingBox())!;
@@ -87,6 +93,7 @@ test.describe("dropdown swipe scrolls, tap selects", () => {
   });
 
   test("model tree: a drag over family and variant rows never toggles a selection", async ({ page }) => {
+    test.skip(test.info().project.name !== "mobile", "CDP touch drags need Chromium");
     for (const path of ["/", "/elanlar?category=CAR"]) {
       await page.goto(path);
       const { input, listbox } = await openBrandList(page);
@@ -127,6 +134,7 @@ test.describe("dropdown swipe scrolls, tap selects", () => {
   });
 
   test("seller model path: swipes never activate family/variant/back rows; taps do", async ({ page, context }) => {
+    test.skip(test.info().project.name !== "mobile", "CDP touch drags need Chromium");
     const { userId } = await loginAs(context, testPhone("mobile", 71));
     void userId;
     await page.goto("/elan-yerlesdir");
@@ -180,4 +188,45 @@ test.describe("dropdown swipe scrolls, tap selects", () => {
     await modelList.getByRole("option", { name: "Tree 100" }).tap();
     await expect(model).toHaveValue(/Tree/);
   });
+  test("full touch sequence: swipe, single-tap select, model families load, variant selects", async ({ page }, testInfo) => {
+    await page.goto("/");
+    const { input, listbox } = await openBrandList(page);
+
+    if (testInfo.project.name === "mobile") {
+      // Real drag first (CDP, Chromium only): scrolls, selects nothing.
+      const box = (await listbox.boundingBox())!;
+      await touchDrag(page, box.x + box.width / 2, box.y + box.height - 15, box.y + 15);
+      expect(await listbox.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+      await expect(input).toHaveValue("");
+      await expect(listbox).toBeVisible();
+    }
+
+    // ONE deliberate tap commits the brand and closes the list
+    // immediately — the Owner-reported iPhone failure mode was a
+    // needed second tap (iOS tap-as-hover on the highlighting rows).
+    await listbox.getByRole("option", { name: "Toyota", exact: true }).tap();
+    await expect(page.getByTestId("home-brand-listbox")).toHaveCount(0);
+    await expect(input).toHaveValue("Toyota");
+
+    // The model control enables and shows the real seeded families.
+    const toggle = page.getByTestId("home-model-toggle");
+    await expect(toggle).toBeEnabled();
+    await toggle.tap();
+    const panel = page.getByTestId("home-model-panel");
+    await expect(panel).toBeVisible();
+    for (const family of ["Corolla", "Camry", "Tree Family"]) {
+      await expect(panel.getByText(family, { exact: true })).toBeVisible();
+    }
+
+    // Scroll inside the panel (programmatic — works on every engine),
+    // then expand and select a nested variant by tap.
+    await panel.evaluate((el) => el.scrollBy(0, 40));
+    await page.getByTestId("home-model-expand-tree-family").tap();
+    const variant = page.getByTestId("home-model-variant-tree-100");
+    await variant.tap();
+    await expect(variant).toBeChecked();
+    // Nothing else got toggled by the interactions above.
+    expect(await panel.locator("input[type=checkbox]:checked").count()).toBe(1);
+  });
+
 });

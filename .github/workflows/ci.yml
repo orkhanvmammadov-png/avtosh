@@ -87,8 +87,8 @@ jobs:
           PG_BIN="$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)"
           echo "$PG_BIN" >> "$GITHUB_PATH"
 
-      - name: Install Playwright browser
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium webkit
 
       # The Playwright webServer boots the ephemeral DB + seed + next dev
       # itself; no Supabase, WhatsApp, or payment credentials are needed.

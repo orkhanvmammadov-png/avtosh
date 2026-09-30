@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { SELLER } from "@/lib/marketplace/labels";
+import { useTapActivation } from "@/components/seller/axin/tap-activation";
 import { publicFetch } from "@/lib/marketplace/public-api";
 import type { TypeaheadItem } from "@/components/seller/axin/typeahead-field";
 
@@ -61,6 +62,7 @@ export function ModelPathField({
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const tap = useTapActivation();
 
   const filteredFamilies = useMemo(() => {
     const q = query.trim().toLocaleLowerCase("az");
@@ -246,10 +248,12 @@ export function ModelPathField({
               aria-selected={false}
               data-testid={`${id}-back`}
               className="flex h-11 cursor-pointer items-center gap-1.5 border-b border-sunken px-3 text-[13px] font-semibold text-slate-strong desk:h-9"
-              // Click-only activation (see typeahead-field): a swipe that
-              // starts on this row must scroll, not navigate back.
+              // Tap activation (see tap-activation.ts): back on a real
+              // tap only — never at touch start, never during a scroll.
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => back()}
+              onPointerDown={tap.onRowPointerDown}
+              onPointerCancel={tap.onRowPointerCancel}
+              onPointerUp={(e) => tap.onRowPointerUp(e, () => back())}
             >
               <ChevronLeft size={14} aria-hidden="true" />
               <span className="truncate">{level.family.name}</span>
@@ -273,19 +277,24 @@ export function ModelPathField({
                   className={`flex h-11 cursor-pointer items-center justify-between gap-2 px-3 text-[13px] text-ink desk:h-9 ${
                     index === activeIndex ? "bg-row-hover" : ""
                   } ${level.kind === "variants" ? "pl-6" : ""}`}
-                  onPointerEnter={() => setActiveIndex(index)}
-                  // Click-only activation: pointerdown would select at the
-                  // start of a swipe; a synthesized click only follows a
-                  // completed tap, so the list can scroll natively. The
-                  // mousedown guard keeps the input focused.
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    if (level.kind === "families") {
-                      void pickFamily(item);
-                    } else {
-                      commit(level.family.id, item.id, item.name);
-                    }
+                  // Mouse-only hover highlight (iOS tap-as-hover guard).
+                  onPointerEnter={(e) => {
+                    if (e.pointerType === "mouse") setActiveIndex(index);
                   }}
+                  // Tap activation (see tap-activation.ts): never at touch
+                  // start, never during a scroll, no iOS click reliance.
+                  onMouseDown={(e) => e.preventDefault()}
+                  onPointerDown={tap.onRowPointerDown}
+                  onPointerCancel={tap.onRowPointerCancel}
+                  onPointerUp={(e) =>
+                    tap.onRowPointerUp(e, () => {
+                      if (level.kind === "families") {
+                        void pickFamily(item);
+                      } else {
+                        commit(level.family.id, item.id, item.name);
+                      }
+                    })
+                  }
                 >
                   <span className="truncate">{item.name}</span>
                   {isSelected ? (
