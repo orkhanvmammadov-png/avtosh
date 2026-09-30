@@ -1,0 +1,332 @@
+import { expect, test, type Page } from "@playwright/test";
+import { loginAs, testPhone } from "./auth-helpers";
+
+/**
+ * Swipe-vs-tap regression for the searchable dropdowns: a vertical
+ * drag that STARTS on an option row must scroll the list, never
+ * select the row; a deliberate tap must select exactly once.
+ *
+ * Runs on the touch-enabled mobile project. Drags go through CDP
+ * Input.dispatchTouchEvent, i.e. Chromium's REAL gesture recognizer
+ * (touch → pointerdown/move → pointercancel + native scroll), not
+ * synthetic DOM events. This proves the handler contract in
+ * Chromium's touch pipeline; iOS Safari's own gesture pipeline still
+ * needs the physical-iPhone UAT pass.
+ */
+
+async function touchDrag(page: Page, x: number, fromY: number, toY: number): Promise<void> {
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    const steps = 10;
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y: fromY }] });
+    for (let i = 1; i <= steps; i += 1) {
+      const y = fromY + ((toY - fromY) * i) / steps;
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y }] });
+    }
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  } finally {
+    await cdp.detach();
+  }
+}
+
+async function openBrandList(page: Page) {
+  const input = page.locator("#home-brand");
+  await input.tap();
+  const listbox = page.getByTestId("home-brand-listbox");
+  await expect(listbox).toBeVisible();
+  // Seeded CAR brands (Toyota, BMW + 12 fillers) overflow max-h-[45vh].
+  await expect
+    .poll(async () => listbox.evaluate((el) => el.scrollHeight - el.clientHeight))
+    .toBeGreaterThan(100);
+  return { input, listbox };
+}
+
+// CDP drags need Chromium ("mobile"); tap-sequence tests also run on
+// the WebKit mobile project (WebKit touch pipeline — closer to iOS,
+// but still not proof of physical iOS Safari behavior).
+const TOUCH_PROJECTS = ["mobile", "mobile-webkit"];
+
+test.describe("dropdown swipe scrolls, tap selects", () => {
+  test.beforeEach(async ({}, testInfo) => {
+    test.skip(!TOUCH_PROJECTS.includes(testInfo.project.name), "touch projects only");
+  });
+
+  test("brand: upward and downward drags starting on rows scroll without selecting", async ({ page }) => {
+    test.skip(test.info().project.name !== "mobile", "CDP touch drags need Chromium");
+    await page.goto("/");
+    const { input, listbox } = await openBrandList(page);
+    const box = (await listbox.boundingBox())!;
+    const x = box.x + box.width / 2;
+
+    // Drag UP starting on a row near the visible BOTTOM → list scrolls down.
+    await touchDrag(page, x, box.y + box.height - 15, box.y + 15);
+    const afterUp = await listbox.evaluate((el) => el.scrollTop);
+    expect(afterUp).toBeGreaterThan(0);
+    await expect(listbox).toBeVisible();
+    await expect(input).toHaveValue("");
+
+    // Drag DOWN starting on a row near the visible TOP → scrolls back up.
+    await touchDrag(page, x, box.y + 15, box.y + box.height - 15);
+    const afterDown = await listbox.evaluate((el) => el.scrollTop);
+    expect(afterDown).toBeLessThan(afterUp);
+    await expect(listbox).toBeVisible();
+    await expect(input).toHaveValue("");
+  });
+
+  test("brand: a deliberate tap selects exactly once and closes the list", async ({ page }) => {
+    await page.goto("/");
+    const { input, listbox } = await openBrandList(page);
+    await listbox.getByRole("option", { name: "Toyota", exact: true }).tap();
+    await expect(input).toHaveValue("Toyota");
+    await expect(listbox).toHaveCount(0);
+    // Selection took effect exactly once: the model field unlocked
+    // for the tapped brand, and reopening (blur first — the input
+    // keeps focus after selection, so a fresh tap must re-focus it)
+    // shows Toyota as the single selected option.
+    await expect(page.getByTestId("home-model-toggle")).toBeEnabled();
+    await page.getByRole("heading", { level: 1 }).tap();
+    await input.tap();
+    await expect(page.getByTestId("home-brand-listbox")).toBeVisible();
+    await expect(
+      page.getByTestId("home-brand-listbox").getByRole("option", { name: "Toyota", exact: true }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("model tree: a drag over family and variant rows never toggles a selection", async ({ page }) => {
+    test.skip(test.info().project.name !== "mobile", "CDP touch drags need Chromium");
+    for (const path of ["/", "/elanlar?category=CAR"]) {
+      await page.goto(path);
+      const { input, listbox } = await openBrandList(page);
+      await listbox.getByRole("option", { name: "Toyota", exact: true }).tap();
+      await expect(input).toHaveValue("Toyota");
+      await page.getByTestId("home-model-toggle").tap();
+      const panel = page.getByTestId("home-model-panel");
+      await expect(panel).toBeVisible();
+      // Expose nested variant rows too.
+      await page.getByTestId("home-model-expand-tree-family").tap();
+      await expect(page.getByTestId("home-model-variant-tree-100")).toBeVisible();
+
+      const box = (await panel.boundingBox())!;
+      const before = await panel.evaluate((el) => ({
+        scrollTop: el.scrollTop,
+        pageY: window.scrollY,
+      }));
+      // Drag starting directly on the rows inside the panel.
+      await touchDrag(page, box.x + box.width / 2, box.y + box.height - 15, box.y + 15);
+      const checkedCount = await panel.locator("input[type=checkbox]:checked").count();
+      expect(checkedCount).toBe(0);
+      await expect(panel).toBeVisible();
+      // Record scroll behavior: either the panel scrolled or, when its
+      // content fits, the gesture chained to the page — both are
+      // "scrolls without toggling".
+      const after = await panel.evaluate((el) => ({
+        scrollTop: el.scrollTop,
+        pageY: window.scrollY,
+      }));
+      test.info().annotations.push({
+        type: `model-tree-scroll@${path}`,
+        description: `panel ${before.scrollTop}->${after.scrollTop}, page ${before.pageY}->${after.pageY}`,
+      });
+      // A deliberate tap on a family row still toggles.
+      await page.getByTestId("home-model-family-corolla").tap();
+      await expect(page.getByTestId("home-model-family-corolla")).toBeChecked();
+    }
+  });
+
+  test("seller model path: swipes never activate family/variant/back rows; taps do", async ({ page, context }) => {
+    test.skip(test.info().project.name !== "mobile", "CDP touch drags need Chromium");
+    const { userId } = await loginAs(context, testPhone("mobile", 71));
+    void userId;
+    await page.goto("/elan-yerlesdir");
+    const brand = page.getByTestId("quick-start-brand");
+    await brand.tap();
+    const brandList = page.getByTestId("quick-start-brand-listbox");
+    await expect(brandList).toBeVisible();
+
+    // Swipe starting on a quick-start brand row: no selection.
+    const bBox = (await brandList.boundingBox())!;
+    await touchDrag(page, bBox.x + bBox.width / 2, bBox.y + bBox.height - 15, bBox.y + 15);
+    await expect(brand).toHaveValue("");
+    await expect(brandList).toBeVisible();
+
+    await brandList.getByRole("option", { name: "Toyota", exact: true }).tap();
+    await expect(brand).toHaveValue("Toyota");
+
+    const model = page.getByTestId("quick-start-model");
+    await model.tap();
+    const modelList = page.getByTestId("quick-start-model-listbox");
+    await expect(modelList).toBeVisible();
+
+    // Swipe over FAMILY rows: no family opens, list stays put.
+    const fBox = (await modelList.boundingBox())!;
+    await touchDrag(page, fBox.x + fBox.width / 2, fBox.y + fBox.height - 15, fBox.y + 15);
+    await expect(model).toHaveValue("");
+    await expect(modelList).toBeVisible();
+    await expect(page.getByTestId("quick-start-model-back")).toHaveCount(0);
+
+    // Tap a family → variants level with a back row.
+    await modelList.getByRole("option", { name: "Tree Family", exact: true }).tap();
+    const backRow = page.getByTestId("quick-start-model-back");
+    await expect(backRow).toBeVisible();
+
+    // Swipe starting on the BACK row: must not navigate back.
+    const backBox = (await backRow.boundingBox())!;
+    await touchDrag(page, backBox.x + backBox.width / 2, backBox.y + 10, backBox.y + 90);
+    await expect(page.getByTestId("quick-start-model-back")).toBeVisible();
+    await expect(model).toHaveValue("");
+
+    // Swipe over VARIANT rows: nothing commits.
+    const vBox = (await modelList.boundingBox())!;
+    await touchDrag(page, vBox.x + vBox.width / 2, vBox.y + vBox.height - 15, vBox.y + 15);
+    await expect(model).toHaveValue("");
+
+    // Deliberate taps: back works, then a variant commits.
+    await backRow.tap();
+    await expect(page.getByTestId("quick-start-model-back")).toHaveCount(0);
+    await modelList.getByRole("option", { name: "Tree Family", exact: true }).tap();
+    await page.getByTestId("quick-start-model-back").waitFor();
+    await modelList.getByRole("option", { name: "Tree 100" }).tap();
+    await expect(model).toHaveValue(/Tree/);
+  });
+  test("full touch sequence: swipe, single-tap select, model families load, variant selects", async ({ page }, testInfo) => {
+    await page.goto("/");
+    const { input, listbox } = await openBrandList(page);
+
+    if (testInfo.project.name === "mobile") {
+      // Real drag first (CDP, Chromium only): scrolls, selects nothing.
+      const box = (await listbox.boundingBox())!;
+      await touchDrag(page, box.x + box.width / 2, box.y + box.height - 15, box.y + 15);
+      expect(await listbox.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+      await expect(input).toHaveValue("");
+      await expect(listbox).toBeVisible();
+    }
+
+    // ONE deliberate tap commits the brand and closes the list
+    // immediately — the Owner-reported iPhone failure mode was a
+    // needed second tap (iOS tap-as-hover on the highlighting rows).
+    await listbox.getByRole("option", { name: "Toyota", exact: true }).tap();
+    await expect(page.getByTestId("home-brand-listbox")).toHaveCount(0);
+    await expect(input).toHaveValue("Toyota");
+
+    // The model control enables and shows the real seeded families.
+    const toggle = page.getByTestId("home-model-toggle");
+    await expect(toggle).toBeEnabled();
+    await toggle.tap();
+    const panel = page.getByTestId("home-model-panel");
+    await expect(panel).toBeVisible();
+    for (const family of ["Corolla", "Camry", "Tree Family"]) {
+      await expect(panel.getByText(family, { exact: true })).toBeVisible();
+    }
+
+    // Scroll inside the panel (programmatic — works on every engine),
+    // then expand and select a nested variant by tap.
+    await panel.evaluate((el) => el.scrollBy(0, 40));
+    await page.getByTestId("home-model-expand-tree-family").tap();
+    const variant = page.getByTestId("home-model-variant-tree-100");
+    await variant.tap();
+    await expect(variant).toBeChecked();
+    // Nothing else got toggled by the interactions above.
+    expect(await panel.locator("input[type=checkbox]:checked").count()).toBe(1);
+  });
+
+});
+
+test.describe("click-through suppression is gesture-correlated", () => {
+  test.beforeEach(async ({}, testInfo) => {
+    test.skip(!TOUCH_PROJECTS.includes(testInfo.project.name), "touch projects only");
+  });
+
+  // Activates a brand option with RAW touch-type pointer events and
+  // deliberately NO synthesized click — the case the suppression must
+  // not leak from. Returns the activation point.
+  async function activateBrandWithoutClick(page: Page): Promise<{ x: number; y: number }> {
+    const { input, listbox } = await openBrandList(page);
+    const point = await listbox.getByRole("option", { name: "Toyota", exact: true }).evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const x = r.x + r.width / 2;
+      const y = r.y + r.height / 2;
+      const base = { bubbles: true, cancelable: true, pointerId: 41, pointerType: "touch", isPrimary: true, clientX: x, clientY: y };
+      el.dispatchEvent(new PointerEvent("pointerdown", base));
+      el.dispatchEvent(new PointerEvent("pointerup", base));
+      return { x, y };
+    });
+    await expect(input).toHaveValue("Toyota");
+    await expect(page.getByTestId("home-brand-listbox")).toHaveCount(0);
+    return point;
+  }
+
+  test("with no synthetic click, the immediate next tap is never swallowed", async ({ page }) => {
+    await page.goto("/");
+    await activateBrandWithoutClick(page);
+    // Within the 400ms window: a REAL tap on the Model control (its own
+    // pointerdown disarms the suppression before its click) must work.
+    await page.getByTestId("home-model-toggle").tap();
+    await expect(page.getByTestId("home-model-panel")).toBeVisible();
+    // And another immediate tap keeps working (category switch).
+    await page.getByTestId("category-MOTORCYCLE").tap();
+    await expect(page.getByTestId("category-MOTORCYCLE")).toHaveAttribute("aria-checked", "true");
+  });
+
+  test("the same-gesture synthetic click is swallowed and cannot hit an underlying control", async ({ page }) => {
+    await page.goto("/");
+    const point = await activateBrandWithoutClick(page);
+    // Mimic the browser's post-tap synthesized click: same gesture, so
+    // NO new pointerdown precedes it. It must be cancelled (capture
+    // listener), so whatever now sits under the finger stays inert.
+    const result = await page.evaluate(({ x, y }) => {
+      const target = document.elementFromPoint(x, y) ?? document.body;
+      const passed = target.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, clientX: x, clientY: y }),
+      );
+      return { passed, targetTestId: target.closest("[data-testid]")?.getAttribute("data-testid") ?? null };
+    }, point);
+    expect(result.passed).toBe(false); // preventDefault-ed by the suppression
+    // The model panel is always in the DOM (hidden={!open}) — closed
+    // means hidden, and the brand listbox is conditionally rendered.
+    await expect(page.getByTestId("home-model-panel")).toBeHidden();
+    await expect(page.getByTestId("home-brand-listbox")).toHaveCount(0);
+    // Suppression is one-shot: a further click at the same point passes.
+    const second = await page.evaluate(({ x, y }) => {
+      const target = document.elementFromPoint(x, y) ?? document.body;
+      return target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: x, clientY: y }));
+    }, point);
+    expect(second).toBe(true);
+  });
+
+  test("suppression expires: a click after the window passes untouched", async ({ page }) => {
+    await page.goto("/");
+    const point = await activateBrandWithoutClick(page);
+    await page.waitForTimeout(500); // beyond SYNTH_CLICK_WINDOW_MS
+    const passed = await page.evaluate(({ x, y }) => {
+      const target = document.elementFromPoint(x, y) ?? document.body;
+      return target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: x, clientY: y }));
+    }, point);
+    expect(passed).toBe(true);
+  });
+
+  test("seller back row: activation arms suppression without eating the next tap", async ({ page, context }) => {
+    const { userId } = await loginAs(context, testPhone("mobile", 72));
+    void userId;
+    await page.goto("/elan-yerlesdir");
+    const brand = page.getByTestId("quick-start-brand");
+    await brand.tap();
+    await page.getByTestId("quick-start-brand-listbox").getByRole("option", { name: "Toyota", exact: true }).tap();
+    await expect(brand).toHaveValue("Toyota");
+    const model = page.getByTestId("quick-start-model");
+    await model.tap();
+    await page.getByTestId("quick-start-model-listbox").getByRole("option", { name: "Tree Family", exact: true }).tap();
+    const backRow = page.getByTestId("quick-start-model-back");
+    await expect(backRow).toBeVisible();
+    // Raw touch activation of the BACK row (no synthetic click) …
+    await backRow.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const base = { bubbles: true, cancelable: true, pointerId: 42, pointerType: "touch", isPrimary: true, clientX: r.x + r.width / 2, clientY: r.y + r.height / 2 };
+      el.dispatchEvent(new PointerEvent("pointerdown", base));
+      el.dispatchEvent(new PointerEvent("pointerup", base));
+    });
+    await expect(page.getByTestId("quick-start-model-back")).toHaveCount(0); // back to families
+    // … then the immediate next tap still works.
+    await page.getByTestId("quick-start-model-listbox").getByRole("option", { name: "Tree Family", exact: true }).tap();
+    await expect(page.getByTestId("quick-start-model-back")).toBeVisible();
+  });
+});

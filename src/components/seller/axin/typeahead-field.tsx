@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Loader2, X } from "lucide-react";
 import { SELLER } from "@/lib/marketplace/labels";
+import { useTapActivation } from "@/components/seller/axin/tap-activation";
 
 export interface TypeaheadItem {
   id: string;
@@ -57,6 +58,7 @@ export function TypeaheadField({
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const tap = useTapActivation();
 
   const selected = useMemo(() => items.find((i) => i.id === value) ?? null, [items, value]);
   const filtered = useMemo(() => {
@@ -223,11 +225,21 @@ export function TypeaheadField({
                   className={`flex h-11 cursor-pointer items-center justify-between gap-2 px-3 text-[13px] text-ink desk:h-9 ${
                     index === activeIndex ? "bg-row-hover" : ""
                   }`}
-                  onPointerEnter={() => setActiveIndex(index)}
-                  onPointerDown={(e) => {
-                    e.preventDefault(); // keep input focus
-                    select(item);
+                  // Mouse-only hover highlight: on iOS a pointerenter that
+                  // mutates content trips the tap-as-hover heuristic and
+                  // the tap's click is withheld (the "second tap" bug).
+                  onPointerEnter={(e) => {
+                    if (e.pointerType === "mouse") setActiveIndex(index);
                   }}
+                  // Tap activation (see tap-activation.ts): selects on
+                  // pointerup-within-slop of the same pointer — never
+                  // during a scroll (pointercancel), never at touch start,
+                  // and independent of iOS click synthesis. The mousedown
+                  // guard keeps the input focused.
+                  onMouseDown={(e) => e.preventDefault()}
+                  onPointerDown={tap.onRowPointerDown}
+                  onPointerCancel={tap.onRowPointerCancel}
+                  onPointerUp={(e) => tap.onRowPointerUp(e, () => select(item))}
                 >
                   <span className="truncate">{item.name}</span>
                   {isSelected ? <Check size={14} className="shrink-0 text-primary" aria-hidden="true" /> : null}

@@ -25,6 +25,10 @@ export default defineConfig({
     { name: "desktop", testIgnore: /read-only-ui\.spec\.ts/, use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, extraHTTPHeaders: { "x-forwarded-for": "203.0.113.1" } } },
     { name: "tablet", testIgnore: /read-only-ui\.spec\.ts/, use: { ...devices["Desktop Chrome"], viewport: { width: 768, height: 1024 }, extraHTTPHeaders: { "x-forwarded-for": "203.0.113.2" } } },
     { name: "mobile", testIgnore: /read-only-ui\.spec\.ts/, use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, extraHTTPHeaders: { "x-forwarded-for": "203.0.113.3" } } },
+    // WebKit tap-sequence run for the dropdown interaction only. It
+    // exercises WebKit's touch pipeline but does NOT prove physical
+    // iOS Safari behavior (Owner UAT does that).
+    { name: "mobile-webkit", testMatch: /dropdown-swipe\.spec\.ts/, use: { ...devices["iPhone 13"], extraHTTPHeaders: { "x-forwarded-for": "203.0.113.6" } } },
     // Read-only launch UI runs against the second (READ_ONLY) server.
     { name: "read-only-desktop", testMatch: /read-only-ui\.spec\.ts/, use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, baseURL: "http://localhost:3001", extraHTTPHeaders: { "x-forwarded-for": "203.0.113.4" } } },
     { name: "read-only-mobile", testMatch: /read-only-ui\.spec\.ts/, use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, baseURL: "http://localhost:3001", extraHTTPHeaders: { "x-forwarded-for": "203.0.113.5" } } },

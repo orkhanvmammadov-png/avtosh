@@ -27,6 +27,12 @@ const model = async (brandId, code, name, slug) =>
 const toyota = await brand("Toyota", "toyota", ["CAR"]);
 const bmw = await brand("BMW", "bmw", ["CAR", "MOTORCYCLE"]);
 const yamaha = await brand("Yamaha", "yamaha", ["MOTORCYCLE"]);
+// Filler brands (no models, no listings) so the brand listbox is
+// genuinely scrollable at mobile viewports — required by the
+// swipe-vs-tap dropdown tests. Names collide with no spec filters.
+for (let i = 1; i <= 12; i += 1) {
+  await brand(`Sınaq Marka ${String(i).padStart(2, "0")}`, `sinaq-marka-${i}`, ["CAR"]);
+}
 const corolla = await model(toyota, "CAR", "Corolla", "corolla");
 // O.15 hierarchical model tree: one Toyota family WITH variants for
 // multi-select OR-semantics and single-choice wizard specs.
