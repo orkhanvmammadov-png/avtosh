@@ -31,8 +31,15 @@ import type { BrandDto, CategoryDto, CityDto, ModelDto, ModelVariantDto, Referen
  */
 
 /** Direction 1C standard closed control: h40 desktop / h44 @390. */
-const control =
-  "min-h-10 w-full rounded-control border border-line-strong bg-raised px-3 text-[13px] text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none focus:shadow-[0_0_0_2px_rgba(20,122,78,0.25)] disabled:bg-raised disabled:text-muted disabled:border-line max-sm:min-h-11";
+// Text size split from the shape so variants (PriceField) can swap
+// only the size without stacking conflicting utilities. Below desk
+// every focusable input/select computes 16px: iOS Safari auto-zooms
+// the page when a focused input or select is under 16px, which is
+// exactly the reported mobile search zoom bug. Never "fix" that via
+// maximum-scale/user-scalable — pinch zoom must stay available.
+const controlShape =
+  "min-h-10 w-full rounded-control border border-line-strong bg-raised px-3 text-ink transition-colors duration-150 hover:border-muted focus:border-primary focus:outline-none focus:shadow-[0_0_0_2px_rgba(20,122,78,0.25)] disabled:bg-raised disabled:text-muted disabled:border-line max-sm:min-h-11";
+const control = `${controlShape} text-base desk:text-[13px]`;
 
 function digits(value: string): string {
   return value.replace(/\D/g, "");
@@ -192,7 +199,11 @@ function PriceField({
         aria-label={ariaLabel}
         value={groupThousands(value)}
         onChange={(e) => onChange(digits(e.target.value))}
-        className={`${control} pr-10 ${filled ? "pl-12 font-condensed text-[14px] font-semibold" : ""}`}
+        className={
+          filled
+            ? `${controlShape} text-base desk:text-[14px] pr-10 pl-12 font-condensed font-semibold`
+            : `${control} pr-10`
+        }
         data-testid={testid}
       />
       <span aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-muted">
