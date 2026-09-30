@@ -204,7 +204,7 @@ export function ModelPathField({
           value={display}
           readOnly={level.kind === "variants"}
           data-testid={id}
-          className="h-11 w-full rounded-control desk:h-10 border border-line-strong bg-raised pl-3 pr-8 text-[13px] text-ink outline-none transition-colors duration-150 placeholder:text-muted focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 disabled:cursor-not-allowed disabled:bg-sunken disabled:text-muted"
+          className="h-11 w-full rounded-control desk:h-10 border border-line-strong bg-raised pl-3 pr-8 text-base desk:text-[13px] text-ink outline-none transition-colors duration-150 placeholder:text-muted focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 disabled:cursor-not-allowed disabled:bg-sunken disabled:text-muted"
           onFocus={() => {
             if (!disabled) {
               setOpen(true);
