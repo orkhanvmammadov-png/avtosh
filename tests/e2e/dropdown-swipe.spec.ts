@@ -230,3 +230,103 @@ test.describe("dropdown swipe scrolls, tap selects", () => {
   });
 
 });
+
+test.describe("click-through suppression is gesture-correlated", () => {
+  test.beforeEach(async ({}, testInfo) => {
+    test.skip(!TOUCH_PROJECTS.includes(testInfo.project.name), "touch projects only");
+  });
+
+  // Activates a brand option with RAW touch-type pointer events and
+  // deliberately NO synthesized click — the case the suppression must
+  // not leak from. Returns the activation point.
+  async function activateBrandWithoutClick(page: Page): Promise<{ x: number; y: number }> {
+    const { input, listbox } = await openBrandList(page);
+    const point = await listbox.getByRole("option", { name: "Toyota", exact: true }).evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const x = r.x + r.width / 2;
+      const y = r.y + r.height / 2;
+      const base = { bubbles: true, cancelable: true, pointerId: 41, pointerType: "touch", isPrimary: true, clientX: x, clientY: y };
+      el.dispatchEvent(new PointerEvent("pointerdown", base));
+      el.dispatchEvent(new PointerEvent("pointerup", base));
+      return { x, y };
+    });
+    await expect(input).toHaveValue("Toyota");
+    await expect(page.getByTestId("home-brand-listbox")).toHaveCount(0);
+    return point;
+  }
+
+  test("with no synthetic click, the immediate next tap is never swallowed", async ({ page }) => {
+    await page.goto("/");
+    await activateBrandWithoutClick(page);
+    // Within the 400ms window: a REAL tap on the Model control (its own
+    // pointerdown disarms the suppression before its click) must work.
+    await page.getByTestId("home-model-toggle").tap();
+    await expect(page.getByTestId("home-model-panel")).toBeVisible();
+    // And another immediate tap keeps working (category switch).
+    await page.getByTestId("category-MOTORCYCLE").tap();
+    await expect(page.getByTestId("category-MOTORCYCLE")).toHaveAttribute("aria-checked", "true");
+  });
+
+  test("the same-gesture synthetic click is swallowed and cannot hit an underlying control", async ({ page }) => {
+    await page.goto("/");
+    const point = await activateBrandWithoutClick(page);
+    // Mimic the browser's post-tap synthesized click: same gesture, so
+    // NO new pointerdown precedes it. It must be cancelled (capture
+    // listener), so whatever now sits under the finger stays inert.
+    const result = await page.evaluate(({ x, y }) => {
+      const target = document.elementFromPoint(x, y) ?? document.body;
+      const passed = target.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, clientX: x, clientY: y }),
+      );
+      return { passed, targetTestId: target.closest("[data-testid]")?.getAttribute("data-testid") ?? null };
+    }, point);
+    expect(result.passed).toBe(false); // preventDefault-ed by the suppression
+    // The model panel is always in the DOM (hidden={!open}) — closed
+    // means hidden, and the brand listbox is conditionally rendered.
+    await expect(page.getByTestId("home-model-panel")).toBeHidden();
+    await expect(page.getByTestId("home-brand-listbox")).toHaveCount(0);
+    // Suppression is one-shot: a further click at the same point passes.
+    const second = await page.evaluate(({ x, y }) => {
+      const target = document.elementFromPoint(x, y) ?? document.body;
+      return target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: x, clientY: y }));
+    }, point);
+    expect(second).toBe(true);
+  });
+
+  test("suppression expires: a click after the window passes untouched", async ({ page }) => {
+    await page.goto("/");
+    const point = await activateBrandWithoutClick(page);
+    await page.waitForTimeout(500); // beyond SYNTH_CLICK_WINDOW_MS
+    const passed = await page.evaluate(({ x, y }) => {
+      const target = document.elementFromPoint(x, y) ?? document.body;
+      return target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: x, clientY: y }));
+    }, point);
+    expect(passed).toBe(true);
+  });
+
+  test("seller back row: activation arms suppression without eating the next tap", async ({ page, context }) => {
+    const { userId } = await loginAs(context, testPhone("mobile", 72));
+    void userId;
+    await page.goto("/elan-yerlesdir");
+    const brand = page.getByTestId("quick-start-brand");
+    await brand.tap();
+    await page.getByTestId("quick-start-brand-listbox").getByRole("option", { name: "Toyota", exact: true }).tap();
+    await expect(brand).toHaveValue("Toyota");
+    const model = page.getByTestId("quick-start-model");
+    await model.tap();
+    await page.getByTestId("quick-start-model-listbox").getByRole("option", { name: "Tree Family", exact: true }).tap();
+    const backRow = page.getByTestId("quick-start-model-back");
+    await expect(backRow).toBeVisible();
+    // Raw touch activation of the BACK row (no synthetic click) …
+    await backRow.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const base = { bubbles: true, cancelable: true, pointerId: 42, pointerType: "touch", isPrimary: true, clientX: r.x + r.width / 2, clientY: r.y + r.height / 2 };
+      el.dispatchEvent(new PointerEvent("pointerdown", base));
+      el.dispatchEvent(new PointerEvent("pointerup", base));
+    });
+    await expect(page.getByTestId("quick-start-model-back")).toHaveCount(0); // back to families
+    // … then the immediate next tap still works.
+    await page.getByTestId("quick-start-model-listbox").getByRole("option", { name: "Tree Family", exact: true }).tap();
+    await expect(page.getByTestId("quick-start-model-back")).toBeVisible();
+  });
+});
