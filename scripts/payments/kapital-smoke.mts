@@ -26,7 +26,12 @@ import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { createKapitalProvider, buildHppRedirect } from "../../src/providers/payments/kapital-provider.ts";
-import { pathOccupied, planSmokeRun, writeUrlFileExclusive } from "./kapital-smoke-guards.mts";
+import {
+  assertHttpsCheckoutUrl,
+  pathOccupied,
+  planSmokeRun,
+  writeUrlFileExclusive,
+} from "./kapital-smoke-guards.mts";
 
 const decision = planSmokeRun(process.env);
 if (!decision.ok) {
@@ -67,10 +72,16 @@ const created = await provider.createOrder({
   redirectUrl: plan.redirectUrl,
 });
 
-const written = writeUrlFileExclusive(
-  urlFile,
-  `${buildHppRedirect(created.hppUrl, created.providerOrderId, created.hppSecret)}\n`,
-);
+// HTTPS-only, independently of NODE_ENV: a non-HTTPS checkout URL is
+// never written or presented — the unpaid order just expires.
+const checkoutUrl = buildHppRedirect(created.hppUrl, created.providerOrderId, created.hppSecret);
+const httpsCheck = assertHttpsCheckoutUrl(checkoutUrl);
+if (!httpsCheck.ok) {
+  console.error(`Refusing to continue: ${httpsCheck.reason}`);
+  console.error("The checkout URL was withheld; the unpaid order will expire.");
+  process.exit(1);
+}
+const written = writeUrlFileExclusive(urlFile, `${checkoutUrl}\n`);
 
 console.log("create-order OK:");
 console.log(`  provider order id: ${created.providerOrderId}`);

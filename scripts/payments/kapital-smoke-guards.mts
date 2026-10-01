@@ -94,6 +94,25 @@ export function planSmokeRun(env: Record<string, string | undefined>): SmokeDeci
   };
 }
 
+/**
+ * The checkout URL (HPP URL + order password) may only ever be
+ * stored or presented over HTTPS — independently of NODE_ENV (the
+ * adapter's own HTTPS policy is production-only, but this script
+ * runs from an operator shell where NODE_ENV is unset).
+ */
+export function assertHttpsCheckoutUrl(rawUrl: string): { ok: true } | { ok: false; reason: string } {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return { ok: false, reason: "the provider checkout URL is not a valid URL." };
+  }
+  if (url.protocol !== "https:") {
+    return { ok: false, reason: "the provider checkout URL is not HTTPS; refusing to store or present it." };
+  }
+  return { ok: true };
+}
+
 /** True when ANYTHING (file, symlink, dir — dangling included) sits at the path. */
 export function pathOccupied(filePath: string): boolean {
   try {

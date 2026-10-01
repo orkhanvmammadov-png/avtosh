@@ -269,18 +269,33 @@ modes:
 (extra HPP hosts; API host always allowed; HTTPS enforced in
 production), plus `NEXT_PUBLIC_APP_URL` for the redirect URL.
 
-## Production checklist
+## Production checklist (direct-production, Owner decision)
 
-1. Obtain merchant credentials; set the four `KAPITAL_*` vars and
-   `NEXT_PUBLIC_APP_URL` in the production environment.
-2. Run the sandbox smoke test against the test environment; complete
-   one manual HPP payment with the bank's test card and verify the
-   listing reaches PENDING_MODERATION.
-3. Confirm the production `hppUrl` host and add it to
+There is NO bank sandbox phase. While `LAUNCH_MODE=READ_ONLY`, the
+public checkout stays closed, so the controlled bank smoke proves
+the WIRE contract only — create order, HPP payment, authenticated
+status read with exact amount/currency — and **cannot prove listing
+fulfillment** (no payment-to-listing path runs in read-only mode;
+fulfillment is exercised by the integration/E2E suites and verified
+live only after a later reviewed FULL release).
+
+1. Owner obtains production merchant credentials; locally they go
+   only into the chmod-600 env file, and for deployment only into
+   the Vercel **Production** secret environment — never Preview,
+   never chat, never git.
+2. Run the controlled production smoke (see above): explicit
+   Owner-approved `KAPITAL_SMOKE_AMOUNT`,
+   `KAPITAL_SMOKE_CONFIRM_PRODUCTION=YES`, explicit HTTPS
+   `NEXT_PUBLIC_APP_URL`; pay once with the Owner-approved card from
+   the 0600 URL file, delete the file, then confirm `FullyPaid` with
+   the exact amount/currency via verify mode.
+3. Record the raw (redacted) status strings observed so the unproven
+   wire spellings can be mapped with evidence; refund the controlled
+   charge directly with the bank (no code path).
+4. Confirm the production `hppUrl` host and set
    `KAPITAL_ALLOWED_HPP_HOSTS` if it differs from the API host.
-4. Confirm callback parameter names and the full status vocabulary
-   against the owner's Kapital documentation access (see below).
-5. Schedule reconciliation (Phase 4.16).
+5. Full release (separate, reviewed): `LAUNCH_MODE=FULL`, crons
+   restored, and only then does live checkout exercise fulfillment.
 
 ## Documentation ambiguities (explicit)
 

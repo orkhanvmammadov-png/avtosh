@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   KAPITAL_PRODUCTION_ORIGIN,
   KAPITAL_TEST_ORIGIN,
+  assertHttpsCheckoutUrl,
   pathOccupied,
   planSmokeRun,
   writeUrlFileExclusive,
@@ -96,6 +97,26 @@ describe("planSmokeRun refusal paths", () => {
     });
     expect(planSmokeRun(env)).toMatchObject({ ok: true, plan: { mode: "verify", orderId: "12345" } });
     expect(planSmokeRun({ ...env, KAPITAL_SMOKE_ORDER_ID: "../etc" })).toMatchObject({ ok: false });
+  });
+});
+
+describe("checkout URL must be HTTPS, independently of NODE_ENV", () => {
+  it("accepts only https checkout URLs", () => {
+    expect(assertHttpsCheckoutUrl("https://hpp.example/flex?id=1&password=x")).toEqual({ ok: true });
+    expect(assertHttpsCheckoutUrl("http://hpp.example/flex?id=1&password=x")).toMatchObject({
+      ok: false,
+    });
+    expect(assertHttpsCheckoutUrl("ftp://hpp.example/flex")).toMatchObject({ ok: false });
+    expect(assertHttpsCheckoutUrl("not a url")).toMatchObject({ ok: false });
+  });
+
+  it("refusal reasons never echo the URL (it embeds the order password)", () => {
+    const refused = assertHttpsCheckoutUrl("http://hpp.example/flex?id=1&password=supersecret");
+    expect(refused.ok).toBe(false);
+    if (!refused.ok) {
+      expect(refused.reason).not.toContain("supersecret");
+      expect(refused.reason).not.toContain("hpp.example");
+    }
   });
 });
 
