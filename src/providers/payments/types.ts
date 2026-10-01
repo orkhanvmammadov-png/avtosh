@@ -44,9 +44,22 @@ export interface PaymentProviderClient {
 /** Raised for transport/contract failures — payment state never moves on it. */
 export class PaymentProviderError extends Error {
   readonly kind: "CONFIG" | "NETWORK" | "AUTH" | "CONTRACT";
-  constructor(kind: PaymentProviderError["kind"], message: string) {
+  /**
+   * The provider's documented machine error code (e.g. "InvalidAmt",
+   * "PmoDecline", "InvalidLogin") when the response carried one and
+   * it matched the strict code shape. Never the human description —
+   * provider descriptions can embed masked card data and must not
+   * propagate. For operational logs only; never shown to clients.
+   */
+  readonly providerErrorCode?: string;
+  constructor(
+    kind: PaymentProviderError["kind"],
+    message: string,
+    providerErrorCode?: string,
+  ) {
     super(message);
     this.name = "PaymentProviderError";
     this.kind = kind;
+    this.providerErrorCode = providerErrorCode;
   }
 }

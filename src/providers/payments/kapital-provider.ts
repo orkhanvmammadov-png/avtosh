@@ -1,12 +1,15 @@
-import { kapitalConfig } from "@/lib/config/kapital";
-import { majorToMinorExact } from "@/lib/payments/money";
+// Relative (not @/) imports: the manual smoke script loads this
+// adapter directly under plain `node`, which cannot resolve the
+// tsconfig path alias. Next/vitest resolve both forms identically.
+import { kapitalConfig } from "../../lib/config/kapital.ts";
+import { majorToMinorExact } from "../../lib/payments/money.ts";
 import {
   PaymentProviderError,
   type CreateOrderInput,
   type CreatedProviderOrder,
   type PaymentProviderClient,
   type ProviderOrderDetails,
-} from "@/providers/payments/types";
+} from "./types.ts";
 
 /**
  * Kapital Bank e-commerce REST adapter.
@@ -30,6 +33,18 @@ interface KapitalOrderEnvelope {
     currency?: unknown;
     trans?: { actionId?: unknown }[];
   };
+  /** Documented error envelope: { errorCode, errorDescription, … }. */
+  errorCode?: unknown;
+}
+
+// Documented error codes are short alphanumeric tokens (InvalidAmt,
+// PmoDecline, InvalidLogin, …). Only a string of that exact shape is
+// ever surfaced; errorDescription is never read — the documentation
+// shows it can embed masked card data.
+const ERROR_CODE_SHAPE = /^[A-Za-z][A-Za-z0-9]{1,39}$/;
+
+function safeErrorCode(value: unknown): string | undefined {
+  return typeof value === "string" && ERROR_CODE_SHAPE.test(value) ? value : undefined;
 }
 
 function authorizationHeader(username: string, password: string): string {
@@ -55,17 +70,40 @@ async function kapitalFetch(path: string, init: RequestInit): Promise<KapitalOrd
     // timeout / DNS / connection reset — payment state never moves on this
     throw new PaymentProviderError("NETWORK", "Payment provider is unreachable.");
   }
+  // The body is read as text once so the documented error envelope's
+  // errorCode can be surfaced for operations on EVERY failure shape;
+  // errorDescription is deliberately never extracted.
+  let bodyText = "";
+  try {
+    bodyText = await response.text();
+  } catch {
+    bodyText = "";
+  }
+  let parsed: unknown;
+  try {
+    parsed = bodyText === "" ? undefined : JSON.parse(bodyText);
+  } catch {
+    parsed = undefined;
+  }
+  const errorCode = safeErrorCode((parsed as KapitalOrderEnvelope | undefined)?.errorCode);
   if (response.status === 401 || response.status === 403) {
-    throw new PaymentProviderError("AUTH", "Payment provider rejected the merchant credentials.");
+    throw new PaymentProviderError(
+      "AUTH",
+      "Payment provider rejected the merchant credentials.",
+      errorCode,
+    );
   }
   if (!response.ok) {
-    throw new PaymentProviderError("CONTRACT", `Payment provider returned HTTP ${response.status}.`);
+    throw new PaymentProviderError(
+      "CONTRACT",
+      `Payment provider returned HTTP ${response.status}.`,
+      errorCode,
+    );
   }
-  try {
-    return (await response.json()) as KapitalOrderEnvelope;
-  } catch {
+  if (parsed === undefined || typeof parsed !== "object") {
     throw new PaymentProviderError("CONTRACT", "Payment provider returned malformed JSON.");
   }
+  return parsed as KapitalOrderEnvelope;
 }
 
 /** hppUrl must be a sane provider URL — never an open-redirect primitive. */
@@ -112,7 +150,13 @@ export function createKapitalProvider(): PaymentProviderClient {
         password.length === 0 ||
         typeof hppUrl !== "string"
       ) {
-        throw new PaymentProviderError("CONTRACT", "Provider create-order response is incomplete.");
+        // A 200 can still carry the documented error envelope instead
+        // of an order — surface its code, never its description.
+        throw new PaymentProviderError(
+          "CONTRACT",
+          "Provider create-order response is incomplete.",
+          safeErrorCode(envelope.errorCode),
+        );
       }
       assertSafeHppUrl(hppUrl);
       return {
@@ -139,7 +183,11 @@ export function createKapitalProvider(): PaymentProviderClient {
         (typeof id !== "number" && typeof id !== "string") ||
         typeof status !== "string"
       ) {
-        throw new PaymentProviderError("CONTRACT", "Provider order-details response is incomplete.");
+        throw new PaymentProviderError(
+          "CONTRACT",
+          "Provider order-details response is incomplete.",
+          safeErrorCode(envelope.errorCode),
+        );
       }
       const amountMinor = majorToMinorExact(order.amount);
       if (amountMinor === null) {

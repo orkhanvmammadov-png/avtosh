@@ -137,6 +137,71 @@ describe("createOrder", () => {
   });
 });
 
+describe("documented error envelope — code surfaced, description never", () => {
+  const input = {
+    amountMajor: "2.00", currency: "AZN", language: "az", description: "x", redirectUrl: "https://a.b/x",
+  };
+
+  it("surfaces errorCode from a non-2xx error envelope", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ errorCode: "InvalidAmt", errorDescription: "valid amount" }, 400),
+    );
+    await expect(createKapitalProvider().createOrder(input)).rejects.toMatchObject({
+      kind: "CONTRACT",
+      providerErrorCode: "InvalidAmt",
+    });
+  });
+
+  it("surfaces InvalidLogin on credential rejection", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ errorCode: "InvalidLogin", errorDescription: "Invalid login or password" }, 401),
+    );
+    await expect(createKapitalProvider().createOrder(input)).rejects.toMatchObject({
+      kind: "AUTH",
+      providerErrorCode: "InvalidLogin",
+    });
+  });
+
+  it("a 200 carrying only the error envelope fails closed with the code and no description text", async () => {
+    // Documented PmoDecline shape: the description/details embed
+    // masked card data — none of it may reach the error.
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        errorCode: "PmoDecline",
+        errorDescription: "Transaction declined by PMO: 52 - Card not found. PAN=416974******1778",
+        errorDetails: { declineReason: "SrcCardInvalid", pmoResultCode: "52" },
+      }),
+    );
+    let caught: unknown;
+    await createKapitalProvider().createOrder(input).catch((e) => { caught = e; });
+    expect(caught).toBeInstanceOf(PaymentProviderError);
+    const err = caught as PaymentProviderError;
+    expect(err.kind).toBe("CONTRACT");
+    expect(err.providerErrorCode).toBe("PmoDecline");
+    expect(err.message).not.toContain("PAN");
+    expect(err.message).not.toContain("1778");
+    expect(err.message).not.toContain("declined");
+  });
+
+  it("rejects malformed error codes instead of propagating free text", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ errorCode: "not a code with spaces PAN=4169", errorDescription: "x" }, 400),
+    );
+    await expect(createKapitalProvider().createOrder(input)).rejects.toMatchObject({
+      kind: "CONTRACT",
+      providerErrorCode: undefined,
+    });
+  });
+
+  it("get-order-details error envelope surfaces its code too", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ errorCode: "InvalidOrderState" }));
+    await expect(createKapitalProvider().getOrderDetails("123")).rejects.toMatchObject({
+      kind: "CONTRACT",
+      providerErrorCode: "InvalidOrderState",
+    });
+  });
+});
+
 describe("getOrderDetails", () => {
   it("queries the documented endpoint and parses amounts exactly", async () => {
     fetchMock.mockResolvedValueOnce(

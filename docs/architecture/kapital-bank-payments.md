@@ -210,13 +210,57 @@ deterministic in-memory client via `setPaymentProviderForTesting`.
 Nothing in the automated suites touches the live provider or the
 network.
 
-## Optional live sandbox smoke test
+## Manual live smoke test (test terminal or PRODUCTION)
 
-`scripts/payments/kapital-sandbox-smoke.mts` — manual only, requires
-`KAPITAL_SANDBOX_SMOKE=1` + env credentials; creates a 0.01 AZN
-Order_SMS (no charge until a card pays), prints the checkout URL for
-a manual HPP walk-through (test cards: official Kapital docs — never
-copied into this repo), and reads the order back. CI never runs it.
+`scripts/payments/kapital-smoke.mts` — manual only, never in CI.
+Requires `KAPITAL_SMOKE=1` plus env credentials loaded from the
+local chmod-600 env file (never pasted into chat/commits/CI). Two
+modes:
+
+- **Create** (default): creates one `Order_SMS`. Everything is
+  explicit and fail-closed REGARDLESS of host (Owner decision:
+  direct production, no sandbox phase): `KAPITAL_API_BASE_URL` must
+  parse to exactly one of the two intended Kapital origins (URL
+  origin comparison, never a substring check);
+  `KAPITAL_SMOKE_CONFIRM_PRODUCTION=YES` is always required;
+  `KAPITAL_SMOKE_AMOUNT` must be explicitly supplied (no default,
+  hard-capped); `NEXT_PUBLIC_APP_URL` must be explicit (no
+  localhost fallback) and HTTPS for a production order. The checkout
+  URL embeds the order password, so it is **never printed** — it is
+  written exclusively (`O_EXCL`, born 0600, never overwritten, never
+  through a symlink) to `~/.avtosh/kapital-smoke-url.txt`; an
+  existing file or symlink at that path refuses the run BEFORE any
+  order is created. Open the file locally, pay manually, then delete
+  it. Gating lives in `kapital-smoke-guards.mts` and is unit-tested.
+- **Verify**: `KAPITAL_SMOKE_ORDER_ID=<id>` re-reads the order over
+  the authenticated API — the authoritative status check; the
+  browser STATUS parameter is never trusted.
+
+## Production merchant integration decisions (Owner)
+
+- The direct production terminal is used without a bank sandbox
+  phase (Owner decision). The controlled first charge follows the
+  smoke procedure above with an Owner-approved amount and card.
+- **Refund / Reversal** (`POST /order/{ID}/exec-tran` with
+  `type: Refund` or `voidKind`): documented by the bank but
+  **deliberately not implemented**. Automatic refunds are a
+  moderation/operations policy decision, not a technical default.
+  Open decisions before any refund code: who may trigger one (role),
+  against which payment states, full vs. partial, same-day reversal
+  vs. refund selection, audit trail, and reconciliation of
+  `Refunded`/`Voided` responses. Until then, refunds are executed by
+  the Owner directly with the bank, and the existing `Refunded`
+  status handling marks the payment REFUNDED on the next
+  authenticated read.
+- Only wire-proven status strings are mapped (`Preparing`,
+  `FullyPaid`, `Refunded`). The bank's status table lists display
+  names ("Being prepared", "Partially paid", …) whose exact wire
+  spellings the document does not prove; every unproven status is
+  recorded verbatim, logged as `unknown_provider_status`, is never
+  SUCCESS, never fulfills, and is surfaced for operations review.
+  Reconciliation keeps re-checking pending payments; a payment that
+  never reaches `FullyPaid` is bounded by the attempt/stale flow and
+  the buyer can retry.
 
 ## Env vars
 
@@ -225,18 +269,33 @@ copied into this repo), and reads the order back. CI never runs it.
 (extra HPP hosts; API host always allowed; HTTPS enforced in
 production), plus `NEXT_PUBLIC_APP_URL` for the redirect URL.
 
-## Production checklist
+## Production checklist (direct-production, Owner decision)
 
-1. Obtain merchant credentials; set the four `KAPITAL_*` vars and
-   `NEXT_PUBLIC_APP_URL` in the production environment.
-2. Run the sandbox smoke test against the test environment; complete
-   one manual HPP payment with the bank's test card and verify the
-   listing reaches PENDING_MODERATION.
-3. Confirm the production `hppUrl` host and add it to
+There is NO bank sandbox phase. While `LAUNCH_MODE=READ_ONLY`, the
+public checkout stays closed, so the controlled bank smoke proves
+the WIRE contract only — create order, HPP payment, authenticated
+status read with exact amount/currency — and **cannot prove listing
+fulfillment** (no payment-to-listing path runs in read-only mode;
+fulfillment is exercised by the integration/E2E suites and verified
+live only after a later reviewed FULL release).
+
+1. Owner obtains production merchant credentials; locally they go
+   only into the chmod-600 env file, and for deployment only into
+   the Vercel **Production** secret environment — never Preview,
+   never chat, never git.
+2. Run the controlled production smoke (see above): explicit
+   Owner-approved `KAPITAL_SMOKE_AMOUNT`,
+   `KAPITAL_SMOKE_CONFIRM_PRODUCTION=YES`, explicit HTTPS
+   `NEXT_PUBLIC_APP_URL`; pay once with the Owner-approved card from
+   the 0600 URL file, delete the file, then confirm `FullyPaid` with
+   the exact amount/currency via verify mode.
+3. Record the raw (redacted) status strings observed so the unproven
+   wire spellings can be mapped with evidence; refund the controlled
+   charge directly with the bank (no code path).
+4. Confirm the production `hppUrl` host and set
    `KAPITAL_ALLOWED_HPP_HOSTS` if it differs from the API host.
-4. Confirm callback parameter names and the full status vocabulary
-   against the owner's Kapital documentation access (see below).
-5. Schedule reconciliation (Phase 4.16).
+5. Full release (separate, reviewed): `LAUNCH_MODE=FULL`, crons
+   restored, and only then does live checkout exercise fulfillment.
 
 ## Documentation ambiguities (explicit)
 
