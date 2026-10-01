@@ -269,6 +269,29 @@ modes:
 (extra HPP hosts; API host always allowed; HTTPS enforced in
 production), plus `NEXT_PUBLIC_APP_URL` for the redirect URL.
 
+## Production bank smoke — PASS (2026-10-01, Owner-run)
+
+The controlled production smoke on the live merchant terminal
+PASSED: the Owner completed one real 1.00 AZN payment through the
+Kapital HPP, and the authenticated verify read returned
+`status: FullyPaid` with `amountMinor: 100`, `currency: AZN` — an
+exact amount/currency match. The private checkout-URL file was
+deleted after use. No order id, credentials, payment URLs or card
+data are recorded here.
+
+Scope of this PASS — the WIRE contract only:
+- It is NOT application end-to-end payment UAT. `LAUNCH_MODE` is
+  still READ_ONLY, so listing fulfillment and the moderation
+  transition remain UNVERIFIED in live production; they are covered
+  by the automated suites and will be exercised live only after the
+  later reviewed FULL release.
+- An earlier attempt ended `Declined` and remains UNEXPLAINED (open
+  item; the redirect audit established no merchant-side redirect
+  defect, and no redirect fix is claimed). Not all payment
+  scenarios have passed — exactly one successful purchase has.
+- Refund of the controlled charge is DEFERRED by the Owner — open
+  item, not completed.
+
 ## Production checklist (direct-production, Owner decision)
 
 There is NO bank sandbox phase. While `LAUNCH_MODE=READ_ONLY`, the
