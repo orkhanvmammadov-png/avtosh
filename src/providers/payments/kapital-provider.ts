@@ -1,12 +1,15 @@
-import { kapitalConfig } from "@/lib/config/kapital";
-import { majorToMinorExact } from "@/lib/payments/money";
+// Relative (not @/) imports: the manual smoke script loads this
+// adapter directly under plain `node`, which cannot resolve the
+// tsconfig path alias. Next/vitest resolve both forms identically.
+import { kapitalConfig } from "../../lib/config/kapital.ts";
+import { majorToMinorExact } from "../../lib/payments/money.ts";
 import {
   PaymentProviderError,
   type CreateOrderInput,
   type CreatedProviderOrder,
   type PaymentProviderClient,
   type ProviderOrderDetails,
-} from "@/providers/payments/types";
+} from "./types.ts";
 
 /**
  * Kapital Bank e-commerce REST adapter.

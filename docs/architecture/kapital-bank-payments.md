@@ -217,14 +217,21 @@ Requires `KAPITAL_SMOKE=1` plus env credentials loaded from the
 local chmod-600 env file (never pasted into chat/commits/CI). Two
 modes:
 
-- **Create** (default): creates one `Order_SMS` (amount
-  `KAPITAL_SMOKE_AMOUNT`, default 0.01, hard-capped). The checkout
+- **Create** (default): creates one `Order_SMS`. Everything is
+  explicit and fail-closed REGARDLESS of host (Owner decision:
+  direct production, no sandbox phase): `KAPITAL_API_BASE_URL` must
+  parse to exactly one of the two intended Kapital origins (URL
+  origin comparison, never a substring check);
+  `KAPITAL_SMOKE_CONFIRM_PRODUCTION=YES` is always required;
+  `KAPITAL_SMOKE_AMOUNT` must be explicitly supplied (no default,
+  hard-capped); `NEXT_PUBLIC_APP_URL` must be explicit (no
+  localhost fallback) and HTTPS for a production order. The checkout
   URL embeds the order password, so it is **never printed** — it is
-  written to `~/.avtosh/kapital-smoke-url.txt` (chmod 600); open it
-  locally, pay manually, then delete the file. Against the
-  production host the script refuses to run without
-  `KAPITAL_SMOKE_CONFIRM_PRODUCTION=YES` (real card ⇒ real charge;
-  Owner approves amount and card first).
+  written exclusively (`O_EXCL`, born 0600, never overwritten, never
+  through a symlink) to `~/.avtosh/kapital-smoke-url.txt`; an
+  existing file or symlink at that path refuses the run BEFORE any
+  order is created. Open the file locally, pay manually, then delete
+  it. Gating lives in `kapital-smoke-guards.mts` and is unit-tested.
 - **Verify**: `KAPITAL_SMOKE_ORDER_ID=<id>` re-reads the order over
   the authenticated API — the authoritative status check; the
   browser STATUS parameter is never trusted.
