@@ -210,13 +210,50 @@ deterministic in-memory client via `setPaymentProviderForTesting`.
 Nothing in the automated suites touches the live provider or the
 network.
 
-## Optional live sandbox smoke test
+## Manual live smoke test (test terminal or PRODUCTION)
 
-`scripts/payments/kapital-sandbox-smoke.mts` — manual only, requires
-`KAPITAL_SANDBOX_SMOKE=1` + env credentials; creates a 0.01 AZN
-Order_SMS (no charge until a card pays), prints the checkout URL for
-a manual HPP walk-through (test cards: official Kapital docs — never
-copied into this repo), and reads the order back. CI never runs it.
+`scripts/payments/kapital-smoke.mts` — manual only, never in CI.
+Requires `KAPITAL_SMOKE=1` plus env credentials loaded from the
+local chmod-600 env file (never pasted into chat/commits/CI). Two
+modes:
+
+- **Create** (default): creates one `Order_SMS` (amount
+  `KAPITAL_SMOKE_AMOUNT`, default 0.01, hard-capped). The checkout
+  URL embeds the order password, so it is **never printed** — it is
+  written to `~/.avtosh/kapital-smoke-url.txt` (chmod 600); open it
+  locally, pay manually, then delete the file. Against the
+  production host the script refuses to run without
+  `KAPITAL_SMOKE_CONFIRM_PRODUCTION=YES` (real card ⇒ real charge;
+  Owner approves amount and card first).
+- **Verify**: `KAPITAL_SMOKE_ORDER_ID=<id>` re-reads the order over
+  the authenticated API — the authoritative status check; the
+  browser STATUS parameter is never trusted.
+
+## Production merchant integration decisions (Owner)
+
+- The direct production terminal is used without a bank sandbox
+  phase (Owner decision). The controlled first charge follows the
+  smoke procedure above with an Owner-approved amount and card.
+- **Refund / Reversal** (`POST /order/{ID}/exec-tran` with
+  `type: Refund` or `voidKind`): documented by the bank but
+  **deliberately not implemented**. Automatic refunds are a
+  moderation/operations policy decision, not a technical default.
+  Open decisions before any refund code: who may trigger one (role),
+  against which payment states, full vs. partial, same-day reversal
+  vs. refund selection, audit trail, and reconciliation of
+  `Refunded`/`Voided` responses. Until then, refunds are executed by
+  the Owner directly with the bank, and the existing `Refunded`
+  status handling marks the payment REFUNDED on the next
+  authenticated read.
+- Only wire-proven status strings are mapped (`Preparing`,
+  `FullyPaid`, `Refunded`). The bank's status table lists display
+  names ("Being prepared", "Partially paid", …) whose exact wire
+  spellings the document does not prove; every unproven status is
+  recorded verbatim, logged as `unknown_provider_status`, is never
+  SUCCESS, never fulfills, and is surfaced for operations review.
+  Reconciliation keeps re-checking pending payments; a payment that
+  never reaches `FullyPaid` is bounded by the attempt/stale flow and
+  the buyer can retry.
 
 ## Env vars
 

@@ -242,6 +242,8 @@ export async function runProviderCheckout(
     logPaymentEvent("checkout_initiation_failed", {
       payment_id: context.paymentId,
       kind,
+      provider_error_code:
+        error instanceof PaymentProviderError ? error.providerErrorCode : undefined,
     });
     throw checkoutUnavailable();
   }
@@ -324,6 +326,8 @@ export async function verifyProviderPayment(paymentId: string): Promise<Verifica
       payment_id: paymentId,
       provider_order_id: attempt.provider_order_id,
       kind: error instanceof PaymentProviderError ? error.kind : "UNKNOWN",
+      provider_error_code:
+        error instanceof PaymentProviderError ? error.providerErrorCode : undefined,
     });
     return { state: "CHECK_FAILED" };
   }
