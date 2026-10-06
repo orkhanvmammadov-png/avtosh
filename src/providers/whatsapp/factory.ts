@@ -1,11 +1,15 @@
 import { createDevWhatsAppProvider } from "@/providers/whatsapp/dev-provider";
+import { createMsmSmsOtpProvider } from "@/providers/sms/msm-otp-provider";
 import type { WhatsAppOtpProvider } from "@/providers/whatsapp/types";
 
 /**
- * Provider selection. Production checkpoint: a real Meta/BSP-backed
- * provider is NOT integrated yet — production OTP sending fails
- * loudly until one is implemented and approved. Development and test
- * environments use the dev/in-memory providers.
+ * OTP delivery provider selection. The Owner-selected production
+ * channel is MSM Technologies SMS (OTP_SMS_PROVIDER=msm — an
+ * explicit opt-in in every environment; config validation then
+ * requires the MSM secrets). Without it, production OTP sending
+ * still fails loudly, and development/test keep the dev/in-memory
+ * providers. The interface predates the channel decision, hence the
+ * WhatsApp naming — delivery semantics are identical.
  */
 
 let testOverride: WhatsAppOtpProvider | null = null;
@@ -23,6 +27,9 @@ export function setWhatsAppOtpProviderForTesting(
 export function getWhatsAppOtpProvider(): WhatsAppOtpProvider {
   if (testOverride !== null) {
     return testOverride;
+  }
+  if (process.env.OTP_SMS_PROVIDER === "msm") {
+    return createMsmSmsOtpProvider();
   }
   if (process.env.NODE_ENV === "production") {
     throw new Error(
