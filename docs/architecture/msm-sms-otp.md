@@ -56,8 +56,9 @@ delivery failures cannot grind the rate limits. Pinned by
 
 ## Wire details the first controlled live test must confirm
 
-The supplied document does not prove: the request ROOT element
-(`<SMS-Request>` chosen, mirroring `<SMS-Response>`), the accepted
+The request root element is `<SMS-InsRequest>` — Owner-confirmed
+from the supplied MSM contract and pinned by an exact-structure
+test. Still unverified: the accepted
 `Content-Type` (`application/xml; charset=utf-8` chosen), UTF-8
 handling of Azerbaijani characters in `text`, the exact v1 error
 response shapes, and the `/query/single` `username={apiusername}i`

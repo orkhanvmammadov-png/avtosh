@@ -74,10 +74,29 @@ describe("request shape", () => {
     expect((init.headers as Record<string, string>)["content-type"]).toBe(
       "application/xml; charset=utf-8",
     );
-    const body = String(init.body);
-    expect(body).toContain(`<?xml version="1.0" encoding="UTF-8"?>`);
-    expect(body).toContain(`<CLIENT user="unit-msm-user" pwd="unit-msm-secret-key" from="Avtosh.az"/>`);
-    expect(body).toContain(`<INSERT to="501234567" text="hello"/>`);
+    // Exact full-document assertion — the Owner-supplied contract
+    // uses SMS-InsRequest as root; nothing may drift (opening tag,
+    // CLIENT and INSERT attributes, closing tag).
+    expect(String(init.body)).toBe(
+      `<?xml version="1.0" encoding="UTF-8"?>` +
+        `<SMS-InsRequest>` +
+        `<CLIENT user="unit-msm-user" pwd="unit-msm-secret-key" from="Avtosh.az"/>` +
+        `<INSERT to="501234567" text="hello"/>` +
+        `</SMS-InsRequest>`,
+    );
+  });
+
+  it("the smoke script's send path produces the identical exact structure", async () => {
+    // The smoke sends through the same sendMsmSms with its fixed text.
+    fetchMock.mockResolvedValueOnce(okXml());
+    await sendMsmSms({ phoneE164: "+994501234567", text: MSM_SMOKE_TEXT });
+    expect(String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body)).toBe(
+      `<?xml version="1.0" encoding="UTF-8"?>` +
+        `<SMS-InsRequest>` +
+        `<CLIENT user="unit-msm-user" pwd="unit-msm-secret-key" from="Avtosh.az"/>` +
+        `<INSERT to="501234567" text="${MSM_SMOKE_TEXT}"/>` +
+        `</SMS-InsRequest>`,
+    );
   });
 
   it("converts +994501234567 to 501234567 exactly once and refuses other shapes with no network call", () => {

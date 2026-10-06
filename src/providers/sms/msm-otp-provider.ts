@@ -20,10 +20,10 @@ import { WhatsAppDeliveryError, type WhatsAppOtpProvider } from "../whatsapp/typ
  * challenge on failure; the user's recovery path is a fresh request
  * after OTP_MIN_INTERVAL_SECONDS.
  *
- * Wire details the first controlled live test must confirm (the
- * supplied document does not prove them): the request ROOT element
- * (<SMS-Request> chosen here, mirroring the <SMS-Response> reply)
- * and the Content-Type (application/xml; charset=utf-8 chosen).
+ * Request root element <SMS-InsRequest> is Owner-confirmed from the
+ * supplied MSM contract. Still unverified until the first controlled
+ * live test: the Content-Type (application/xml; charset=utf-8
+ * chosen).
  *
  * Never logged or thrown: credentials, the OTP, the message text,
  * the XML, or the full phone number. Only the numeric res code and
@@ -64,10 +64,10 @@ export function buildMsmRequestXml(input: {
 }): string {
   return (
     `<?xml version="1.0" encoding="UTF-8"?>` +
-    `<SMS-Request>` +
+    `<SMS-InsRequest>` +
     `<CLIENT user="${xmlEscape(input.username)}" pwd="${xmlEscape(input.apiKey)}" from="${xmlEscape(input.sender)}"/>` +
     `<INSERT to="${xmlEscape(input.to)}" text="${xmlEscape(input.text)}"/>` +
-    `</SMS-Request>`
+    `</SMS-InsRequest>`
   );
 }
 
