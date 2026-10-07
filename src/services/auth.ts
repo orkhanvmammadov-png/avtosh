@@ -9,6 +9,7 @@ import {
 } from "@/auth/otp-crypto";
 import { maskPhone, normalizePhoneE164 } from "@/auth/phone";
 import { ApiError } from "@/lib/api/errors";
+import { pilotGate } from "@/lib/config/launch-pilot";
 import { getSql, withTransaction } from "@/lib/server/db/client";
 import { getWhatsAppOtpProvider } from "@/providers/whatsapp/factory";
 import {
@@ -30,6 +31,20 @@ import {
 } from "@/repositories/auth";
 
 const OTP_PURPOSE = "LOGIN";
+
+/**
+ * Owner-only pilot (see launch-pilot.ts): a phone outside the
+ * allowlist can never trigger an SMS or complete a login. The
+ * refusal is the same generic throttle answer a busy phone would
+ * get — no enumeration oracle, no pilot fingerprint — and the phone
+ * is never logged.
+ */
+function assertPilotPhone(phoneE164: string): void {
+  const gate = pilotGate();
+  if (gate.active && !gate.isAllowed(phoneE164)) {
+    throw new ApiError("OTP_RATE_LIMITED", "Too many requests. Try again later.");
+  }
+}
 
 export interface OtpChallengeResult {
   challengeId: string;
@@ -77,6 +92,7 @@ export async function requestOtp(input: {
   if (phone === null) {
     throw new ApiError("AUTH_INVALID_PHONE", "Invalid phone number.");
   }
+  assertPilotPhone(phone);
   const cfg = authConfig();
   const pepper = requireOtpPepper();
 
@@ -153,6 +169,9 @@ export async function resendOtp(input: {
         "Resend limit reached. Request a new code later.",
       );
     }
+    // Pilot: a challenge created before the pilot was enabled must
+    // not keep producing SMS for a non-allowlisted phone.
+    assertPilotPhone(challenge.phone_e164);
     await rotateChallengeOtp(tx, challenge.id, newHash);
     return challenge.phone_e164;
   });
@@ -207,6 +226,12 @@ export async function verifyOtp(input: {
       challenge.expires_at.getTime() <= Date.now()
     ) {
       return { failure: "OTP_EXPIRED" };
+    }
+    // Pilot: a pre-pilot challenge for a non-allowlisted phone can
+    // never become a session; indistinguishable from a wrong code.
+    const gate = pilotGate();
+    if (gate.active && !gate.isAllowed(challenge.phone_e164)) {
+      return { failure: "OTP_INVALID" };
     }
     const valid = verifyOtpHash(
       pepper,

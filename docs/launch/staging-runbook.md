@@ -13,6 +13,22 @@ the Vercel/Supabase dashboards — never in chat, never committed.
   `LAUNCH_MODE=READ_ONLY` explicitly for clarity).
 - The later full release enables the marketplace by deliberately
   setting `LAUNCH_MODE=FULL` after review. Nothing else flips it.
+- **Env changes are not instantaneous:** changing `LAUNCH_MODE` (or
+  any env var) in Vercel takes effect only after a SUCCESSFUL
+  redeployment. Until that deployment is live, the previous mode
+  keeps serving — plan flips and rollbacks around a verified deploy,
+  not around saving the variable.
+- **Owner-only pilot:** `LAUNCH_PILOT_PHONES` (Production-only
+  secret, comma-separated `+994XXXXXXXXX`; never `NEXT_PUBLIC_*`)
+  gates the FULL launch to the listed phones: outsiders cannot
+  receive SMS, log in, use an existing session, start payments, or
+  use the anonymous contact/report endpoints, while public browsing,
+  cron jobs and session-independent payment verification keep
+  working. FAIL-CLOSED: if the variable is set but malformed, NOBODY
+  (including the Owner) is allowed, and a sanitized
+  `launch_pilot_misconfigured` log line is emitted (counts only,
+  never numbers). Opening the public launch = deleting the variable
+  + a successful redeploy.
 
 ## 1. Supabase project (staging) and local secret handling
 
@@ -245,7 +261,27 @@ Set in the dashboard (Owner enters values directly):
 
 ## 8. Rollback
 
-- App: revert to the previous Vercel deployment (instant).
+- App code: revert to the previous Vercel deployment (fast, but
+  verify it is actually serving before declaring the rollback done).
+- Launch mode: setting `LAUNCH_MODE=READ_ONLY` requires a SUCCESSFUL
+  redeployment to take effect — rollback is NOT instantaneous, and a
+  failed deploy leaves FULL serving. Verify with the 503 spot checks
+  in §7 after the deploy completes.
+- **Pending paid orders when READ_ONLY is restored:** in READ_ONLY
+  both the payment-return verification and the cron job endpoints
+  refuse, so a payment captured by the bank just before the rollback
+  stays PENDING in AVTOSH (money captured, fulfillment deferred —
+  the exactly-once design holds; nothing is lost or doubled). Check
+  for them with SQL over the migration connection
+  (`select id, status, created_at from payments where status in
+  ('CREATED','PENDING') order by created_at`), and read the
+  authoritative bank state per order with the Kapital smoke script's
+  verify mode (authenticated read, no writes). They reconcile
+  automatically on the next FULL deployment (reconcile-payments job
+  / first callback). If the rollback will last long, prefer rolling
+  back to FULL + `LAUNCH_PILOT_PHONES` (everyone gated, verification
+  and reconciliation still running) over READ_ONLY, or refund the
+  captured orders directly with the bank.
 - Catalog data: the importer never deletes; to withdraw a bad import,
   deactivate rows (`is_active=false`) via a corrected import file —
   do not hand-edit SQL.

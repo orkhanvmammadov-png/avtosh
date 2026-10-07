@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { isReadOnlyLaunch } from "@/lib/config/launch";
+import { pilotGate } from "@/lib/config/launch-pilot";
 import { authConfig } from "@/auth/config";
 import { readSessionToken } from "@/auth/cookies";
 import { hashSessionToken } from "@/auth/otp-crypto";
@@ -39,6 +40,14 @@ export async function getCurrentAuth(
   const sql = getSql();
   const row = await findActiveSessionWithUser(sql, hashSessionToken(token));
   if (row === undefined) {
+    return null;
+  }
+  // Pilot: a session minted before the pilot was enabled must not
+  // bypass it — a non-allowlisted user is anonymous everywhere (no
+  // last-seen touch either). Covers every authenticated route:
+  // listings, uploads, checkout, favorites, moderator/admin.
+  const gate = pilotGate();
+  if (gate.active && !gate.isAllowed(row.phone_e164)) {
     return null;
   }
   await touchSessionLastSeen(sql, row.session_id);
@@ -147,6 +156,11 @@ export async function getCurrentAuthFromCookies(): Promise<AuthContext | null> {
   const sql = getSql();
   const row = await findActiveSessionWithUser(sql, hashSessionToken(token));
   if (row === undefined) {
+    return null;
+  }
+  // Pilot parity with getCurrentAuth: pre-pilot sessions never bypass.
+  const gate = pilotGate();
+  if (gate.active && !gate.isAllowed(row.phone_e164)) {
     return null;
   }
   await touchSessionLastSeen(sql, row.session_id);
