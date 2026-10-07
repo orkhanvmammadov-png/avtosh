@@ -132,41 +132,47 @@ tunable via validated env vars: `POOLER_CHECK_CONCURRENCY`
 link, raise the budget or lower the rounds rather than concluding
 from a ceiling trip.
 
-Decision rule and current status (REVISED after the 2026-10 FULL
-incident):
-- **Runtime `DATABASE_URL`: the TRANSACTION pooler (port 6543).**
-  The session pooler served READ_ONLY, but its client cap equals the
-  project's `pool_size` (15 on the incident compute size) and
-  serverless multiplies connections by every warm function instance:
-  with the app's per-instance pool of 5, three busy instances — SSR
-  plus the four cron jobs aligning on the quarter hour — exhausted
-  it the moment FULL enabled real page auth and jobs
-  (`EMAXCONNSESSION: max clients reached in session mode …
-  pool_size: 15`, digest 4291426755; homepage SSR failed). The
-  transaction pooler multiplexes clients over a small server pool,
-  which is the correct serverless posture.
-- **Compatibility is verified for THIS app**, not assumed: the
-  bounded checker PASSED 960/960 on the production transaction
-  pooler; `prepare: false` is set; every transaction goes through
-  `sql.begin` (postgres.js pins one connection per transaction); a
-  code audit found no advisory locks, LISTEN/NOTIFY, `SET`
-  session state or `search_path` changes. The first gated FULL
-  re-UAT still monitors for hangs/mismatches before GO — a bounded
-  PASS plus audit is necessary, not sufficient.
-- The session pooler (5432) remains valid for low-fan-out use
-  (migrations fallback on IPv4-only networks, operator psql); it is
-  no longer the runtime connection. `MIGRATION_DATABASE_URL` is
-  unchanged by this revision.
-- Per-instance pool size is tunable via `DB_POOL_MAX` (default 5,
-  validated 1–20). Raising it is NEVER the fix for client
-  exhaustion — instance fan-out is the multiplier; lower it (e.g. 3)
-  if instance counts grow. Connections are tagged
-  `application_name = 'avtosh-runtime'` so
-  `pg_stat_activity` attributes them during incidents.
-- Record in the release notes: the chosen URL kind, the check
-  output, the project's client-connection limits for its compute
-  size, and any failures observed. No connection mode may be
-  described as "verified" without an actual run.
+Decision rule and current status (SECOND REVISION, 2026-10, after
+the transaction-pooler rollout broke page streaming):
+- **Runtime `DATABASE_URL`: the SESSION pooler (port 5432). The
+  TRANSACTION pooler (6543) is PROHIBITED for this application's
+  runtime.** Switching production to 6543 made `/elanlar` (and
+  intermittently `/`) hang on the loading skeleton forever: Next
+  streams the shell (HTTP 200 logged with a tiny duration), then the
+  page's data chunk never arrives. Reproduced deterministically
+  against the staging transaction pooler with the production build
+  (31,605-byte stall vs. a full 128,882-byte page in ~3 s on the
+  session pooler), and caught in the act server-side: a backend
+  stuck `active / wait_event=ClientRead` on the page's
+  `categories where code = $1` lookup — the extended-protocol
+  message sequence never completed through Supavisor. This is the
+  documented postgres.js-pipelining failure, now proven for this
+  workload; `prepare: false` does not prevent it and
+  `max_pipeline: 1` (the driver's minimum) does not either. A later
+  re-run even failed the simple phase with server-side statement
+  timeouts — the mode is not dependable for this driver.
+- The session-mode client cap that caused the original FULL
+  exhaustion (`EMAXCONNSESSION`, pool_size 15) is addressed on the
+  session pooler instead: (1) Owner raises the project's pooler
+  `pool_size` in the Supabase dashboard (and/or upgrades compute);
+  (2) production sets `DB_POOL_MAX=3` to cut per-instance use;
+  (3) the cron schedules are STAGGERED (§10) so job invocations
+  never align on the quarter hour. With pool_size 30 and
+  DB_POOL_MAX 3, ten concurrently busy instances fit.
+- `scripts/db/check-supabase-pooler.mjs` now runs TWO phases: the
+  original interleaved-transaction smoke AND a "page burst" phase
+  reproducing the shape that actually hung (many more concurrent
+  multi-query tasks than pool connections). Verified live on
+  staging: SESSION passes both phases (960/960 and 240/240);
+  TRANSACTION fails. Run both kinds before ever revisiting this
+  decision.
+- Per-instance pool size stays tunable via `DB_POOL_MAX` (default 5,
+  validated 1–20); connections are tagged
+  `application_name='avtosh-runtime'` for `pg_stat_activity`
+  attribution. Raising `DB_POOL_MAX` is never the fix for client
+  exhaustion — instance fan-out is the multiplier.
+- `MIGRATION_DATABASE_URL` is unchanged throughout (direct
+  connection, or the session pooler on IPv4-only networks).
 
 ## 3. Migrations (tracked runner)
 
@@ -334,10 +340,10 @@ The five production cron schedules are RESTORED in `vercel.json`
 | Job | Schedule | Effect on production records |
 |---|---|---|
 | `reconcile-payments` | `*/5 * * * *` | re-verifies stale PENDING Kapital payments through the same exactly-once verification path as the callback — the safety net for pending paid orders (see §8) |
-| `send-reminders` | `*/10 * * * *` | schedules expiry-reminder rows; DELIVERY is a no-op in production (the notification provider is fail-closed null until a channel is integrated — MSM covers OTP only), logged as `provider_unconfigured` |
-| `expire-listings` | `*/15 * * * *` | overdue ACTIVE listings → EXPIRED (idempotent; public queries already exclude overdue rows by `current_expires_at`) |
-| `promotion-housekeeping` | `*/15 * * * *` | syncs promotion statuses from their time windows (idempotent) |
-| `cleanup-images` | `0 */6 * * *` | reference-checked, grace-gated, bounded storage-orphan cleanup (idempotent) |
+| `send-reminders` | `3-59/10 * * * *` | schedules expiry-reminder rows; DELIVERY is a no-op in production (the notification provider is fail-closed null until a channel is integrated — MSM covers OTP only), logged as `provider_unconfigured` |
+| `expire-listings` | `7-59/15 * * * *` | overdue ACTIVE listings → EXPIRED (idempotent; public queries already exclude overdue rows by `current_expires_at`) |
+| `promotion-housekeeping` | `11-59/15 * * * *` | syncs promotion statuses from their time windows (idempotent) |
+| `cleanup-images` | `23 */6 * * *` | reference-checked, grace-gated, bounded storage-orphan cleanup (idempotent) |
 
 Deploying the schedules does NOT run the jobs: every endpoint is
 double-gated — in READ_ONLY it refuses even a valid `CRON_SECRET`

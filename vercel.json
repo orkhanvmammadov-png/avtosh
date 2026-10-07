@@ -2,9 +2,9 @@
   "regions": ["fra1"],
   "crons": [
     { "path": "/api/jobs/reconcile-payments", "schedule": "*/5 * * * *" },
-    { "path": "/api/jobs/send-reminders", "schedule": "*/10 * * * *" },
-    { "path": "/api/jobs/expire-listings", "schedule": "*/15 * * * *" },
-    { "path": "/api/jobs/promotion-housekeeping", "schedule": "*/15 * * * *" },
-    { "path": "/api/jobs/cleanup-images", "schedule": "0 */6 * * *" }
+    { "path": "/api/jobs/send-reminders", "schedule": "3-59/10 * * * *" },
+    { "path": "/api/jobs/expire-listings", "schedule": "7-59/15 * * * *" },
+    { "path": "/api/jobs/promotion-housekeeping", "schedule": "11-59/15 * * * *" },
+    { "path": "/api/jobs/cleanup-images", "schedule": "23 */6 * * *" }
   ]
 }

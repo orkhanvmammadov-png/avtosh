@@ -19,12 +19,15 @@ describe("vercel.json production configuration", () => {
   });
 
   it("schedules exactly the five approved cron jobs", () => {
+    // Minute offsets STAGGER the jobs so cron invocations never all
+    // align on the quarter hour — simultaneous function instances
+    // were a multiplier in the session-pool exhaustion incident.
     expect(config.crons).toEqual([
       { path: "/api/jobs/reconcile-payments", schedule: "*/5 * * * *" },
-      { path: "/api/jobs/send-reminders", schedule: "*/10 * * * *" },
-      { path: "/api/jobs/expire-listings", schedule: "*/15 * * * *" },
-      { path: "/api/jobs/promotion-housekeeping", schedule: "*/15 * * * *" },
-      { path: "/api/jobs/cleanup-images", schedule: "0 */6 * * *" },
+      { path: "/api/jobs/send-reminders", schedule: "3-59/10 * * * *" },
+      { path: "/api/jobs/expire-listings", schedule: "7-59/15 * * * *" },
+      { path: "/api/jobs/promotion-housekeeping", schedule: "11-59/15 * * * *" },
+      { path: "/api/jobs/cleanup-images", schedule: "23 */6 * * *" },
     ]);
   });
 

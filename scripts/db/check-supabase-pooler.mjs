@@ -85,6 +85,9 @@ async function worker(id) {
 }
 
 async function fail(kind, verdict, detail) {
+  // In-flight queries reject after the pool closes; once we are
+  // failing, those are expected noise and must not crash the report.
+  process.on("unhandledRejection", () => {});
   report(`FAIL (${kind})`, verdict);
   if (detail) console.error(detail);
   console.error(failureAdvice(poolerKind, kind));
@@ -102,11 +105,75 @@ const watchdog = setInterval(() => {
   }
 }, 1_000);
 
+/**
+ * PHASE 2 — "page burst": the shape that ACTUALLY hung production on
+ * the shared transaction pooler while phase 1 passed 960/960. An SSR
+ * page fires far more concurrent multi-statement tasks than the pool
+ * has connections (app pool max 5), each task awaiting several
+ * parameterized multi-row selects in sequence; postgres.js pipelines
+ * the overflow onto busy connections and Supavisor can stall a
+ * statement mid-protocol (server backend stuck active/ClientRead).
+ * Tunables: POOLER_CHECK_BURST_TASKS (40), POOLER_CHECK_BURST_QUERIES
+ * (6 per task).
+ */
+const burstTasks = Number(process.env.POOLER_CHECK_BURST_TASKS ?? 40);
+const burstQueries = Number(process.env.POOLER_CHECK_BURST_QUERIES ?? 6);
+const burstProgress = createProgressClassifier({
+  stallTimeoutMs,
+  totalBudgetMs,
+  totalRounds: burstTasks * burstQueries,
+  startedAt: Date.now(),
+});
+
+function reportBurst(prefix, verdict) {
+  console.log(
+    `${prefix} [${poolerKind}] page-burst ${verdict.completedRounds}/${verdict.totalRounds} queries in ${verdict.elapsedMs}ms ` +
+      `(tasks=${burstTasks}, queries/task=${burstQueries}, pool=${sql.options.max}, stall=${stallTimeoutMs}ms)`,
+  );
+}
+
+async function burstTask(id) {
+  for (let step = 0; step < burstQueries; step += 1) {
+    const tag = 7_000_000 + id * 1_000 + step;
+    const rows = await sql`
+      select ${tag}::int as tag, g as n, repeat('x', 120) as pad
+      from generate_series(1, 40) g
+    `;
+    if (rows.length !== 40 || rows[0].tag !== tag) {
+      throw new MismatchError(`burst reply: sent ${tag}, got ${rows[0]?.tag} (${rows.length} rows)`);
+    }
+    burstProgress.recordRound(Date.now());
+  }
+}
+
 try {
   await Promise.all(Array.from({ length: concurrency }, (_, id) => worker(id)));
   clearInterval(watchdog);
   const verdict = progress.classify(Date.now());
-  report("PASS (bounded smoke test)", verdict);
+  report("PASS phase 1 (interleaved tx smoke)", verdict);
+} catch (error) {
+  clearInterval(watchdog);
+  const verdict = progress.classify(Date.now());
+  const kind = error instanceof MismatchError ? "MISMATCH" : "QUERY_ERROR";
+  await fail(kind, verdict, `${error instanceof Error ? error.message : error}`);
+}
+
+const burstWatchdog = setInterval(() => {
+  const verdict = burstProgress.classify(Date.now());
+  if (verdict.state === "STALL" || verdict.state === "TOTAL_BUDGET_EXCEEDED") {
+    clearInterval(burstWatchdog);
+    process.on("unhandledRejection", () => {});
+    reportBurst(`FAIL (${verdict.state})`, verdict);
+    console.error(failureAdvice(poolerKind, verdict.state));
+    void sql.end({ timeout: 5 }).catch(() => undefined);
+    process.exit(1);
+  }
+}, 1_000);
+
+try {
+  await Promise.all(Array.from({ length: burstTasks }, (_, id) => burstTask(id)));
+  clearInterval(burstWatchdog);
+  reportBurst("PASS phase 2", burstProgress.classify(Date.now()));
   console.log(
     "PASS here is necessary, not sufficient: exercise the real application " +
       "against staging before treating this connection mode as verified.",
@@ -114,8 +181,13 @@ try {
   await sql.end({ timeout: 5 });
   process.exit(0);
 } catch (error) {
-  clearInterval(watchdog);
-  const verdict = progress.classify(Date.now());
+  clearInterval(burstWatchdog);
+  process.on("unhandledRejection", () => {});
+  const verdict = burstProgress.classify(Date.now());
   const kind = error instanceof MismatchError ? "MISMATCH" : "QUERY_ERROR";
-  await fail(kind, verdict, `${error instanceof Error ? error.message : error}`);
+  reportBurst(`FAIL (${kind})`, verdict);
+  console.error(`${error instanceof Error ? error.message : error}`);
+  console.error(failureAdvice(poolerKind, kind));
+  await sql.end({ timeout: 5 }).catch(() => undefined);
+  process.exit(1);
 }
