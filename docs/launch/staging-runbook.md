@@ -132,26 +132,41 @@ tunable via validated env vars: `POOLER_CHECK_CONCURRENCY`
 link, raise the budget or lower the rounds rather than concluding
 from a ceiling trip.
 
-Decision rule and current status:
-- **Selected runtime for this staging release: the session pooler
-  (port 5432)** — it is not subject to the transaction-mode
-  pipelining truncation. On the Frankfurt staging project
-  (2026-09-28) the bounded checker PASSED on both pooler kinds
-  (SESSION 960/960 rounds, TRANSACTION 960/960 rounds), and beyond
-  the smoke test, **actual application reads and a real catalog
-  importer transaction have succeeded over the session pooler**. A
-  bounded checker PASS remains necessary but not sufficient on its
-  own; the session-pooler selection rests on that plus the real
-  application exercise.
-- The transaction pooler (6543) is a **separately tested candidate
-  only**, not the selected runtime — consider it in a later release
-  only if its check PASSES repeatedly and Supavisor on the project
-  is a version with native pipelining support.
+Decision rule and current status (REVISED after the 2026-10 FULL
+incident):
+- **Runtime `DATABASE_URL`: the TRANSACTION pooler (port 6543).**
+  The session pooler served READ_ONLY, but its client cap equals the
+  project's `pool_size` (15 on the incident compute size) and
+  serverless multiplies connections by every warm function instance:
+  with the app's per-instance pool of 5, three busy instances — SSR
+  plus the four cron jobs aligning on the quarter hour — exhausted
+  it the moment FULL enabled real page auth and jobs
+  (`EMAXCONNSESSION: max clients reached in session mode …
+  pool_size: 15`, digest 4291426755; homepage SSR failed). The
+  transaction pooler multiplexes clients over a small server pool,
+  which is the correct serverless posture.
+- **Compatibility is verified for THIS app**, not assumed: the
+  bounded checker PASSED 960/960 on the production transaction
+  pooler; `prepare: false` is set; every transaction goes through
+  `sql.begin` (postgres.js pins one connection per transaction); a
+  code audit found no advisory locks, LISTEN/NOTIFY, `SET`
+  session state or `search_path` changes. The first gated FULL
+  re-UAT still monitors for hangs/mismatches before GO — a bounded
+  PASS plus audit is necessary, not sufficient.
+- The session pooler (5432) remains valid for low-fan-out use
+  (migrations fallback on IPv4-only networks, operator psql); it is
+  no longer the runtime connection. `MIGRATION_DATABASE_URL` is
+  unchanged by this revision.
+- Per-instance pool size is tunable via `DB_POOL_MAX` (default 5,
+  validated 1–20). Raising it is NEVER the fix for client
+  exhaustion — instance fan-out is the multiplier; lower it (e.g. 3)
+  if instance counts grow. Connections are tagged
+  `application_name = 'avtosh-runtime'` so
+  `pg_stat_activity` attributes them during incidents.
 - Record in the release notes: the chosen URL kind, the check
   output, the project's client-connection limits for its compute
-  size, and any failures observed. If both fail, stop and
-  investigate before deploying. No connection mode may be described
-  as "verified" without an actual staging run.
+  size, and any failures observed. No connection mode may be
+  described as "verified" without an actual run.
 
 ## 3. Migrations (tracked runner)
 
