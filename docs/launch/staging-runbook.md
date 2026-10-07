@@ -275,26 +275,39 @@ deployment has occurred and no production database exists.
 The former Seoul staging project is not the selected environment; it
 is left untouched (do not access or delete it yet).
 
-## 10. Restoring the scheduled jobs (later FULL release)
+## 10. Scheduled jobs (restored in vercel.json)
 
-`vercel.json` intentionally ships with `"crons": []` for this
-release. The full release restores exactly this configuration
-(preserved here and in git history at tag/commit of PR #43-era
-`vercel.json`):
+The five production cron schedules are RESTORED in `vercel.json`
+(pinned by `tests/unit/vercel-config.test.ts`):
 
-```json
-{
-  "crons": [
-    { "path": "/api/jobs/reconcile-payments", "schedule": "*/5 * * * *" },
-    { "path": "/api/jobs/send-reminders", "schedule": "*/10 * * * *" },
-    { "path": "/api/jobs/expire-listings", "schedule": "*/15 * * * *" },
-    { "path": "/api/jobs/promotion-housekeeping", "schedule": "*/15 * * * *" },
-    { "path": "/api/jobs/cleanup-images", "schedule": "0 */6 * * *" }
-  ]
-}
-```
+| Job | Schedule | Effect on production records |
+|---|---|---|
+| `reconcile-payments` | `*/5 * * * *` | re-verifies stale PENDING Kapital payments through the same exactly-once verification path as the callback — the safety net for pending paid orders (see §8) |
+| `send-reminders` | `*/10 * * * *` | schedules expiry-reminder rows; DELIVERY is a no-op in production (the notification provider is fail-closed null until a channel is integrated — MSM covers OTP only), logged as `provider_unconfigured` |
+| `expire-listings` | `*/15 * * * *` | overdue ACTIVE listings → EXPIRED (idempotent; public queries already exclude overdue rows by `current_expires_at`) |
+| `promotion-housekeeping` | `*/15 * * * *` | syncs promotion statuses from their time windows (idempotent) |
+| `cleanup-images` | `0 */6 * * *` | reference-checked, grace-gated, bounded storage-orphan cleanup (idempotent) |
 
-together with: `LAUNCH_MODE=FULL`, a strong `CRON_SECRET` (≥16
-chars), real WhatsApp + Kapital credentials, and a reviewed release
-that re-enables login, selling, payments and moderation. The job
-endpoints stay double-gated: cron auth AND launch mode.
+Deploying the schedules does NOT run the jobs: every endpoint is
+double-gated — in READ_ONLY it refuses even a valid `CRON_SECRET`
+(503, covered for all five routes by
+`tests/integration/cron-routes-auth.test.ts`), and without a
+provisioned `CRON_SECRET` (≥16 chars) every call gets a uniform 401,
+so Vercel's unauthenticated cron pings are inert until the secret is
+set.
+
+Prerequisites before these schedules actually execute work:
+- **Vercel plan**: sub-daily schedules require a paid plan (Hobby
+  allows only a couple of daily crons) — the Owner must confirm the
+  team plan supports `*/5` frequencies BEFORE merging, or Vercel will
+  not honor them.
+- `CRON_SECRET` set in Vercel Production (Vercel then sends it as
+  the Bearer automatically).
+- `LAUNCH_MODE=FULL` via a successful redeploy (§0), as part of the
+  reviewed full release (login, selling, payments, moderation),
+  optionally behind the Owner pilot gate.
+
+If READ_ONLY is ever restored while payments are pending, follow §8:
+the jobs refuse again, pending paid orders wait safely and reconcile
+on the next FULL deployment — never assume a captured payment can be
+ignored just because the site went read-only.
