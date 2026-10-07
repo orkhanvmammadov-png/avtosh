@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { maskPhone } from "@/auth/phone";
 import { ApiError } from "@/lib/api/errors";
 import { isReadOnlyLaunch } from "@/lib/config/launch";
+import { pilotGate } from "@/lib/config/launch-pilot";
+import { readOnlyLaunchError } from "@/lib/api/handler";
 import { listingImageConfig } from "@/lib/config/listing-images";
 import { marketplaceConfig, type SearchSort } from "@/lib/config/marketplace";
 import { getSql } from "@/lib/server/db/client";
@@ -644,6 +646,12 @@ export async function revealListingContact(
   publicId: number,
   sourceHash: string | null,
 ): Promise<ContactRevealDto> {
+  // Pilot: contact reveal is anonymous, so no allowlist membership
+  // can be proven — it is unavailable for everyone during the pilot
+  // (same honest coming-later answer as the read-only launch).
+  if (pilotGate().active) {
+    throw readOnlyLaunchError();
+  }
   const sql = getSql();
   const row = await getPublicContact(sql, publicId);
   const visible =

@@ -519,6 +519,29 @@ describe("callback — session-independent fulfillment and privacy", () => {
     expect(after.outboxPaymentSuccess).toBe(1);
   });
 
+  it("the Owner pilot gate never blocks verification/fulfillment of an already-created order", async () => {
+    const provider = installFake();
+    const payer = await createTestUserSession("+994519000011");
+    const { listingId, paymentId } = await insertPaidListing(payer.userId);
+    await checkout(listingId, payer.cookie); // order created BEFORE the pilot
+    const orderId = [...provider.orders.keys()][0];
+    provider.orders.get(orderId)!.status = "FullyPaid";
+    // Pilot enabled with an allowlist that does NOT include the payer:
+    // the bank return and reconciliation must still settle the money
+    // exactly once (verification is session-independent by design).
+    process.env.LAUNCH_PILOT_PHONES = "+994510000001";
+    try {
+      const result = await handleKapitalCallback(null, orderId);
+      expect(result.view).toBe("GENERIC");
+      const after = await counts(listingId, paymentId);
+      expect(after.paymentStatus).toBe("SUCCESS");
+      expect(after.listingStatus).toBe("PENDING_MODERATION");
+      expect(after.outboxPaymentSuccess).toBe(1);
+    } finally {
+      delete process.env.LAUNCH_PILOT_PHONES;
+    }
+  });
+
   it("a foreign session cannot block verification and learns nothing", async () => {
     const provider = installFake();
     const { listingId, paymentId } = await insertPaidListing(seller.userId);

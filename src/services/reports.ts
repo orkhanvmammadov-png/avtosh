@@ -1,4 +1,6 @@
 import { ApiError } from "@/lib/api/errors";
+import { pilotGate } from "@/lib/config/launch-pilot";
+import { readOnlyLaunchError } from "@/lib/api/handler";
 import { marketplaceConfig } from "@/lib/config/marketplace";
 import { getSql } from "@/lib/server/db/client";
 import {
@@ -34,6 +36,11 @@ export async function submitListingReport(
   sourceHash: string | null,
   input: { reasonCode: ReportReasonCode; note: string | null },
 ): Promise<void> {
+  // Pilot: anonymous intake is unavailable while the pilot gate is
+  // active (no membership can be proven without a session).
+  if (pilotGate().active) {
+    throw readOnlyLaunchError();
+  }
   const sql = getSql();
   // Reportable = exactly the publicly reachable detail statuses
   // (Phase 4.8: full/limited views). Anything else — SUSPENDED,
