@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { isReadOnlyLaunch } from "@/lib/config/launch";
+import { pilotGate } from "@/lib/config/launch-pilot";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Check } from "lucide-react";
@@ -128,6 +129,12 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const title = detailTitle(listing);
   const limited = !listing.contactable;
   const readOnly = isReadOnlyLaunch();
+  // Owner-only pilot: the anonymous contact-reveal and report
+  // endpoints refuse while LAUNCH_PILOT_PHONES is active, so the UI
+  // shows the same honest "coming soon" treatment as READ_ONLY
+  // instead of buttons that would 503. Favorites stay gated on
+  // readOnly only — they are authenticated and work for pilot users.
+  const contactUnavailable = readOnly || pilotGate().active;
   const contactable = !limited && listing.seller !== null;
   const freshness = listing.publishedAt === null ? null : formatFreshness(listing.publishedAt, nowMs);
   const meta = [
@@ -225,7 +232,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               ) : null}
               </div>
               <div className="mt-4 md:mt-0 md:flex md:shrink-0 md:items-center md:gap-2 desk:mt-3 desk:block xl:mt-4">
-                {readOnly && contactable ? (
+                {contactUnavailable && contactable ? (
                   <div
                     role="status"
                     className="rounded-lg bg-[#FBEED8] px-4 py-3.5"
@@ -287,7 +294,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   Elan № {listing.publicId}
                   {listing.publishedAt !== null ? ` · ${formatDateAz(listing.publishedAt)}` : ""}
                 </span>
-                {readOnly ? null : (
+                {contactUnavailable ? null : (
                   <a href="#report" className="text-[#D08A82] transition-colors duration-150 hover:underline" data-testid="panel-report-link">
                     Şikayət et
                   </a>
@@ -385,7 +392,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                 </p>
               </div>
             </div>
-            {readOnly ? null : (
+            {contactUnavailable ? null : (
               <a href="#report" className="shrink-0 text-[11.5px] font-medium text-[#B3261E] hover:underline">
                 Şikayət et
               </a>
@@ -398,7 +405,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             əvvəl beh göndərməyin.
           </Notice>
         ) : null}
-        {readOnly ? null : (
+        {contactUnavailable ? null : (
           <div className="mt-5 pt-1" id="report">
             <ReportListing publicId={listing.publicId} />
           </div>
