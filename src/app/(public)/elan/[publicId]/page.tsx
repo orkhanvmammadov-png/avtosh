@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { isReadOnlyLaunch } from "@/lib/config/launch";
 import { pilotGate } from "@/lib/config/launch-pilot";
+import { getCurrentAuthFromCookies } from "@/auth/current-user";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Check } from "lucide-react";
@@ -129,12 +130,17 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const title = detailTitle(listing);
   const limited = !listing.contactable;
   const readOnly = isReadOnlyLaunch();
-  // Owner-only pilot: the anonymous contact-reveal and report
-  // endpoints refuse while LAUNCH_PILOT_PHONES is active, so the UI
-  // shows the same honest "coming soon" treatment as READ_ONLY
-  // instead of buttons that would 503. Favorites stay gated on
-  // readOnly only — they are authenticated and work for pilot users.
-  const contactUnavailable = readOnly || pilotGate().active;
+  // Owner-only pilot: contact reveal is permitted for a signed-in
+  // pilot user (the session resolver nullifies everyone else), so
+  // the button shows only to them; all other visitors get the honest
+  // "coming soon" notice. Reports stay blocked for EVERYONE during
+  // the pilot. Favorites stay gated on readOnly only. The session
+  // lookup runs only while the pilot is active — zero extra queries
+  // in public FULL.
+  const pilotActive = pilotGate().active;
+  const pilotAuthed = pilotActive && !readOnly ? (await getCurrentAuthFromCookies()) !== null : false;
+  const contactUnavailable = readOnly || (pilotActive && !pilotAuthed);
+  const reportsUnavailable = readOnly || pilotActive;
   const contactable = !limited && listing.seller !== null;
   const freshness = listing.publishedAt === null ? null : formatFreshness(listing.publishedAt, nowMs);
   const meta = [
@@ -294,7 +300,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   Elan № {listing.publicId}
                   {listing.publishedAt !== null ? ` · ${formatDateAz(listing.publishedAt)}` : ""}
                 </span>
-                {contactUnavailable ? null : (
+                {reportsUnavailable ? null : (
                   <a href="#report" className="text-[#D08A82] transition-colors duration-150 hover:underline" data-testid="panel-report-link">
                     Şikayət et
                   </a>
@@ -392,7 +398,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                 </p>
               </div>
             </div>
-            {contactUnavailable ? null : (
+            {reportsUnavailable ? null : (
               <a href="#report" className="shrink-0 text-[11.5px] font-medium text-[#B3261E] hover:underline">
                 Şikayət et
               </a>
@@ -405,7 +411,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             əvvəl beh göndərməyin.
           </Notice>
         ) : null}
-        {contactUnavailable ? null : (
+        {reportsUnavailable ? null : (
           <div className="mt-5 pt-1" id="report">
             <ReportListing publicId={listing.publicId} />
           </div>
