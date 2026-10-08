@@ -645,11 +645,15 @@ export interface ContactRevealDto {
 export async function revealListingContact(
   publicId: number,
   sourceHash: string | null,
+  options: { pilotAuthenticated?: boolean } = {},
 ): Promise<ContactRevealDto> {
-  // Pilot: contact reveal is anonymous, so no allowlist membership
-  // can be proven — it is unavailable for everyone during the pilot
-  // (same honest coming-later answer as the read-only launch).
-  if (pilotGate().active) {
+  // Pilot: contact reveal is permitted ONLY with a valid session for
+  // an allowlisted phone (the session resolvers already nullify
+  // every other session, so pilotAuthenticated === a pilot user).
+  // Anonymous and outsider requests keep the honest coming-later
+  // answer; with the pilot variable removed the gate is inactive and
+  // anonymous reveal works exactly as before.
+  if (pilotGate().active && options.pilotAuthenticated !== true) {
     throw readOnlyLaunchError();
   }
   const sql = getSql();

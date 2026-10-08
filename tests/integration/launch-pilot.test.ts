@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { closeSql } from "@/lib/server/db/client";
+import { closeSql, getSql } from "@/lib/server/db/client";
 import { createTestUserSession } from "./helpers/session";
 import {
   createMemoryWhatsAppProvider,
@@ -37,6 +37,7 @@ let provider: MemoryWhatsAppProvider;
 let outsider: { cookie: string };
 let pilotUser: { cookie: string };
 let outsiderChallengeId = "";
+let activePublicId = "";
 
 type Handler = (request: Request, context?: { params: Promise<Record<string, string>> }) => Promise<Response>;
 
@@ -85,6 +86,31 @@ beforeAll(async () => {
   expect(preChallenge.status).toBe(200);
   outsiderChallengeId = ((await preChallenge.json()) as { data: { challenge_id: string } }).data
     .challenge_id;
+
+  // ACTIVE listing fixture (unique lp-* slugs) for the contact tests.
+  const sql = getSql();
+  const [cat] = await sql<{ id: string }[]>`select id from categories where code = 'CAR'`;
+  const [brand] = await sql<{ id: string }[]>`
+    insert into brands (name, slug) values ('LpBrand', 'lp-brand') returning id
+  `;
+  await sql`insert into brand_categories (brand_id, category_id) values (${brand!.id}, ${cat!.id})`;
+  const [model] = await sql<{ id: string }[]>`
+    insert into models (brand_id, category_id, name, slug)
+    values (${brand!.id}, ${cat!.id}, 'LpModel', 'lp-model') returning id
+  `;
+  const [city] = await sql<{ id: string }[]>`
+    insert into cities (name_az, slug) values ('LpBakı', 'lp-baki') returning id
+  `;
+  const [listing] = await sql<{ public_id: string }[]>`
+    insert into listings (owner_id, category_id, brand_id, model_id, city_id, year,
+      price_minor, mileage, description, contact_phone_e164, seller_name,
+      status, published_at, current_expires_at)
+    values (${(await createTestUserSession("+994519111222")).userId}, ${cat!.id}, ${brand!.id}, ${model!.id}, ${city!.id}, 2021,
+      1500000, 40000, 'Lp təsvir', '+994501112233', 'Lp Seller',
+      'ACTIVE', now(), now() + interval '10 days')
+    returning public_id::text as public_id
+  `;
+  activePublicId = listing!.public_id;
 
   process.env.LAUNCH_PILOT_PHONES = PILOT_PHONE; // pilot ON from here
 });
@@ -182,20 +208,58 @@ describe("existing sessions never bypass the pilot", () => {
   });
 });
 
-describe("anonymous mutations, public reads, jobs and payment paths", () => {
-  it("anonymous contact reveal and report intake refuse during the pilot", async () => {
-    const contact = await call(contactRoute, "POST", "http://localhost/api/v1/listings/1/contact", {
-      params: { publicId: "1" },
+describe("contact reveal during the pilot — session-gated", () => {
+  function contactCall(cookie?: string) {
+    return call(contactRoute, "POST", `http://localhost/api/v1/listings/${activePublicId}/contact`, {
+      params: { publicId: activePublicId },
+      cookie,
     });
+  }
+
+  it("anonymous requests refuse with the launch 503", async () => {
+    const contact = await contactCall();
     expect(contact.status).toBe(503);
     expect(await errorCode(contact)).toBe("SERVICE_READ_ONLY");
-    const report = await call(reportRoute, "POST", "http://localhost/api/v1/listings/1/report", {
-      params: { publicId: "1" },
-      body: { reason_code: "FRAUD_SUSPECTED" },
-    });
-    expect(report.status).toBe(503);
-    expect(await errorCode(report)).toBe("SERVICE_READ_ONLY");
   });
+
+  it("an outsider session refuses identically (no bypass)", async () => {
+    const contact = await contactCall(outsider.cookie);
+    expect(contact.status).toBe(503);
+    expect(await errorCode(contact)).toBe("SERVICE_READ_ONLY");
+  });
+
+  it("the pilot session receives the listing contact, uncached", async () => {
+    const contact = await contactCall(pilotUser.cookie);
+    expect(contact.status).toBe(200);
+    expect(contact.headers.get("cache-control")).toBe("no-store");
+    const body = (await contact.json()) as { data: { contact: { phone?: string } } };
+    expect(body.data.contact.phone).toContain("+994");
+  });
+
+  it("public FULL (pilot variable removed) remains anonymous", async () => {
+    delete process.env.LAUNCH_PILOT_PHONES;
+    try {
+      const contact = await contactCall();
+      expect(contact.status).toBe(200);
+    } finally {
+      process.env.LAUNCH_PILOT_PHONES = PILOT_PHONE;
+    }
+  });
+
+  it("reports stay blocked during the pilot, even for the pilot session", async () => {
+    for (const cookie of [undefined, pilotUser.cookie]) {
+      const report = await call(reportRoute, "POST", `http://localhost/api/v1/listings/${activePublicId}/report`, {
+        params: { publicId: activePublicId },
+        body: { reason_code: "FRAUD_SUSPECTED" },
+        cookie,
+      });
+      expect(report.status).toBe(503);
+      expect(await errorCode(report)).toBe("SERVICE_READ_ONLY");
+    }
+  });
+});
+
+describe("anonymous mutations, public reads, jobs and payment paths", () => {
 
   it("public read-only browsing stays open", async () => {
     const brands = await call(brandsRoute, "GET", "http://localhost/api/v1/catalog/brands?category=CAR");
