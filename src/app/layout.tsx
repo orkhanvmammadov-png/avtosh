@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fira_Sans, Fira_Sans_Condensed } from "next/font/google";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
 
 /**
  * Approved brand typography (design handoff tokens.md): Fira Sans
@@ -54,6 +55,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           Məzmuna keç
         </a>
         {children}
+        {/* Vercel Web Analytics: anonymous page views only — no
+            custom events, no user identifiers or personal data. */}
+        <Analytics />
       </body>
     </html>
   );
