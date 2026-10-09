@@ -30,7 +30,10 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }): Promise<Metadata> {
   const state = filtersFromSearchParams(await searchParams);
-  const label = CATEGORY_LABELS[state.category ?? ""] ?? UI.listings;
+  // Mirror the page's default marketplace context (CAR) so the bare
+  // /elanlar URL titles as the CAR listing page it renders — never
+  // the "Elanlar elanları" fallback tautology.
+  const label = CATEGORY_LABELS[state.category ?? "CAR"] ?? CATEGORY_LABELS.CAR;
   return { title: `${label} elanları`, alternates: { canonical: searchHref(state) } };
 }
 
