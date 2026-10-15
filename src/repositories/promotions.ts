@@ -229,6 +229,65 @@ export async function insertPromotionPeriod(
   return rows[0];
 }
 
+/**
+ * Complimentary campaign PREMIUM period. Same queuing rule as paid
+ * periods (starts at greatest(now, latest unexpired same-type end) —
+ * so it appends after paid/scheduled Premium, and later paid
+ * purchases queue after it in turn). Idempotent: the partial unique
+ * index (listing_id, campaign_id) makes re-runs, repeated
+ * moderation callbacks and concurrent grants insert at most once;
+ * callers must hold lockListingForPromotion for ordering with
+ * concurrent checkouts.
+ */
+export async function insertCampaignPromotionPeriod(
+  sql: Sql,
+  input: { listingId: string; campaignId: string; grantDays: number },
+): Promise<InsertedPromotionRow | undefined> {
+  // WALL-CLOCK deadline guard: now() is frozen at transaction start,
+  // so a grant transaction that waited on the campaign FOR SHARE or
+  // the listing FOR UPDATE lock could otherwise insert AFTER the
+  // enrollment deadline. The EXISTS predicate re-checks the window
+  // with clock_timestamp() inside this very INSERT — evaluated after
+  // every lock is held, immediately before the row is written — so
+  // the 720-hour window is exact regardless of lock waits. The
+  // period's own starts_at uses clock_timestamp() for the same
+  // reason (no backdating after a wait).
+  const rows = await sql<InsertedPromotionRow[]>`
+    insert into listing_promotions
+      (listing_id, type, package_id, payment_id, campaign_id, source,
+       starts_at, ends_at, status, purchased_duration_days, purchased_price_minor)
+    select
+      ${input.listingId}, 'PREMIUM'::promotion_type, null, null,
+      ${input.campaignId}, 'CAMPAIGN', base.starts_at,
+      base.starts_at + (${input.grantDays} || ' days')::interval,
+      case when base.starts_at <= clock_timestamp() then 'ACTIVE' else 'SCHEDULED' end::promotion_status,
+      ${input.grantDays}, 0
+    from (
+      select greatest(
+        clock_timestamp(),
+        coalesce(
+          (select max(ends_at) from listing_promotions
+            where listing_id = ${input.listingId}
+              and type = 'PREMIUM'::promotion_type
+              and status in ('SCHEDULED', 'ACTIVE') and ends_at > clock_timestamp()),
+          clock_timestamp()
+        )
+      ) as starts_at
+    ) base
+    where exists (
+      select 1 from premium_campaigns c
+      where c.id = ${input.campaignId}
+        and c.status = 'ENROLLING'
+        and c.enrollment_starts_at <= clock_timestamp()
+        and c.enrollment_ends_at > clock_timestamp()
+    )
+    on conflict (listing_id, campaign_id) where campaign_id is not null
+      do nothing
+    returning id, starts_at, ends_at, status::text as status
+  `;
+  return rows[0];
+}
+
 /** Fulfilled promotion period for a payment (result page display). */
 export async function findPromotionByPayment(
   sql: Sql,
@@ -259,6 +318,32 @@ export async function ownerPromotionState(
           and status in ('SCHEDULED','ACTIVE') and ends_at > now()) as boost_until
   `;
   return rows[0];
+}
+
+/** Append-only audit entry for a complimentary campaign grant. */
+export async function insertCampaignGrantAudit(
+  sql: Sql,
+  input: {
+    listingId: string;
+    campaignId: string;
+    campaignCode: string;
+    grantedVia: "BACKFILL" | "APPROVAL";
+    startsAt: Date;
+    endsAt: Date;
+  },
+): Promise<void> {
+  await sql`
+    insert into audit_logs (actor_user_id, actor_type, action, entity_type, entity_id, after_data)
+    values (null, 'SYSTEM', 'PROMOTION_CAMPAIGN_GRANTED', 'listing', ${input.listingId},
+      ${sql.json({
+        campaign_id: input.campaignId,
+        campaign_code: input.campaignCode,
+        granted_via: input.grantedVia,
+        promotion_type: "PREMIUM",
+        starts_at: input.startsAt.toISOString(),
+        ends_at: input.endsAt.toISOString(),
+      })})
+  `;
 }
 
 /** Append-only audit entry for server-side promotion activation. */
