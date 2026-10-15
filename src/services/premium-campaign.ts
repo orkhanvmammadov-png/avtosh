@@ -5,8 +5,8 @@ import {
   lockListingForPromotion,
 } from "@/repositories/promotions";
 import {
-  findOpenPremiumCampaign,
-  type PremiumCampaignRow,
+  lockCampaignForGrant,
+  lockOpenPremiumCampaign,
 } from "@/repositories/premium-campaigns";
 import { insertOutboxEvent } from "@/repositories/listing-publications";
 
@@ -35,23 +35,33 @@ export async function grantCampaignPremium(
   tx: Sql,
   input: {
     listingId: string;
-    campaign: PremiumCampaignRow;
+    campaignId: string;
     grantedVia: "BACKFILL" | "APPROVAL";
   },
-): Promise<{ granted: boolean; endsAt?: Date }> {
+): Promise<{ granted: boolean; reason?: "CAMPAIGN_CLOSED" | "ALREADY_GRANTED"; endsAt?: Date }> {
+  // Authoritative, race-safe enrollment check INSIDE the grant
+  // transaction: the campaign row is read FOR SHARE with status
+  // ENROLLING and now within [starts, ends). A concurrent --stop
+  // blocks on this lock until we commit; after a committed stop (or
+  // outside the window, on either side) no grant can pass here —
+  // this covers the backfill and the approval path identically.
+  const campaign = await lockCampaignForGrant(tx, input.campaignId);
+  if (campaign === undefined) {
+    return { granted: false, reason: "CAMPAIGN_CLOSED" };
+  }
   await lockListingForPromotion(tx, input.listingId);
   const period = await insertCampaignPromotionPeriod(tx, {
     listingId: input.listingId,
-    campaignId: input.campaign.id,
-    grantDays: input.campaign.grant_days,
+    campaignId: campaign.id,
+    grantDays: campaign.grant_days,
   });
   if (period === undefined) {
-    return { granted: false }; // already granted by this campaign
+    return { granted: false, reason: "ALREADY_GRANTED" };
   }
   await insertCampaignGrantAudit(tx, {
     listingId: input.listingId,
-    campaignId: input.campaign.id,
-    campaignCode: input.campaign.code,
+    campaignId: campaign.id,
+    campaignCode: campaign.code,
     grantedVia: input.grantedVia,
     startsAt: period.starts_at,
     endsAt: period.ends_at,
@@ -63,7 +73,7 @@ export async function grantCampaignPremium(
       listing_id: input.listingId,
       promotion_type: "PREMIUM",
       source: "CAMPAIGN",
-      campaign_code: input.campaign.code,
+      campaign_code: campaign.code,
       granted_via: input.grantedVia,
       starts_at: period.starts_at.toISOString(),
       ends_at: period.ends_at.toISOString(),
@@ -84,9 +94,12 @@ export async function enrollApprovedListingInOpenCampaign(
   tx: Sql,
   listingId: string,
 ): Promise<void> {
-  const campaign = await findOpenPremiumCampaign(tx);
+  // Locked ENROLLING+window read (FOR SHARE) — the same database
+  // enforcement as the backfill path; a DRAFT (prepared-but-unopened)
+  // or stopped campaign can never grant here.
+  const campaign = await lockOpenPremiumCampaign(tx);
   if (campaign === undefined) {
     return;
   }
-  await grantCampaignPremium(tx, { listingId, campaign, grantedVia: "APPROVAL" });
+  await grantCampaignPremium(tx, { listingId, campaignId: campaign.id, grantedVia: "APPROVAL" });
 }

@@ -15,9 +15,15 @@ create table premium_campaigns (
   -- bounds enrollment, never the benefit.
   enrollment_starts_at timestamptz not null,
   enrollment_ends_at timestamptz not null,
-  status text not null default 'ACTIVE'
-    constraint premium_campaigns_status_allowed check (status in ('ACTIVE', 'STOPPED')),
+  -- Lifecycle: DRAFT (prepared; dry-runs allowed, NO grants possible)
+  -- → ENROLLING (the one explicit opening operation; grants require
+  -- this status AND now within the window, checked FOR SHARE inside
+  -- every grant transaction) → STOPPED (terminal; issued grants
+  -- untouched).
+  status text not null default 'DRAFT'
+    constraint premium_campaigns_status_allowed check (status in ('DRAFT', 'ENROLLING', 'STOPPED')),
   created_at timestamptz not null default now(),
+  opened_at timestamptz,
   stopped_at timestamptz,
   constraint premium_campaigns_window_valid
     check (enrollment_ends_at > enrollment_starts_at)

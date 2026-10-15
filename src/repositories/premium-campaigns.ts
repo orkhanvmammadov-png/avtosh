@@ -9,7 +9,7 @@ export interface PremiumCampaignRow {
   grant_days: number;
   enrollment_starts_at: Date;
   enrollment_ends_at: Date;
-  status: "ACTIVE" | "STOPPED";
+  status: "DRAFT" | "ENROLLING" | "STOPPED";
 }
 
 const CAMPAIGN_SELECT = `id, code, grant_days,
@@ -27,23 +27,70 @@ export async function findCampaignByCode(
 }
 
 /**
- * The campaign whose enrollment window is open RIGHT NOW (status
- * ACTIVE, now within [starts, ends)). At most one is expected; the
- * newest wins deterministically if operators ever overlap two.
+ * The campaign that may grant RIGHT NOW: status ENROLLING and now
+ * within [starts, ends). Locked FOR SHARE so a concurrent --stop
+ * (an UPDATE on the row) blocks until this grant transaction
+ * commits, and once a stop has committed no later grant transaction
+ * can pass this predicate — the enforcement is the database's row
+ * lock, never a status read before a long-running loop. MUST be
+ * called inside the transaction that inserts the grant. At most one
+ * open campaign is expected; the newest wins deterministically.
  */
-export async function findOpenPremiumCampaign(
+export async function lockOpenPremiumCampaign(
   sql: Sql,
 ): Promise<PremiumCampaignRow | undefined> {
   const rows = await sql<PremiumCampaignRow[]>`
     select id, code, grant_days, enrollment_starts_at, enrollment_ends_at, status
     from premium_campaigns
-    where status = 'ACTIVE'
+    where status = 'ENROLLING'
       and enrollment_starts_at <= now()
       and enrollment_ends_at > now()
     order by enrollment_starts_at desc
     limit 1
+    for share
   `;
   return rows[0];
+}
+
+/** Same locked read for ONE specific campaign (backfill path). */
+export async function lockCampaignForGrant(
+  sql: Sql,
+  campaignId: string,
+): Promise<PremiumCampaignRow | undefined> {
+  const rows = await sql<PremiumCampaignRow[]>`
+    select id, code, grant_days, enrollment_starts_at, enrollment_ends_at, status
+    from premium_campaigns
+    where id = ${campaignId}
+      and status = 'ENROLLING'
+      and enrollment_starts_at <= now()
+      and enrollment_ends_at > now()
+    for share
+  `;
+  return rows[0];
+}
+
+/**
+ * The ONE explicit opening operation (DRAFT → ENROLLING). Rejected
+ * unless now is inside the configured window — opening outside the
+ * window has no meaningful semantics and would otherwise create a
+ * campaign that silently never (or retroactively) grants.
+ */
+export async function openCampaignEnrollment(
+  sql: Sql,
+  code: string,
+): Promise<"OPENED" | "NOT_DRAFT" | "OUTSIDE_WINDOW" | "NOT_FOUND"> {
+  const campaign = await findCampaignByCode(sql, code);
+  if (campaign === undefined) return "NOT_FOUND";
+  if (campaign.status !== "DRAFT") return "NOT_DRAFT";
+  const rows = await sql<{ id: string }[]>`
+    update premium_campaigns
+    set status = 'ENROLLING', opened_at = now()
+    where code = ${code} and status = 'DRAFT'
+      and enrollment_starts_at <= now()
+      and enrollment_ends_at > now()
+    returning id
+  `;
+  return rows.length > 0 ? "OPENED" : "OUTSIDE_WINDOW";
 }
 
 export async function createCampaign(
@@ -58,12 +105,17 @@ export async function createCampaign(
   return rows[0]!;
 }
 
-/** Controlled stop: enrollment closes; issued grants are untouched. */
+/**
+ * Controlled stop: enrollment closes; issued grants are untouched.
+ * The UPDATE waits for in-flight grant transactions (they hold the
+ * row FOR SHARE) and, once committed, every later grant transaction
+ * fails the locked ENROLLING read — database-enforced, race-safe.
+ */
 export async function stopCampaign(sql: Sql, code: string): Promise<boolean> {
   const rows = await sql<{ id: string }[]>`
     update premium_campaigns
     set status = 'STOPPED', stopped_at = now()
-    where code = ${code} and status = 'ACTIVE'
+    where code = ${code} and status in ('DRAFT', 'ENROLLING')
     returning id
   `;
   return rows.length > 0;
