@@ -243,6 +243,15 @@ export async function insertCampaignPromotionPeriod(
   sql: Sql,
   input: { listingId: string; campaignId: string; grantDays: number },
 ): Promise<InsertedPromotionRow | undefined> {
+  // WALL-CLOCK deadline guard: now() is frozen at transaction start,
+  // so a grant transaction that waited on the campaign FOR SHARE or
+  // the listing FOR UPDATE lock could otherwise insert AFTER the
+  // enrollment deadline. The EXISTS predicate re-checks the window
+  // with clock_timestamp() inside this very INSERT — evaluated after
+  // every lock is held, immediately before the row is written — so
+  // the 720-hour window is exact regardless of lock waits. The
+  // period's own starts_at uses clock_timestamp() for the same
+  // reason (no backdating after a wait).
   const rows = await sql<InsertedPromotionRow[]>`
     insert into listing_promotions
       (listing_id, type, package_id, payment_id, campaign_id, source,
@@ -251,20 +260,27 @@ export async function insertCampaignPromotionPeriod(
       ${input.listingId}, 'PREMIUM'::promotion_type, null, null,
       ${input.campaignId}, 'CAMPAIGN', base.starts_at,
       base.starts_at + (${input.grantDays} || ' days')::interval,
-      case when base.starts_at <= now() then 'ACTIVE' else 'SCHEDULED' end::promotion_status,
+      case when base.starts_at <= clock_timestamp() then 'ACTIVE' else 'SCHEDULED' end::promotion_status,
       ${input.grantDays}, 0
     from (
       select greatest(
-        now(),
+        clock_timestamp(),
         coalesce(
           (select max(ends_at) from listing_promotions
             where listing_id = ${input.listingId}
               and type = 'PREMIUM'::promotion_type
-              and status in ('SCHEDULED', 'ACTIVE') and ends_at > now()),
-          now()
+              and status in ('SCHEDULED', 'ACTIVE') and ends_at > clock_timestamp()),
+          clock_timestamp()
         )
       ) as starts_at
     ) base
+    where exists (
+      select 1 from premium_campaigns c
+      where c.id = ${input.campaignId}
+        and c.status = 'ENROLLING'
+        and c.enrollment_starts_at <= clock_timestamp()
+        and c.enrollment_ends_at > clock_timestamp()
+    )
     on conflict (listing_id, campaign_id) where campaign_id is not null
       do nothing
     returning id, starts_at, ends_at, status::text as status

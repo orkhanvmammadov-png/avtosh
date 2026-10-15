@@ -356,6 +356,39 @@ describe("stop is race-safe against in-flight grants", () => {
   });
 });
 
+describe("wall-clock deadline survives lock waits", () => {
+  it("a grant that starts inside the window but waits on a lock past enrollment end inserts nothing", async () => {
+    const sql = getSql();
+    const deadline = Date.now() + 600;
+    const lateCampaign = await enrollingCampaign(new Date(Date.now() - 60_000), new Date(deadline));
+    const contested = await insertListing("wallClock", "ACTIVE");
+
+    // tx1 holds the listing FOR UPDATE lock across the enrollment end
+    // (now() inside tx2 stays frozen at ITS transaction start, so only
+    // the clock_timestamp() guard inside the INSERT can catch this).
+    const holder = withTransaction(async (tx) => {
+      await tx`select id from listings where id = ${contested} for update`;
+      await delay(1_400); // released well AFTER the deadline
+    });
+    await delay(150); // tx1 holds the lock; the window is still open
+    expect(Date.now()).toBeLessThan(deadline);
+    const grantPromise = grant(contested, lateCampaign.id);
+    const [, grantResult] = await Promise.all([holder, grantPromise]);
+
+    // The grant passed the FOR SHARE window pre-check in-window, then
+    // blocked on the listing lock until past enrollment_ends_at — the
+    // wall-clock guard must refuse the row.
+    expect(Date.now()).toBeGreaterThan(deadline);
+    expect(grantResult).toMatchObject({ granted: false, reason: "CAMPAIGN_CLOSED" });
+    expect(await premiumPeriods(contested)).toHaveLength(0);
+    const [audits] = await sql<{ n: string }[]>`
+      select count(*)::text as n from audit_logs
+      where action = 'PROMOTION_CAMPAIGN_GRANTED' and entity_id = ${contested}
+    `;
+    expect(Number(audits!.n)).toBe(0);
+  });
+});
+
 describe("campaign shutdown", () => {
   it("stop closes enrollment without touching issued grants", async () => {
     const sql = getSql();

@@ -1,0 +1,8 @@
+decision_id,subject,owner_decision,owner_note,decided_at
+C1,13 BMW numeric pilot variants,RATIFIED_PRODUCTION_EVIDENCE_READY,Official BMW evidence accepted.,2026-09-24
+C2,18 PROPOSE_VARIANT structural classifications,RATIFIED_STRUCTURE,Structure approved; per-variant evidence grades still apply.,2026-09-24
+C3,Conversions S3/RS3/Civic Si/Civic Type R,RATIFIED_CONVERSION,Applied in v2.,2026-09-24
+C4,Ford Mustang GT,RATIFIED_EXCLUDE_NOT_TAXONOMY,Official Ford trim positioning.,2026-09-24
+C5,Santa FE -> Santa Fe,RATIFIED_DISPLAY_FIX,Slug santa-fe unchanged; applied in v2.,2026-09-24
+C6,14 Mercedes provisional variants / 5 families,EVIDENCE_UPGRADE_EXECUTED,13 of 14 upgraded to PRODUCTION_EVIDENCE_READY; E 500 remains UNRESOLVED_SOURCE_BLOCKER.,2026-09-24
+C7,97 deferred rows,CLOSED_PER_POLICY,All 97 closed; zero REVIEW remains in the v2 masters.,2026-09-24

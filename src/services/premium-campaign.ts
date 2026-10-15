@@ -56,7 +56,19 @@ export async function grantCampaignPremium(
     grantDays: campaign.grant_days,
   });
   if (period === undefined) {
-    return { granted: false, reason: "ALREADY_GRANTED" };
+    // The guarded insert declined: either this campaign already
+    // granted here (unique index) or the wall-clock deadline passed
+    // while we waited on locks (clock_timestamp() guard inside the
+    // INSERT — now() is frozen at transaction start and must not
+    // decide the 720-hour window).
+    const [existing] = await tx<{ id: string }[]>`
+      select id from listing_promotions
+      where listing_id = ${input.listingId} and campaign_id = ${campaign.id}
+    `;
+    return {
+      granted: false,
+      reason: existing === undefined ? "CAMPAIGN_CLOSED" : "ALREADY_GRANTED",
+    };
   }
   await insertCampaignGrantAudit(tx, {
     listingId: input.listingId,

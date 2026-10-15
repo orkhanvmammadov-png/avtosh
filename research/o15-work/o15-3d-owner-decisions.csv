@@ -1,0 +1,9 @@
+decision_id,subject,owner_decision,owner_note,applied_to,decided_at
+D1,Mercedes reopened QA (17 rows),RATIFIED,"All 17 outcomes ratified exactly as recorded (3 EXCLUDE, 3 REVIEW, 2 family 170, 9 E-Class).",mercedes-reopened-review.csv,2026-09-24
+D2,95 CAR + 2 MOTO REVIEW rows,DEFER_TO_RESEARCH_BACKLOG,Deferred from AVTOSH.AZ catalog v1 pending sufficient taxonomy or identity evidence. Explicitly barred from production import.,car-review-closure.csv; moto-review-closure.csv; deferred-review-backlog.csv,2026-09-24
+D3,21 MEDIUM-risk exclusions,APPROVE_EXCLUSION_FOR_V1,Outside the current AVTOSH.AZ CAR/MOTO MVP catalog boundary. The exclusion is reversible and the raw source identity must remain preserved for future scope review.,medium-risk-exclusion-review.csv,2026-09-24
+D4,8 source-gap marques,ACKNOWLEDGED_SOURCE_GAP,No brand/model enters the import-ready dataset without later evidence.,source-gap-marques.csv,2026-09-24
+D5,Triumph identity,RATIFIED,"One global canonical marque; immutable slug triumph; CAR+MOTO category links; model families owned independently by (brand, category).",brand-decision-master.csv,2026-09-24
+D6,Approved family universe,RATIFIED,CAR 4501 + MOTO 5722 = 10223 import-candidate families; 97 deferred REVIEW rows; no REVIEW/EXCLUDE row among import candidates; reconciliation 4502->4500->4501 preserved.,car-family-count-reconciliation.csv,2026-09-24
+D7,Provenance,RATIFIED,source_checked_at=2026-09-24 is the dataset CHECK date; source_snapshot_date=UNKNOWN; never conflated; provenance fields stay outside the production import JSON.,all decision masters,2026-09-24
+D8,P0 pilot,APPROVED,148-family P0_AZ_CORE approved as ordered research queue; first wave = exactly 30 families (p0-wave-1.csv); no variant research started in O.15.3D.,variant-priority-backlog.csv; p0-wave-1.csv,2026-09-24

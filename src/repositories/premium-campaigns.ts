@@ -12,9 +12,6 @@ export interface PremiumCampaignRow {
   status: "DRAFT" | "ENROLLING" | "STOPPED";
 }
 
-const CAMPAIGN_SELECT = `id, code, grant_days,
-  enrollment_starts_at, enrollment_ends_at, status`;
-
 export async function findCampaignByCode(
   sql: Sql,
   code: string,
@@ -43,8 +40,8 @@ export async function lockOpenPremiumCampaign(
     select id, code, grant_days, enrollment_starts_at, enrollment_ends_at, status
     from premium_campaigns
     where status = 'ENROLLING'
-      and enrollment_starts_at <= now()
-      and enrollment_ends_at > now()
+      and enrollment_starts_at <= clock_timestamp()
+      and enrollment_ends_at > clock_timestamp()
     order by enrollment_starts_at desc
     limit 1
     for share
@@ -62,8 +59,8 @@ export async function lockCampaignForGrant(
     from premium_campaigns
     where id = ${campaignId}
       and status = 'ENROLLING'
-      and enrollment_starts_at <= now()
-      and enrollment_ends_at > now()
+      and enrollment_starts_at <= clock_timestamp()
+      and enrollment_ends_at > clock_timestamp()
     for share
   `;
   return rows[0];
@@ -86,8 +83,8 @@ export async function openCampaignEnrollment(
     update premium_campaigns
     set status = 'ENROLLING', opened_at = now()
     where code = ${code} and status = 'DRAFT'
-      and enrollment_starts_at <= now()
-      and enrollment_ends_at > now()
+      and enrollment_starts_at <= clock_timestamp()
+      and enrollment_ends_at > clock_timestamp()
     returning id
   `;
   return rows.length > 0 ? "OPENED" : "OUTSIDE_WINDOW";

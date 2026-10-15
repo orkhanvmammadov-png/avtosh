@@ -52,7 +52,7 @@ const code = arg("code");
 const modes = ["prepare", "dry-run", "open", "execute", "stop"].filter((m) => has(m));
 if (modes.length !== 1 || code === undefined || code === "") {
   console.error(
-    "Usage: --prepare|--dry-run|--open|--execute|--stop --code <CODE> [--starts-at <ISO>] [--grant-days 30]",
+    "Usage: --prepare|--dry-run|--open|--execute|--stop --code <CODE> [--starts-at <ISO with explicit offset>] [--grant-days 30]",
   );
   process.exit(1);
 }
@@ -75,8 +75,16 @@ try {
   if (has("prepare")) {
     const startsRaw = arg("starts-at");
     const grantDays = Number(arg("grant-days") ?? "30");
-    if (startsRaw === undefined || Number.isNaN(Date.parse(startsRaw))) {
-      console.error("--prepare requires --starts-at <ISO timestamp with offset>.");
+    // An explicit offset is mandatory: the documented Baku start
+    // instant must never depend on the operator machine's timezone.
+    if (
+      startsRaw === undefined ||
+      Number.isNaN(Date.parse(startsRaw)) ||
+      !/(Z|[+-]\d{2}:?\d{2})$/.test(startsRaw.trim())
+    ) {
+      console.error(
+        "--prepare requires --starts-at as an ISO timestamp WITH an explicit offset, e.g. 2026-10-20T00:00:00+04:00 (Asia/Baku) — bare local timestamps are refused.",
+      );
       process.exit(1);
     }
     if (!Number.isInteger(grantDays) || grantDays < 1 || grantDays > 90) {
@@ -175,7 +183,8 @@ try {
           const [live] = await tx`
             select grant_days, code from premium_campaigns
             where id = ${campaign.id} and status = 'ENROLLING'
-              and enrollment_starts_at <= now() and enrollment_ends_at > now()
+              and enrollment_starts_at <= clock_timestamp()
+              and enrollment_ends_at > clock_timestamp()
             for share
           `;
           if (!live) {
@@ -192,6 +201,11 @@ try {
             skipped += 1;
             return;
           }
+          // Wall-clock deadline guard inside the INSERT itself: now()
+          // is frozen at transaction start, and the listing FOR
+          // UPDATE wait above can cross the enrollment deadline —
+          // the EXISTS re-check with clock_timestamp() runs after
+          // every lock is held, immediately before the write.
           const inserted = await tx`
             insert into listing_promotions
               (listing_id, type, package_id, payment_id, campaign_id, source,
@@ -199,17 +213,30 @@ try {
             select ${listing.id}, 'PREMIUM'::promotion_type, null, null,
               ${campaign.id}, 'CAMPAIGN', base.starts_at,
               base.starts_at + (${live.grant_days} || ' days')::interval,
-              case when base.starts_at <= now() then 'ACTIVE' else 'SCHEDULED' end::promotion_status,
+              case when base.starts_at <= clock_timestamp() then 'ACTIVE' else 'SCHEDULED' end::promotion_status,
               ${live.grant_days}, 0
-            from (select greatest(now(), coalesce(
+            from (select greatest(clock_timestamp(), coalesce(
               (select max(ends_at) from listing_promotions
                 where listing_id = ${listing.id} and type = 'PREMIUM'
-                  and status in ('SCHEDULED','ACTIVE') and ends_at > now()), now())) as starts_at) base
+                  and status in ('SCHEDULED','ACTIVE') and ends_at > clock_timestamp()), clock_timestamp())) as starts_at) base
+            where exists (
+              select 1 from premium_campaigns c
+              where c.id = ${campaign.id} and c.status = 'ENROLLING'
+                and c.enrollment_starts_at <= clock_timestamp()
+                and c.enrollment_ends_at > clock_timestamp())
             on conflict (listing_id, campaign_id) where campaign_id is not null do nothing
             returning starts_at, ends_at
           `;
           if (inserted.length === 0) {
-            skipped += 1;
+            const [existing] = await tx`
+              select 1 from listing_promotions
+              where listing_id = ${listing.id} and campaign_id = ${campaign.id}
+            `;
+            if (existing) {
+              skipped += 1; // already granted — resumable re-run
+            } else {
+              closed = true; // deadline passed while waiting on locks
+            }
             return;
           }
           // Same committed side effects as the server path: audit AND

@@ -1,0 +1,453 @@
+{
+  "brands": [
+    {
+      "categories": [
+        "CAR"
+      ],
+      "name": "Audi",
+      "slug": "audi"
+    },
+    {
+      "categories": [
+        "CAR"
+      ],
+      "name": "BMW",
+      "slug": "bmw"
+    },
+    {
+      "categories": [
+        "CAR"
+      ],
+      "name": "Ford",
+      "slug": "ford"
+    },
+    {
+      "categories": [
+        "CAR"
+      ],
+      "name": "Honda",
+      "slug": "honda"
+    },
+    {
+      "categories": [
+        "CAR"
+      ],
+      "name": "Hyundai",
+      "slug": "hyundai"
+    },
+    {
+      "categories": [
+        "CAR"
+      ],
+      "name": "Kia",
+      "slug": "kia"
+    },
+    {
+      "categories": [
+        "CAR"
+      ],
+      "name": "Mercedes-Benz",
+      "slug": "mercedes-benz"
+    }
+  ],
+  "model_variants": [
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "model_slug": "3-series",
+      "name": "316",
+      "slug": "316",
+      "sort_order": 10
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "model_slug": "3-series",
+      "name": "318",
+      "slug": "318",
+      "sort_order": 20
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "model_slug": "3-series",
+      "name": "320",
+      "slug": "320",
+      "sort_order": 30
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "model_slug": "3-series",
+      "name": "323",
+      "slug": "323",
+      "sort_order": 40
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "model_slug": "3-series",
+      "name": "325",
+      "slug": "325",
+      "sort_order": 50
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "model_slug": "3-series",
+      "name": "328",
+      "slug": "328",
+      "sort_order": 60
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "model_slug": "3-series",
+      "name": "330",
+      "slug": "330",
+      "sort_order": 70
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "model_slug": "5-series",
+      "name": "518",
+      "slug": "518",
+      "sort_order": 10
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "model_slug": "5-series",
+      "name": "520",
+      "slug": "520",
+      "sort_order": 20
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "model_slug": "5-series",
+      "name": "525",
+      "slug": "525",
+      "sort_order": 30
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "model_slug": "5-series",
+      "name": "530",
+      "slug": "530",
+      "sort_order": 40
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "model_slug": "5-series",
+      "name": "535",
+      "slug": "535",
+      "sort_order": 50
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "model_slug": "5-series",
+      "name": "540",
+      "slug": "540",
+      "sort_order": 60
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "c-class",
+      "name": "C 180",
+      "slug": "c-180",
+      "sort_order": 10
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "c-class",
+      "name": "C 200",
+      "slug": "c-200",
+      "sort_order": 20
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "c-class",
+      "name": "C 220",
+      "slug": "c-220",
+      "sort_order": 30
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "c-class",
+      "name": "C 230",
+      "slug": "c-230",
+      "sort_order": 40
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "c-class",
+      "name": "C 280",
+      "slug": "c-280",
+      "sort_order": 50
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "e-class",
+      "name": "E 200",
+      "slug": "e-200",
+      "sort_order": 10
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "e-class",
+      "name": "E 220",
+      "slug": "e-220",
+      "sort_order": 20
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "e-class",
+      "name": "E 230",
+      "slug": "e-230",
+      "sort_order": 30
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "e-class",
+      "name": "E 250",
+      "slug": "e-250",
+      "sort_order": 40
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "e-class",
+      "name": "E 280",
+      "slug": "e-280",
+      "sort_order": 50
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "e-class",
+      "name": "E 300",
+      "slug": "e-300",
+      "sort_order": 60
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "e-class",
+      "name": "E 320",
+      "slug": "e-320",
+      "sort_order": 70
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "e-class",
+      "name": "E 400",
+      "slug": "e-400",
+      "sort_order": 80
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "model_slug": "e-class",
+      "name": "E 500",
+      "slug": "e-500",
+      "sort_order": 90
+    }
+  ],
+  "models": [
+    {
+      "brand_slug": "audi",
+      "category": "CAR",
+      "name": "A3",
+      "slug": "a3"
+    },
+    {
+      "brand_slug": "audi",
+      "category": "CAR",
+      "name": "A4",
+      "slug": "a4"
+    },
+    {
+      "brand_slug": "audi",
+      "category": "CAR",
+      "name": "Q5",
+      "slug": "q5"
+    },
+    {
+      "brand_slug": "audi",
+      "category": "CAR",
+      "name": "Q7",
+      "slug": "q7"
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "name": "1 Series",
+      "slug": "1-series"
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "name": "2 Series",
+      "slug": "2-series"
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "name": "3 Series",
+      "slug": "3-series"
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "name": "4 Series",
+      "slug": "4-series"
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "name": "5 Series",
+      "slug": "5-series"
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "name": "X1",
+      "slug": "x1"
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "name": "X3",
+      "slug": "x3"
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "name": "X5",
+      "slug": "x5"
+    },
+    {
+      "brand_slug": "ford",
+      "category": "CAR",
+      "name": "Mustang",
+      "slug": "mustang"
+    },
+    {
+      "brand_slug": "honda",
+      "category": "CAR",
+      "name": "CR-V",
+      "slug": "cr-v"
+    },
+    {
+      "brand_slug": "honda",
+      "category": "CAR",
+      "name": "HR-V",
+      "slug": "hr-v"
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "name": "A-Class",
+      "slug": "a-class"
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "name": "C-Class",
+      "slug": "c-class"
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "name": "CLA",
+      "slug": "cla"
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "name": "E-Class",
+      "slug": "e-class"
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "name": "GLC",
+      "slug": "glc"
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "name": "GLE",
+      "slug": "gle"
+    },
+    {
+      "brand_slug": "mercedes-benz",
+      "category": "CAR",
+      "name": "S-Class",
+      "slug": "s-class"
+    },
+    {
+      "brand_slug": "audi",
+      "category": "CAR",
+      "name": "A6",
+      "slug": "a6"
+    },
+    {
+      "brand_slug": "audi",
+      "category": "CAR",
+      "name": "A8",
+      "slug": "a8"
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "name": "7 Series",
+      "slug": "7-series"
+    },
+    {
+      "brand_slug": "bmw",
+      "category": "CAR",
+      "name": "X6",
+      "slug": "x6"
+    },
+    {
+      "brand_slug": "ford",
+      "category": "CAR",
+      "name": "Focus",
+      "slug": "focus"
+    },
+    {
+      "brand_slug": "honda",
+      "category": "CAR",
+      "name": "Civic",
+      "slug": "civic"
+    },
+    {
+      "brand_slug": "hyundai",
+      "category": "CAR",
+      "name": "Santa FE",
+      "slug": "santa-fe"
+    },
+    {
+      "brand_slug": "kia",
+      "category": "CAR",
+      "name": "Sorento",
+      "slug": "sorento"
+    }
+  ]
+}

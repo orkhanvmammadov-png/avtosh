@@ -1,0 +1,11 @@
+brand_slug,category,family_slug,variant_name,variant_slug,current_evidence_grade,current_sources,evidence_gap,additional_sources_checked,final_evidence_grade,final_production_eligibility,final_reason,owner_decision,owner_note
+mercedes-benz,CAR,a-class,A 180,a-180,SECONDARY_ONLY,S8,No official/second independent authoritative source at 4C seal,S43;S8,PUB_PLUS_SECONDARY,ELIGIBLE,Carwow A-Class designation coverage + wiki secondary.,,
+mercedes-benz,CAR,a-class,A 200,a-200,SECONDARY_ONLY,S8,No official/second independent authoritative source at 4C seal,S43;S8,PUB_PLUS_SECONDARY,ELIGIBLE,Carwow A-Class designation coverage + wiki secondary.,,
+mercedes-benz,CAR,c-class,C 300,c-300,SECONDARY_ONLY,S6,No official/second independent authoritative source at 4C seal,S40;S6,OFFICIAL,ELIGIBLE,Official MBUSA C 300 documentation.,,
+mercedes-benz,CAR,c-class,C 320,c-320,SECONDARY_ONLY,S6,No official/second independent authoritative source at 4C seal,S41;S6,TWO_PUBLICATIONS,ELIGIBLE,Edmunds + Car and Driver independently document the C320.,,
+mercedes-benz,CAR,cla,CLA 200,cla-200,SECONDARY_ONLY,S8,No official/second independent authoritative source at 4C seal,S43;S8,PUB_PLUS_SECONDARY,ELIGIBLE,Carwow CLA designation coverage + wiki secondary.,,
+mercedes-benz,CAR,e-class,E 240,e-240,SECONDARY_ONLY,S8,No official/second independent authoritative source at 4C seal,S41;S8,TWO_PUBLICATIONS,ELIGIBLE,Car and Driver 2001 C240/... era coverage plus wiki W210/W211 E 240; graded on the publication pair.,,
+mercedes-benz,CAR,e-class,E 500,e-500,SECONDARY_ONLY,S8,No official/second independent authoritative source at 4C seal,S39;S8,TWO_PUBLICATIONS,ELIGIBLE,Two independent publications document the 500 E -> E 500 identity.,,
+mercedes-benz,CAR,glc,GLC 250,glc-250,SECONDARY_ONLY,S6,No official/second independent authoritative source at 4C seal,S44;S6,PUB_PLUS_SECONDARY,ELIGIBLE,Parkers GLC 250 coverage + wiki secondary.,,
+mercedes-benz,CAR,gle,GLE 400,gle-400,SECONDARY_ONLY,S6,No official/second independent authoritative source at 4C seal,S42;S6,OFFICIAL,ELIGIBLE,Official 2017 GLE400 4MATIC Specifications.,,
+mercedes-benz,CAR,s-class,S 350,s-350,SECONDARY_ONLY,S26,No official/second independent authoritative source at 4C seal,S42;S26,OFFICIAL,ELIGIBLE,Official MBUSA S 350 BlueTEC channel.,,

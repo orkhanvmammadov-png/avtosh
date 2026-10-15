@@ -1,0 +1,10 @@
+brand_slug,before_family,before_key,after_family,after_key,classification,action,source_checked_at
+honda,Accord Dx,"(honda, CAR, accord-dx)",Accord,"(honda, CAR, accord)",TRIM,NORMALIZE_ROWS_TO_PARENT_FAMILY,2026-09-24
+honda,Accord EX,"(honda, CAR, accord-ex)",Accord,"(honda, CAR, accord)",TRIM,NORMALIZE_ROWS_TO_PARENT_FAMILY,2026-09-24
+honda,Accord LX,"(honda, CAR, accord-lx)",Accord,"(honda, CAR, accord)",TRIM,NORMALIZE_ROWS_TO_PARENT_FAMILY,2026-09-24
+honda,Accord Sport,"(honda, CAR, accord-sport)",Accord,"(honda, CAR, accord)",TRIM,NORMALIZE_ROWS_TO_PARENT_FAMILY,2026-09-24
+honda,Accord Sport/Touring,"(honda, CAR, accord-sport-touring)",Accord,"(honda, CAR, accord)",TRIM,NORMALIZE_ROWS_TO_PARENT_FAMILY,2026-09-24
+honda,Accord Touring,"(honda, CAR, accord-touring)",Accord,"(honda, CAR, accord)",TRIM,NORMALIZE_ROWS_TO_PARENT_FAMILY,2026-09-24
+honda,Accord V6,"(honda, CAR, accord-v6)",Accord,"(honda, CAR, accord)",ENGINE,NORMALIZE_ROWS_TO_PARENT_FAMILY,2026-09-24
+honda,Civic 1.6VTI,"(honda, CAR, civic-1-6vti)",Civic,"(honda, CAR, civic)",ENGINE,NORMALIZE_ROWS_TO_PARENT_FAMILY,2026-09-24
+honda,Civic 4D,"(honda, CAR, civic-4d)",Civic,"(honda, CAR, civic)",BODY_STYLE,NORMALIZE_ROWS_TO_PARENT_FAMILY,2026-09-24
