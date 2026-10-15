@@ -9,6 +9,7 @@ import { listListingImages } from "@/repositories/listing-images";
 import { getOpenEditRevision } from "@/repositories/listing-edit-revisions";
 import { listAdjustmentAuditEvents, lockOpenAdjustment } from "@/repositories/moderation-adjustments";
 import { approvedSide, getEditReviewFor } from "@/services/moderation-edit";
+import { enrollApprovedListingInOpenCampaign } from "@/services/premium-campaign";
 import {
   applyAdjustmentOnNewApproval,
   discardAdjustmentOnDecision,
@@ -515,6 +516,11 @@ async function decide(
         expiresAt,
       });
       if (!ok) throw new ApiError("MODERATION_INVALID_STATE", "Listing changed during approval.");
+      // O.16: while a complimentary-Premium enrollment window is
+      // open, a newly ACTIVE listing receives its one-time campaign
+      // grant inside this same transaction (idempotent per listing;
+      // a re-approval or concurrent path can never duplicate it).
+      await enrollApprovedListingInOpenCampaign(tx, listingId);
       toStatus = "ACTIVE";
       eventType = "LISTING_ACTIVATED";
       activation = {
