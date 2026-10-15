@@ -1,2 +1,0 @@
-brand_slug,category,current_family_name,current_family_slug,proposed_family_name,proposed_family_slug,change_type,evidence_reference,source_checked_at,risk,recommendation,owner_decision,owner_note
-hyundai,CAR,Santa FE,santa-fe,Santa Fe,santa-fe,DISPLAY_NAME_ONLY,S13 (Hyundai official styling 'Santa Fe'),2026-09-24,LOW — display-only; immutable slug unchanged,Apply in the next unsealed decision-layer iteration; never mid-seal.,,
