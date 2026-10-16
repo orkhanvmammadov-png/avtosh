@@ -48,7 +48,9 @@ export function PremiumFeed({
 
   return (
     <div>
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" data-testid="premium-grid">
+      {/* Phones show two Premium cards per row (down to 320px — the
+          tighter gap keeps each card ≥138px wide); md/lg unchanged. */}
+      <ul className="grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-4 md:grid-cols-3 lg:grid-cols-4" data-testid="premium-grid">
         {items.map((item, index) => (
           <li key={item.publicId}><ListingCard listing={item} nowMs={renderedAtMs} priority={index < 4} /></li>
         ))}

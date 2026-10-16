@@ -35,7 +35,7 @@ export function ListingCard({
             className="transition-[filter] duration-150 group-hover:brightness-[1.03]"
           />
           {(listing.badges.premium || listing.badges.boosted) && (
-            <div className="absolute left-2 top-2 flex gap-1">
+            <div className="absolute left-2 right-10 top-2 flex flex-wrap gap-1">
               {/* O.6: buyer-facing promotion identity is PREMIUM/BOOST
                   only (never "Reklam"); both render together, Premium
                   first, max two badges. */}
@@ -46,7 +46,7 @@ export function ListingCard({
         </div>
         <div className="pt-2.5">
           <div className="flex items-baseline justify-between gap-3">
-            <p className="font-condensed text-[17px] font-bold leading-tight text-ink md:text-[19px]">
+            <p className="font-condensed text-[17px] font-bold leading-tight text-ink md:text-[19px]" data-testid="card-price">
               {formatPriceMinor(listing.priceMinor, listing.currency)}
             </p>
             <p className="shrink-0 text-[11px] tracking-[0.01em] text-muted" data-testid="card-freshness">
