@@ -174,6 +174,65 @@ test.describe("mobile homepage search entry points", () => {
     await expect(page.getByTestId("home-mobile-filters-count")).toHaveCount(0);
   });
 
+  test("the brand clear control is a real tabbable button, operable by keyboard", async ({ page }) => {
+    await gotoMobileHome(page, 390);
+    await openSheet(page, "home-mobile-brand-entry", "brand-sheet");
+    await page.getByTestId("brand-sheet-option-toyota").click();
+    await page.getByTestId("brand-sheet-close").click();
+    await expect(page.getByTestId("home-mobile-brand-entry")).toBeFocused();
+
+    // The clear control is the next tab stop after the entry — a
+    // sibling button, never an interactive element nested in one.
+    await page.keyboard.press("Tab");
+    await expect(page.getByTestId("home-mobile-brand-clear")).toBeFocused();
+    const nested = await page
+      .getByTestId("home-mobile-brand-entry")
+      .locator("[role=button], button")
+      .count();
+    expect(nested).toBe(0);
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("home-mobile-brand-entry")).toContainText("Bütün markalar");
+    await expect(page.getByTestId("home-mobile-brand-clear")).toHaveCount(0);
+    await expect(page.getByTestId("home-mobile-brand-entry")).toBeFocused();
+  });
+
+  test("Tab and Shift+Tab stay inside the open sheet; the page behind is unreachable", async ({ page }) => {
+    await gotoMobileHome(page, 390);
+
+    const pressStaysInDialog = async (key: string, presses: number) => {
+      for (let i = 0; i < presses; i += 1) {
+        await page.keyboard.press(key);
+        const focus = await page.evaluate(() => {
+          const el = document.activeElement;
+          return {
+            inDialog: el instanceof HTMLElement && el.closest('[aria-modal="true"]') !== null,
+            id: el instanceof HTMLElement ? (el.getAttribute("data-testid") ?? el.tagName) : null,
+          };
+        });
+        expect(focus.inDialog, `${key} #${i + 1} left the sheet (landed on ${focus.id})`).toBe(true);
+      }
+    };
+
+    // Filters sheet: the form itself carries the dialog semantics and
+    // contains more tab stops than we press — cycling must wrap inside.
+    await openSheet(page, "home-mobile-filters-entry", "home-filters-close");
+    await expect(page.locator('form[role="dialog"][aria-modal="true"]')).toBeVisible();
+    await pressStaysInDialog("Tab", 14);
+    await pressStaysInDialog("Shift+Tab", 6);
+    // Background controls (header link, premium favorites) never focus.
+    await page.getByTestId("home-filters-close").click();
+    await expect(page.getByTestId("home-mobile-filters-entry")).toBeFocused();
+
+    // Brand sheet: few focusables, so Tab wraps around its own cycle.
+    await openSheet(page, "home-mobile-brand-entry", "brand-sheet");
+    await expect(page.getByTestId("brand-sheet-search")).toBeFocused();
+    await pressStaysInDialog("Tab", 10);
+    await pressStaysInDialog("Shift+Tab", 4);
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("brand-sheet")).toHaveCount(0);
+    await expect(page.getByTestId("home-mobile-brand-entry")).toBeFocused();
+  });
+
   test("desktop inline search and the results-page filter flow are unchanged", async ({ page }) => {
     const s = seed();
     await page.setViewportSize({ width: 1440, height: 900 });
