@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Check, ChevronDown, ChevronUp, X } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SlidersHorizontal, X } from "lucide-react";
 import { aznInputToMinor, minorToAznInput } from "@/lib/format";
-import { CATEGORY_LABELS, GROUP_LABELS, UI } from "@/lib/marketplace/labels";
+import { CATEGORY_LABELS, GROUP_LABELS, SELLER, UI } from "@/lib/marketplace/labels";
 import { publicFetch } from "@/lib/marketplace/public-api";
 import { engineCcOptions } from "@/lib/marketplace/engine-options";
 import { TypeaheadField } from "@/components/seller/axin/typeahead-field";
@@ -297,10 +297,28 @@ export function HomeSearch({
   const [notRepainted, setNotRepainted] = useState(init.not_repainted === "true");
   const [collapsedCount, setCollapsedCount] = useState(() => countStateFilters(init));
   const [clearCount, setClearCount] = useState(0); // remounts uncontrolled fields on Təmizlə
+  // Mobile home sheets (phones, <640px, home mode only): the compact
+  // "Bütün markalar" / "Filtrlər" entries open full-screen views over
+  // the SAME form state — never a second copy of it. "filters" turns
+  // this form itself into the sheet (the fields keep their one DOM
+  // instance, so values, FormData reads and the URL contract are
+  // untouched); "brand" renders a searchable list over the live
+  // category brands plus the shared ModelTreeSelect selection.
+  const [mobileSheet, setMobileSheet] = useState<null | "brand" | "filters">(null);
+  const [brandStage, setBrandStage] = useState<"list" | "models">("list");
+  const [brandQuery, setBrandQuery] = useState("");
+  const brandEntryRef = useRef<HTMLButtonElement>(null);
+  const pendingFocusRef = useRef<null | "brand" | "filters">(null);
+  const filtersEntryRef = useRef<HTMLButtonElement>(null);
+  const brandSearchRef = useRef<HTMLInputElement>(null);
+  const brandSheetRef = useRef<HTMLDivElement>(null);
+  const brandBackRef = useRef<HTMLButtonElement>(null);
+  const filtersCloseRef = useRef<HTMLButtonElement>(null);
   const requestRef = useRef(0);
   const modelsRequestRef = useRef(0);
   /** Restore value for a keyed field: Təmizlə wins over the URL value. */
   const restored = (value: string | undefined): string => (clearCount > 0 ? "" : (value ?? ""));
+
 
   async function loadBrands(nextCategory: string) {
     const ticket = ++requestRef.current;
@@ -414,6 +432,84 @@ export function HomeSearch({
     return count;
   }
 
+  function closeMobileSheet() {
+    // Closing is the user action that re-derives the chip counts —
+    // same timing contract as toggleExpanded (never on rerender).
+    setCollapsedCount(countActiveFilters());
+    pendingFocusRef.current = mobileSheet;
+    setMobileSheet(null);
+  }
+  // Latest-closure handle for the document-level Escape listener (the
+  // effect below re-runs only when the sheet changes, so calling the
+  // captured closeMobileSheet directly could count stale field state).
+  const closeMobileSheetRef = useRef(closeMobileSheet);
+  useEffect(() => {
+    closeMobileSheetRef.current = closeMobileSheet;
+  });
+
+  // Open sheet: Escape closes (ModelTreeSelect's own capture-phase
+  // Escape closes just its panel first), background scroll locks, and
+  // growing past the sm breakpoint dismisses the sheet so the inline
+  // desktop layout is never trapped behind a stale overlay.
+  useEffect(() => {
+    if (mobileSheet === null) return;
+    const which = mobileSheet;
+    const mq = window.matchMedia("(min-width: 640px)");
+    const syncDesktop = () => {
+      if (mq.matches) setMobileSheet(null);
+    };
+    syncDesktop();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeMobileSheetRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      // Minimal focus trap (the gallery overlay's established pattern):
+      // Tab/Shift+Tab cycle through the active sheet's own controls —
+      // the page behind the sheet is unreachable while it is open. The
+      // filters sheet is this form itself; the brand sheet has its own
+      // container.
+      const container = which === "brand" ? brandSheetRef.current : formRef.current;
+      if (container === null) return;
+      const focusables = Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.getClientRects().length > 0);
+      if (focusables.length === 0) return;
+      event.preventDefault();
+      const index = focusables.indexOf(document.activeElement as HTMLElement);
+      const next = event.shiftKey
+        ? focusables[(index <= 0 ? focusables.length : index) - 1]
+        : focusables[(index + 1) % focusables.length];
+      next?.focus();
+    };
+    mq.addEventListener("change", syncDesktop);
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      mq.removeEventListener("change", syncDesktop);
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileSheet]);
+
+  // Move focus into the sheet that just opened (and between stages),
+  // and back to the entry a close names — AFTER the commit, because
+  // closing the filters sheet remounts the compact entries.
+  useEffect(() => {
+    if (mobileSheet === "brand") {
+      (brandStage === "list" ? brandSearchRef.current : brandBackRef.current)?.focus();
+    } else if (mobileSheet === "filters") {
+      filtersCloseRef.current?.focus();
+    } else if (pendingFocusRef.current !== null) {
+      (pendingFocusRef.current === "brand" ? brandEntryRef : filtersEntryRef).current?.focus();
+      pendingFocusRef.current = null;
+    }
+  }, [mobileSheet, brandStage]);
+
   function toggleExpanded() {
     if (expanded) setCollapsedCount(countActiveFilters());
     setExpanded((v) => !v);
@@ -473,10 +569,43 @@ export function HomeSearch({
     </>
   );
 
+  const filtersOpen = mobileSheet === "filters";
+  const selectedBrandName = brands.find((b) => b.id === brandId)?.name ?? "";
+  const modelCount = modelSelection.familyIds.length + modelSelection.variants.length;
+  const filteredBrands = brands.filter((b) =>
+    b.name.toLocaleLowerCase("az").includes(brandQuery.trim().toLocaleLowerCase("az")),
+  );
+
   return (
-    <form ref={formRef} onSubmit={submit} className="rounded-[12px] bg-raised shadow-overlay max-sm:rounded-none max-sm:bg-transparent max-sm:shadow-none" aria-label="Elan axtarışı">
+    <form
+      ref={formRef}
+      onSubmit={submit}
+      className={`rounded-[12px] bg-raised shadow-overlay max-sm:rounded-none max-sm:shadow-none ${
+        filtersOpen
+          ? "max-sm:fixed max-sm:inset-0 max-sm:z-50 max-sm:overflow-y-auto max-sm:overscroll-contain max-sm:bg-surface max-sm:pb-[max(1rem,env(safe-area-inset-bottom))]"
+          : "max-sm:bg-transparent"
+      }`}
+      role={filtersOpen ? "dialog" : undefined}
+      aria-modal={filtersOpen ? true : undefined}
+      aria-label={filtersOpen ? "Filtrlər" : "Elan axtarışı"}
+    >
+      {filtersOpen ? (
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface px-4 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] sm:hidden">
+          <h2 className="text-[17px] font-bold text-ink">Filtrlər</h2>
+          <button
+            ref={filtersCloseRef}
+            type="button"
+            aria-label="Filtrləri bağla"
+            onClick={closeMobileSheet}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-control text-slate-strong transition-colors duration-150 hover:text-ink"
+            data-testid="home-filters-close"
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
       {/* Compact core search: category · Marka · Model · Şəhər · Axtar. */}
-      <div className="p-4 pb-3 max-sm:px-0 md:p-5 md:pb-3">
+      <div className={`p-4 pb-3 ${filtersOpen ? "" : "max-sm:px-0"} md:p-5 md:pb-3`}>
         <div role="radiogroup" aria-label="Kateqoriya" className="mb-4 flex gap-2">
           {categories.map((c) => (
             <button
@@ -492,7 +621,76 @@ export function HomeSearch({
             </button>
           ))}
         </div>
-        <div className="grid gap-2.5 md:grid-cols-[1fr_1fr_1fr_auto]">
+        {/* Mobile home entry points: the full field set lives in the
+            Filtrlər sheet (this same form, restyled) and the brand
+            sheet below — selections carry across because the state is
+            one and the same. */}
+        {mode === "home" && !filtersOpen ? (
+          <div className="flex flex-col gap-2.5 sm:hidden">
+            {/* The clear control is a SIBLING button overlaid on the
+                entry (never an interactive element nested inside one):
+                tabbable, Enter/Space-operable, same visual slot. */}
+            <div className="relative">
+              <button
+                ref={brandEntryRef}
+                type="button"
+                onClick={() => {
+                  setBrandQuery("");
+                  setBrandStage(brandId === "" ? "list" : "models");
+                  setMobileSheet("brand");
+                }}
+                className="flex min-h-12 w-full items-center gap-2 rounded-control border border-line-strong bg-raised px-3 text-left text-base transition-colors duration-150 hover:border-muted"
+                data-testid="home-mobile-brand-entry"
+              >
+                <span className={`min-w-0 flex-1 truncate ${brandId === "" ? "text-muted" : "pr-7 font-medium text-ink"}`}>
+                  {brandId === ""
+                    ? "Bütün markalar"
+                    : `${selectedBrandName}${modelCount > 0 ? ` · ${modelCount} model` : ""}`}
+                </span>
+                <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-muted" />
+              </button>
+              {brandId !== "" ? (
+                <button
+                  type="button"
+                  aria-label={`${UI.brandLabel} — seçimi təmizlə`}
+                  onClick={() => {
+                    void selectBrand("");
+                    brandEntryRef.current?.focus();
+                  }}
+                  className="absolute right-9 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-[4px] text-muted transition-colors duration-150 hover:text-danger focus-visible:outline-2 focus-visible:outline-primary"
+                  data-testid="home-mobile-brand-clear"
+                >
+                  <X size={12} strokeWidth={2.5} aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                ref={filtersEntryRef}
+                type="button"
+                onClick={() => setMobileSheet("filters")}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-control border border-line-strong bg-raised px-3 text-sm font-semibold text-ink transition-colors duration-150 hover:border-primary hover:text-primary"
+                data-testid="home-mobile-filters-entry"
+              >
+                <SlidersHorizontal size={15} aria-hidden="true" />
+                Filtrlər
+                {collapsedCount > 0 ? (
+                  <span className="rounded-pill bg-primary-tint px-1.5 py-0.5 text-[10px] font-semibold text-primary-hover" data-testid="home-mobile-filters-count">
+                    {collapsedCount}
+                  </span>
+                ) : null}
+              </button>
+              <button
+                type="submit"
+                className="inline-flex min-h-12 items-center justify-center rounded-control bg-primary px-4 text-sm font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed"
+                data-testid="home-mobile-search-submit"
+              >
+                {UI.search}
+              </button>
+            </div>
+          </div>
+        ) : null}
+        <div className={`grid gap-2.5 md:grid-cols-[1fr_1fr_1fr_auto] ${mode === "home" && !filtersOpen ? "max-sm:hidden" : ""}`}>
           <TypeaheadField
             id="home-brand"
             label={UI.brandLabel}
@@ -563,7 +761,7 @@ export function HomeSearch({
         hidden={!expanded}
         data-testid="home-advanced-panel"
         className={
-          "border-t border-line p-4 max-sm:px-0 md:px-4 md:pt-3.5 md:pb-4 desk:px-4 desk:pt-3.5 desk:pb-4 xl:px-[18px] xl:py-4 " +
+          `border-t border-line p-4 ${filtersOpen ? "" : "max-sm:px-0"} md:px-4 md:pt-3.5 md:pb-4 desk:px-4 desk:pt-3.5 desk:pb-4 xl:px-[18px] xl:py-4 ` +
           "grid grid-cols-1 gap-y-3 " +
           "[grid-template-areas:'ban'_'mileage'_'year'_'engine'_'color'_'price'_'fuel'_'drive'_'trans'_'cond'_'actions'] " +
           "md:grid-cols-2 md:gap-x-3.5 md:gap-y-[13px] " +
@@ -739,6 +937,135 @@ export function HomeSearch({
           {actionButtons}
         </div>
       </div>
+      {/* Mobile brand sheet: searchable list over the live
+          category-scoped brands, then the shared hierarchical Model
+          control bound to the SAME selection state as the inline
+          field. Submitting here goes through this very form's submit,
+          so the URL contract has exactly one implementation. */}
+      {mode === "home" && mobileSheet === "brand" ? (
+        <div
+          ref={brandSheetRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={UI.brandLabel}
+          className="fixed inset-0 z-[60] hidden flex-col bg-surface max-sm:flex"
+          data-testid="brand-sheet"
+        >
+          <div className="flex items-center gap-1 border-b border-line px-2 py-1.5 pt-[max(0.375rem,env(safe-area-inset-top))]">
+            {brandStage === "models" ? (
+              <button
+                ref={brandBackRef}
+                type="button"
+                aria-label="Markalar siyahısına qayıt"
+                onClick={() => {
+                  setBrandQuery("");
+                  setBrandStage("list");
+                }}
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-slate-strong transition-colors duration-150 hover:text-ink"
+                data-testid="brand-sheet-back"
+              >
+                <ChevronLeft size={20} aria-hidden="true" />
+              </button>
+            ) : null}
+            <h2 className="min-w-0 flex-1 truncate px-2 text-[17px] font-bold text-ink">
+              {brandStage === "models" ? selectedBrandName : UI.brandLabel}
+            </h2>
+            <button
+              type="button"
+              aria-label="Bağla"
+              onClick={closeMobileSheet}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-slate-strong transition-colors duration-150 hover:text-ink"
+              data-testid="brand-sheet-close"
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+          </div>
+          {brandStage === "list" ? (
+            <>
+              <div className="border-b border-line px-4 py-2.5">
+                <input
+                  ref={brandSearchRef}
+                  type="text"
+                  value={brandQuery}
+                  onChange={(e) => setBrandQuery(e.target.value)}
+                  placeholder="Marka axtar"
+                  aria-label="Marka axtar"
+                  className={`${control} min-h-11`}
+                  data-testid="brand-sheet-search"
+                />
+              </div>
+              <ul className="flex-1 overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom)]" data-testid="brand-sheet-list">
+                {brandQuery.trim() === "" ? (
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void selectBrand("");
+                        closeMobileSheet();
+                      }}
+                      className="flex min-h-12 w-full items-center border-b border-sunken px-4 text-left text-base text-muted transition-colors duration-150 hover:bg-row-hover"
+                      data-testid="brand-sheet-all"
+                    >
+                      {UI.any}
+                    </button>
+                  </li>
+                ) : null}
+                {loadingBrands ? (
+                  <li className="px-4 py-3 text-sm text-muted">Yüklənir…</li>
+                ) : filteredBrands.length === 0 ? (
+                  <li className="px-4 py-3 text-sm text-muted" data-testid="brand-sheet-empty">
+                    {SELLER.noResults}
+                  </li>
+                ) : (
+                  filteredBrands.map((b) => (
+                    <li key={b.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void selectBrand(b.id);
+                          setBrandStage("models");
+                        }}
+                        className={`flex min-h-12 w-full items-center justify-between gap-2 border-b border-sunken px-4 text-left text-base transition-colors duration-150 hover:bg-row-hover ${b.id === brandId ? "font-semibold text-primary" : "text-ink"}`}
+                        data-testid={`brand-sheet-option-${b.slug}`}
+                      >
+                        {b.name}
+                        <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-muted" />
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </>
+          ) : (
+            <>
+              <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+                <ModelTreeSelect
+                  label={UI.modelLabel}
+                  category={category}
+                  brandId={brandId}
+                  families={models}
+                  selection={modelSelection}
+                  onChange={setModelSelection}
+                  disabled={brandId === ""}
+                  testid="brand-sheet-model"
+                />
+                <p className="mt-2.5 text-[12px] text-muted">
+                  Model seçmədən yalnız marka ilə də axtara bilərsiniz.
+                </p>
+              </div>
+              <div className="border-t border-line bg-surface px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+                <button
+                  type="submit"
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-control bg-primary px-8 text-sm font-semibold tracking-[0.01em] text-white transition-colors duration-150 hover:bg-primary-hover active:bg-primary-pressed"
+                  data-testid="brand-sheet-submit"
+                >
+                  {UI.search}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      ) : null}
     </form>
   );
 }

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { seed } from "./helpers";
+import { openSearchControls, seed } from "./helpers";
 import { loginAs, testPhone } from "./auth-helpers";
 import { insertListingFixture } from "./seller-helpers";
 
@@ -10,6 +10,8 @@ import { insertListingFixture } from "./seller-helpers";
 const OUT = "test-results/visual-review";
 
 async function expandHome(page: import("@playwright/test").Page) {
+  // Mobile home: the inline fields live behind the Filtrlər sheet.
+  await openSearchControls(page);
   await page.getByTestId("home-advanced-toggle").click();
   await expect(page.getByTestId("home-advanced-panel")).toBeVisible();
 }

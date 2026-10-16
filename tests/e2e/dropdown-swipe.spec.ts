@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { loginAs, testPhone } from "./auth-helpers";
+import { openSearchControls } from "./helpers";
 
 /**
  * Swipe-vs-tap regression for the searchable dropdowns: a vertical
@@ -30,6 +31,8 @@ async function touchDrag(page: Page, x: number, fromY: number, toY: number): Pro
 }
 
 async function openBrandList(page: Page) {
+  // Mobile home: the inline fields live behind the Filtrlər sheet.
+  await openSearchControls(page);
   const input = page.locator("#home-brand");
   await input.tap();
   const listbox = page.getByTestId("home-brand-listbox");
@@ -84,7 +87,13 @@ test.describe("dropdown swipe scrolls, tap selects", () => {
     // keeps focus after selection, so a fresh tap must re-focus it)
     // shows Toyota as the single selected option.
     await expect(page.getByTestId("home-model-toggle")).toBeEnabled();
-    await page.getByRole("heading", { level: 1 }).tap();
+    // Blur the input: on mobile home the fields sit in the Filtrlər
+    // sheet, which covers the page h1 — tap the sheet's title instead.
+    const inSheet = await page.getByTestId("home-filters-close").isVisible().catch(() => false);
+    await (inSheet
+      ? page.getByRole("heading", { name: "Filtrlər" })
+      : page.getByRole("heading", { level: 1 })
+    ).tap();
     await input.tap();
     await expect(page.getByTestId("home-brand-listbox")).toBeVisible();
     await expect(
