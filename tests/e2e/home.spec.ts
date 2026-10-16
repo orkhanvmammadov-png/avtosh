@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import postgres from "postgres";
-import { expectNoHorizontalOverflow, isMobile, pickBrand, seed } from "./helpers";
+import { expectNoHorizontalOverflow, isMobile, openSearchControls, pickBrand, seed } from "./helpers";
 
 test.describe("Home", () => {
   test("renders hero, 24h count, categories and Premium section", async ({ page }) => {
@@ -55,6 +55,7 @@ test.describe("Home", () => {
 
   test("motorcycle category loads motorcycle brands and searches", async ({ page }) => {
     await page.goto("/");
+    await openSearchControls(page);
     await page.getByTestId("category-MOTORCYCLE").click();
     await expect(page.getByTestId("home-brand")).toBeEnabled();
     await pickBrand(page, "Yamaha");
@@ -66,6 +67,7 @@ test.describe("Home", () => {
   test("advanced search expands inline, preserves values across collapse, resets only via Təmizlə (4.17O.2)", async ({ page }) => {
     const s = seed();
     await page.goto("/");
+    await openSearchControls(page);
     const toggle = page.getByTestId("home-advanced-toggle");
     const panel = page.getByTestId("home-advanced-panel");
     await expect(panel).toBeHidden(); // collapsed by default
@@ -100,6 +102,7 @@ test.describe("Home", () => {
 
   test("Kredit/Barter are toggle buttons in the Price block: collapse-safe, Təmizlə-cleared, restored on results", async ({ page }) => {
     await page.goto("/");
+    await openSearchControls(page);
     const toggle = page.getByTestId("home-advanced-toggle");
     await toggle.click();
     const credit = page.getByTestId("home-adv-credit");
@@ -130,6 +133,7 @@ test.describe("Home", () => {
     await expect(page.getByTestId("home-adv-barter")).toHaveAttribute("aria-pressed", "true");
     // Təmizlə clears both
     await page.goto("/");
+    await openSearchControls(page);
     await page.getByTestId("home-advanced-toggle").click();
     await page.getByTestId("home-adv-credit").click();
     await page.getByTestId("home-adv-barter").click();
@@ -140,6 +144,7 @@ test.describe("Home", () => {
 
   test("CAR advanced filters follow the owner-authoritative reading order (UAT-C2)", async ({ page }) => {
     await page.goto("/");
+    await openSearchControls(page);
     await page.getByTestId("home-advanced-toggle").click();
     const ordered = [
       "home-adv-body_type_id",   // Ban növü
@@ -176,6 +181,7 @@ test.describe("Home", () => {
 
   test("multi-select closes on outside click / Escape; one open at a time; inside stays usable (UAT-C1)", async ({ page }) => {
     await page.goto("/");
+    await openSearchControls(page);
     await page.getByTestId("home-advanced-toggle").click();
     const fuelToggle = page.getByTestId("home-adv-fuel_type-toggle");
     const fuelPanel = page.getByTestId("home-adv-fuel_type-panel");
@@ -214,6 +220,7 @@ test.describe("Home", () => {
 
   test("closed advanced controls share one geometry family (UAT-C1)", async ({ page }) => {
     await page.goto("/");
+    await openSearchControls(page);
     await page.getByTestId("home-advanced-toggle").click();
     const heightOf = async (testid: string) => (await page.getByTestId(testid).boundingBox())!.height;
     const reference = await heightOf("home-adv-body_type_id"); // 1C standard control
@@ -238,6 +245,7 @@ test.describe("Home", () => {
 
   test("year dropdowns cover 1900 → currentYear+1 (4.17O.2)", async ({ page }) => {
     await page.goto("/");
+    await openSearchControls(page);
     await page.getByTestId("home-advanced-toggle").click();
     const yearMin = page.getByTestId("home-adv-year-min");
     const expectedMax = new Date().getFullYear() + 1;
@@ -252,6 +260,7 @@ test.describe("Home", () => {
   test("full advanced submission restores every selection on Search Results (4.17O.2)", async ({ page }) => {
     const s = seed();
     await page.goto("/");
+    await openSearchControls(page);
     await page.getByTestId("home-advanced-toggle").click();
     // non-panel fields first (no overlay open), including the final blocks
     await pickBrand(page, "Toyota");

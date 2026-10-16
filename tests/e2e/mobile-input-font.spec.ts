@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { expectNoHorizontalOverflow, pickBrand } from "./helpers";
+import { expectNoHorizontalOverflow, openSearchControls, pickBrand } from "./helpers";
 
 /**
  * Mobile focus-zoom regression guard: iOS Safari auto-zooms the page
@@ -41,6 +41,8 @@ test.describe("mobile search controls never trigger iOS focus zoom", () => {
       await page.setViewportSize({ width, height: 850 });
       for (const path of ["/", "/elanlar?category=CAR", "/elanlar?category=MOTORCYCLE"]) {
         await page.goto(path);
+        // Mobile home: fields live in the Filtrlər sheet (same form).
+        await openSearchControls(page);
         await expect(page.locator("#home-brand")).toBeVisible();
         // Expand the advanced zone so year/engine/mileage/price/city
         // and category-specific selects are measured too.
@@ -48,6 +50,15 @@ test.describe("mobile search controls never trigger iOS focus zoom", () => {
         if (await toggle.isVisible()) await toggle.click();
         await expect(page.getByTestId("home-adv-city")).toBeVisible();
         await assertVisibleControlFonts(page, 16, `${path}@${width}`);
+        if (path === "/") {
+          // The brand sheet's search input is a mobile-only control —
+          // it must obey the same 16px floor.
+          await page.getByTestId("home-filters-close").click();
+          await page.getByTestId("home-mobile-brand-entry").click();
+          await expect(page.getByTestId("brand-sheet-search")).toBeVisible();
+          await assertVisibleControlFonts(page, 16, `${path}@${width} brand sheet`);
+          await page.getByTestId("brand-sheet-close").click();
+        }
       }
     });
   }

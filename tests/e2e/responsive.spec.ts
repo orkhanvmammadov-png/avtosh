@@ -14,7 +14,15 @@ test.describe("Responsive layout invariants", () => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
       await expectNoHorizontalOverflow(page);
-      await expect(page.getByTestId("home-search-submit")).toBeVisible();
+      // Mobile home shows the compact entry points; the inline grid
+      // with its own submit appears from sm (640px) up.
+      if (width < 640) {
+        await expect(page.getByTestId("home-mobile-brand-entry")).toBeVisible();
+        await expect(page.getByTestId("home-mobile-filters-entry")).toBeVisible();
+        await expect(page.getByTestId("home-mobile-search-submit")).toBeVisible();
+      } else {
+        await expect(page.getByTestId("home-search-submit")).toBeVisible();
+      }
       if (width < 768) await expect(page.getByTestId("mobile-menu-button")).toBeVisible();
       else await expect(page.getByRole("navigation", { name: "Əsas naviqasiya" })).toBeVisible();
 
