@@ -11,7 +11,13 @@ import { SELLER_EDITABLE_STATUSES } from "@/services/listing-states";
 export interface ListingRow {
   id: string;
   public_id: string;
-  owner_id: string;
+  /**
+   * NULL only while a guest draft session owns the row (DRAFT-only by
+   * database CHECK `listings_guest_only_draft`); every non-DRAFT
+   * listing — and every row loaded through an owner-scoped query
+   * (`owner_id = $user`) — has a real user owner.
+   */
+  owner_id: string | null;
   category_id: string;
   category_code: string;
   brand_id: string | null;

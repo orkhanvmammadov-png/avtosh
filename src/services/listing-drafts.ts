@@ -106,22 +106,21 @@ const PATCH_KEY_COLUMNS: Record<string, string> = {
   seller_name: "seller_name",
 };
 
-export async function updateDraft(
-  auth: AuthContext,
-  listingId: string,
+/**
+ * Shared patch resolution for seller AND guest draft updates: content
+ * resolution (catalog validation + dependent-field clearing, identical
+ * semantics with the O.12 edit PATCH) mapped to listing columns, plus
+ * promotion-intent package validation. Pure with respect to the
+ * caller's ownership scope — the guarded UPDATE stays the caller's.
+ */
+export async function resolveDraftUpdateSet(
+  listing: Pick<ListingRow, "category_id" | "category_code" | "brand_id" | "model_id">,
   patch: DraftPatchInput,
-): Promise<OwnerListingDto> {
-  const listing = await loadOwnedListingOrThrow(listingId, auth.user.id);
-  if (!isSellerEditable(listing.status)) {
-    throw new ApiError(
-      "LISTING_NOT_EDITABLE",
-      "The listing is not editable in its current state.",
-    );
-  }
-
-  // Shared content resolution (identical semantics with the O.12 edit
-  // PATCH): catalog validation + dependent clearing in PATCH-key space,
-  // mapped to listing columns here.
+): Promise<{
+  set: Record<string, unknown>;
+  categoryChanged: boolean;
+  targetCategoryId: string;
+}> {
   const resolved = await resolveSellerContentPatch(
     {
       categoryId: listing.category_id,
@@ -165,6 +164,23 @@ export async function updateDraft(
       set.boost_intent_package_id = patch.boost_intent_package_id;
     }
   }
+  return { set, categoryChanged, targetCategoryId };
+}
+
+export async function updateDraft(
+  auth: AuthContext,
+  listingId: string,
+  patch: DraftPatchInput,
+): Promise<OwnerListingDto> {
+  const listing = await loadOwnedListingOrThrow(listingId, auth.user.id);
+  if (!isSellerEditable(listing.status)) {
+    throw new ApiError(
+      "LISTING_NOT_EDITABLE",
+      "The listing is not editable in its current state.",
+    );
+  }
+
+  const { set, categoryChanged, targetCategoryId } = await resolveDraftUpdateSet(listing, patch);
 
   const updated = await withTransaction(async (tx) => {
     const applied =
