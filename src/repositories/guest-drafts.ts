@@ -268,25 +268,70 @@ export const GUEST_DRAFT_DELETED_EVENT = "GUEST_DRAFT_DELETED";
  * (`for update skip locked` — overlapping runs are safe). Scoped to
  * GUEST_DRAFT_DELETED only; the sealed O.12/O.13 cleanup event types
  * stay with runImageCleanup.
+ *
+ * LEASE RULE: a claim moves the event to PROCESSING and pushes
+ * available_at forward by `leaseSeconds` — that timestamp is the
+ * worker's exclusive lease. A worker that dies after claiming leaves
+ * the event PROCESSING with a lease that lapses, and the claim
+ * predicate reclaims exactly those (PROCESSING + expired lease), so
+ * no event is stranded. Two workers can only overlap when a live
+ * worker outruns its lease; then both at most repeat idempotent,
+ * reference-checked object deletes, and the status-guarded marks
+ * ('where status = PROCESSING') make the outcome converge: PROCESSED
+ * sticks, and a late retry-mark after a reclaim finished is a no-op.
+ * `maxAttempts` bounds recovery — events over the attempt budget are
+ * never reclaimed here (markAbandonedGuestCleanupEventsFailed retires
+ * them).
  */
 export async function claimGuestCleanupEvents(
   sql: Sql,
-  limit: number,
+  input: { limit: number; leaseSeconds: number; maxAttempts: number },
 ): Promise<GuestCleanupEventRow[]> {
   return sql<GuestCleanupEventRow[]>`
     update outbox_events
-    set status = 'PROCESSING', attempt_count = attempt_count + 1
+    set status = 'PROCESSING',
+        attempt_count = attempt_count + 1,
+        available_at = now() + make_interval(secs => ${input.leaseSeconds})
     where id in (
       select id from outbox_events
       where event_type = ${GUEST_DRAFT_DELETED_EVENT}
-        and status = 'PENDING'
+        and status in ('PENDING', 'PROCESSING')
         and available_at <= now()
+        and attempt_count < ${input.maxAttempts}
       order by created_at asc
       for update skip locked
-      limit ${limit}
+      limit ${input.limit}
     )
     returning id, attempt_count, payload
   `;
+}
+
+/**
+ * Retires abandoned guest-cleanup events that exhausted the attempt
+ * budget: PROCESSING with a lapsed lease and attempt_count at/over the
+ * cap can never be reclaimed above, so they are marked FAILED (visible
+ * for operations) instead of lingering forever. Bounded and idempotent.
+ */
+export async function markAbandonedGuestCleanupEventsFailed(
+  sql: Sql,
+  input: { maxAttempts: number; limit: number },
+): Promise<number> {
+  const rows = await sql<{ id: string }[]>`
+    update outbox_events
+    set status = 'FAILED', last_error = 'abandoned after attempt budget'
+    where id in (
+      select id from outbox_events
+      where event_type = ${GUEST_DRAFT_DELETED_EVENT}
+        and status = 'PROCESSING'
+        and available_at <= now()
+        and attempt_count >= ${input.maxAttempts}
+      order by created_at asc
+      for update skip locked
+      limit ${input.limit}
+    )
+    returning id
+  `;
+  return rows.length;
 }
 
 /** Execution-time re-check for TEMP objects (uploads bucket): a path

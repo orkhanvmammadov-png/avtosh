@@ -7,8 +7,11 @@ export const dynamic = "force-dynamic";
 
 /** Expired guest-draft cleanup worker (deferred-login PR A). Prepared
     but deliberately NOT scheduled in vercel.json yet — it is invoked
-    manually/tests-only until the guest journey ships. Storage objects
-    are deleted before rows; a failure leaves the row for retry. */
+    manually/tests-only until the guest journey ships. Condemn-first:
+    the row is deleted together with a durable storage-cleanup record
+    in one transaction; objects are deleted afterwards from that
+    record, with lease-based reclaim so an interrupted worker's events
+    are recovered on a later run. */
 export const GET = createApiHandler(async ({ request, requestId }) => {
   assertCronAuthorized(request);
   const summary = await runGuestDraftCleanup();

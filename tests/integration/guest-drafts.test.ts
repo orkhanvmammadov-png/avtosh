@@ -15,6 +15,7 @@ import { runGuestDraftCleanup } from "@/services/guest-draft-cleanup";
 import { createDraft, getOwnedListingDto, updateDraft } from "@/services/listing-drafts";
 import {
   GUEST_DRAFT_DELETED_EVENT,
+  claimGuestCleanupEvents,
   condemnExpiredGuestListing,
 } from "@/repositories/guest-drafts";
 import { insertOutboxEvent } from "@/repositories/listing-publications";
@@ -53,7 +54,15 @@ async function expectApiError(
   throw new Error(`expected ApiError ${code}, but the call succeeded`);
 }
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Explicit barrier: lets a transaction SIGNAL that it holds a lock
+    and lets the test RELEASE it on command — no scheduler timing. */
+function barrier(): { reached: Promise<void>; reach: () => void } {
+  let reach!: () => void;
+  const reached = new Promise<void>((resolve) => {
+    reach = resolve;
+  });
+  return { reached, reach };
+}
 
 /** The PR-C claim contract: ONE guarded transactional write on the
     listings row. Cleanup's condemn locks the same row, so these two
@@ -440,14 +449,20 @@ describe("expired-guest-draft cleanup", () => {
     setStorageProviderForTesting(storage.provider);
 
     // The claim transaction takes the listings row lock FIRST and
-    // holds it while cleanup starts and blocks on its condemn lock.
+    // signals once it PROVABLY holds it; it commits only when the test
+    // releases it — cleanup can therefore never condemn before the
+    // claim committed, with no dependence on scheduler timing.
+    const lockHeld = barrier();
+    const release = barrier();
     const claimTx = withTransaction(async (tx) => {
       const claimed = await simulateClaim(tx, fixture.listingId, fixture.sessionId, seller.user.id);
-      await delay(600);
+      lockHeld.reach();
+      await release.reached;
       return claimed;
     });
-    await delay(150); // the claim holds the row lock now
+    await lockHeld.reached; // the row lock is held NOW, by construction
     const cleanup = runGuestDraftCleanup({ graceSeconds: 0 });
+    release.reach(); // cleanup either blocks on the lock or starts after commit — both orderings prove the claim wins
     const [claimed] = await Promise.all([claimTx, cleanup]);
 
     expect(claimed).toBe(1);
@@ -482,6 +497,8 @@ describe("expired-guest-draft cleanup", () => {
     // Cleanup's condemn step (exact service semantics: locked
     // re-check + row delete + durable record in ONE transaction)
     // takes the row lock first and holds it while the claim arrives.
+    const lockHeld = barrier();
+    const release = barrier();
     const condemnTx = withTransaction(async (tx) => {
       const result = await condemnExpiredGuestListing(tx, fixture.listingId, 0);
       expect(result.condemned).toBe(true);
@@ -496,11 +513,13 @@ describe("expired-guest-draft cleanup", () => {
           },
         });
       }
-      await delay(600);
+      lockHeld.reach();
+      await release.reached;
       return result;
     });
-    await delay(150); // condemn holds the row lock now
+    await lockHeld.reached; // condemn provably holds the row lock NOW
     const claimPromise = simulateClaim(sql, fixture.listingId, fixture.sessionId, seller.user.id);
+    release.reach(); // the claim either blocks on the lock or runs after commit — both orderings prove it loses cleanly
     const [condemned, claimed] = await Promise.all([condemnTx, claimPromise]);
 
     expect(condemned.condemned).toBe(true);
@@ -574,5 +593,89 @@ describe("expired-guest-draft cleanup", () => {
     expect(summary.retained).toBeGreaterThanOrEqual(1);
     expect(storage.deleted.map((d) => d.path)).not.toContain(fixture.finalPath);
     expect(storage.deleted).toContainEqual({ bucket: "listing-uploads", path: fixture.tempPath });
+  });
+
+  it("recovers an event abandoned mid-PROCESSING once its lease lapses", async () => {
+    const sql = getSql();
+    const fixture = await expiredGuestListingWithObjects();
+    const noop = recordingStorage(null);
+    setStorageProviderForTesting(noop.provider);
+
+    // Condemn only (phase 1 creates the durable event)…
+    await withTransaction(async (tx) => {
+      const result = await condemnExpiredGuestListing(tx, fixture.listingId, 0);
+      expect(result.condemned).toBe(true);
+      if (result.condemned) {
+        await insertOutboxEvent(tx, {
+          eventType: GUEST_DRAFT_DELETED_EVENT,
+          aggregateId: fixture.listingId,
+          payload: {
+            listing_id: fixture.listingId,
+            cleanup_image_paths: result.imagePaths.join(","),
+            cleanup_upload_paths: result.uploadPaths.join(","),
+          },
+        });
+      }
+    });
+    // …then a worker claims it and DIES immediately (no mark follows).
+    const claimed = await claimGuestCleanupEvents(sql, {
+      limit: 10,
+      leaseSeconds: 600,
+      maxAttempts: 5,
+    });
+    const mine = claimed.find((e) => e.payload.listing_id === fixture.listingId);
+    expect(mine).toBeDefined();
+
+    // While the lease is live, overlapping runs must NOT reclaim it.
+    const during = recordingStorage(null);
+    setStorageProviderForTesting(during.provider);
+    await runGuestDraftCleanup({ graceSeconds: 0 });
+    expect(during.deleted.map((d) => d.path)).not.toContain(fixture.finalPath);
+    const [held] = await sql<{ status: string }[]>`
+      select status from outbox_events where id = ${mine!.id}
+    `;
+    expect(held).toMatchObject({ status: "PROCESSING" });
+
+    // Lease lapses → a later run reclaims, deletes idempotently
+    // (reference checks intact), and completes the event.
+    await sql`update outbox_events set available_at = now() where id = ${mine!.id}`;
+    const after = recordingStorage(null);
+    setStorageProviderForTesting(after.provider);
+    await runGuestDraftCleanup({ graceSeconds: 0 });
+    expect(after.deleted).toContainEqual({ bucket: "listing-images", path: fixture.finalPath });
+    expect(after.deleted).toContainEqual({ bucket: "listing-uploads", path: fixture.tempPath });
+    const [done] = await sql<{ status: string; attempt_count: number }[]>`
+      select status, attempt_count from outbox_events where id = ${mine!.id}
+    `;
+    expect(done).toMatchObject({ status: "PROCESSED", attempt_count: 2 });
+  });
+
+  it("retires an abandoned event that exhausted its attempt budget as FAILED", async () => {
+    const sql = getSql();
+    const fixture = await expiredGuestListingWithObjects();
+    setStorageProviderForTesting(recordingStorage(null).provider);
+    await withTransaction(async (tx) => {
+      const result = await condemnExpiredGuestListing(tx, fixture.listingId, 0);
+      expect(result.condemned).toBe(true);
+      if (result.condemned) {
+        await insertOutboxEvent(tx, {
+          eventType: GUEST_DRAFT_DELETED_EVENT,
+          aggregateId: fixture.listingId,
+          payload: { listing_id: fixture.listingId, cleanup_image_paths: result.imagePaths.join(","), cleanup_upload_paths: "" },
+        });
+      }
+    });
+    await sql`
+      update outbox_events
+      set status = 'PROCESSING', attempt_count = 5, available_at = now()
+      where event_type = ${GUEST_DRAFT_DELETED_EVENT} and aggregate_id = ${fixture.listingId}
+    `;
+    const summary = await runGuestDraftCleanup({ graceSeconds: 0 });
+    expect(summary.failed).toBeGreaterThanOrEqual(1);
+    const [row] = await sql<{ status: string }[]>`
+      select status from outbox_events
+      where event_type = ${GUEST_DRAFT_DELETED_EVENT} and aggregate_id = ${fixture.listingId}
+    `;
+    expect(row).toMatchObject({ status: "FAILED" });
   });
 });

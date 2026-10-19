@@ -9,6 +9,7 @@ import {
   deleteExpiredGuestSessions,
   isUploadPathReferenced,
   listExpiredGuestListings,
+  markAbandonedGuestCleanupEventsFailed,
 } from "@/repositories/guest-drafts";
 import {
   isImagePathReferenced,
@@ -43,7 +44,12 @@ import { insertOutboxEvent } from "@/repositories/listing-publications";
  *    uploadsBucket — each path behind an execution-time reference
  *    re-check. A storage failure returns the event to PENDING with
  *    backoff (FAILED after the attempt budget), so deletion stays
- *    retryable without ever resurrecting business rows.
+ *    retryable without ever resurrecting business rows. Claims carry a
+ *    LEASE (available_at pushed forward): a worker that dies after
+ *    claiming leaves PROCESSING + a lapsing lease, which a later run
+ *    reclaims — object deletion is idempotent and reference-checked,
+ *    so at-least-once delivery is safe; abandoned events past the
+ *    attempt budget are retired as FAILED.
  *
  * Sessions are removed last, only once they own no listings. Every
  * step is bounded and safe to run concurrently with itself.
@@ -53,6 +59,9 @@ const CLEANUP_BATCH = 25;
 const CLEANUP_MAX_BATCHES = 20;
 const CLEANUP_MAX_ATTEMPTS = 5;
 const CLEANUP_RETRY_BASE_SECONDS = 600;
+/** Worker lease per claimed event — generously above one event's
+    storage work; a crashed worker's events reopen after this. */
+const CLEANUP_LEASE_SECONDS = 600;
 
 function graceSecondsFromEnv(): number {
   const parsed = Number.parseInt(
@@ -133,8 +142,17 @@ export async function runGuestDraftCleanup(
   }
 
   // Phase 2 — storage: bucket-correct deletes from the durable record.
+  // First retire abandoned events that exhausted the attempt budget.
+  summary.failed += await markAbandonedGuestCleanupEventsFailed(sql, {
+    maxAttempts: CLEANUP_MAX_ATTEMPTS,
+    limit: CLEANUP_BATCH,
+  });
   for (let batch = 0; batch < CLEANUP_MAX_BATCHES; batch += 1) {
-    const events = await claimGuestCleanupEvents(sql, CLEANUP_BATCH);
+    const events = await claimGuestCleanupEvents(sql, {
+      limit: CLEANUP_BATCH,
+      leaseSeconds: CLEANUP_LEASE_SECONDS,
+      maxAttempts: CLEANUP_MAX_ATTEMPTS,
+    });
     if (events.length === 0) break;
     for (const event of events) {
       summary.events += 1;
