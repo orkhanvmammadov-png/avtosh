@@ -307,10 +307,68 @@ export async function claimGuestCleanupEvents(
 }
 
 /**
- * Retires abandoned guest-cleanup events that exhausted the attempt
- * budget: PROCESSING with a lapsed lease and attempt_count at/over the
- * cap can never be reclaimed above, so they are marked FAILED (visible
- * for operations) instead of lingering forever. Bounded and idempotent.
+ * GENERATION-FENCED completion marks for guest cleanup events. The
+ * claim generation is the attempt_count a worker observed when it
+ * claimed: a reclaim increments it, so a STALE worker (lease outrun,
+ * event reclaimed by another run) matches zero rows here and can
+ * neither complete, retry nor fail the current holder's claim — the
+ * exact A-marks-retry-under-B hazard. Scoped to GUEST_DRAFT_DELETED;
+ * the shared O.12 markCleanupEvent* helpers are untouched.
+ */
+export async function markGuestCleanupEventProcessed(
+  sql: Sql,
+  input: { id: string; claimAttempt: number },
+): Promise<boolean> {
+  const rows = await sql<{ id: string }[]>`
+    update outbox_events
+    set status = 'PROCESSED', processed_at = now(), last_error = null
+    where id = ${input.id}
+      and event_type = ${GUEST_DRAFT_DELETED_EVENT}
+      and status = 'PROCESSING'
+      and attempt_count = ${input.claimAttempt}
+    returning id
+  `;
+  return rows.length > 0;
+}
+
+export async function markGuestCleanupEventRetry(
+  sql: Sql,
+  input: { id: string; claimAttempt: number; retryAt: Date; error: string },
+): Promise<boolean> {
+  const rows = await sql<{ id: string }[]>`
+    update outbox_events
+    set status = 'PENDING', available_at = ${input.retryAt}, last_error = ${input.error}
+    where id = ${input.id}
+      and event_type = ${GUEST_DRAFT_DELETED_EVENT}
+      and status = 'PROCESSING'
+      and attempt_count = ${input.claimAttempt}
+    returning id
+  `;
+  return rows.length > 0;
+}
+
+export async function markGuestCleanupEventFailed(
+  sql: Sql,
+  input: { id: string; claimAttempt: number; error: string },
+): Promise<boolean> {
+  const rows = await sql<{ id: string }[]>`
+    update outbox_events
+    set status = 'FAILED', last_error = ${input.error}
+    where id = ${input.id}
+      and event_type = ${GUEST_DRAFT_DELETED_EVENT}
+      and status = 'PROCESSING'
+      and attempt_count = ${input.claimAttempt}
+    returning id
+  `;
+  return rows.length > 0;
+}
+
+/**
+ * Retires budget-exhausted guest-cleanup events in a terminal, visible
+ * state REGARDLESS of whether they sit PENDING or PROCESSING: at/over
+ * the attempt cap the claim predicate can never pick them up again, so
+ * once their available_at has lapsed they are marked FAILED instead of
+ * lingering forever. Bounded and idempotent.
  */
 export async function markAbandonedGuestCleanupEventsFailed(
   sql: Sql,
@@ -322,7 +380,7 @@ export async function markAbandonedGuestCleanupEventsFailed(
     where id in (
       select id from outbox_events
       where event_type = ${GUEST_DRAFT_DELETED_EVENT}
-        and status = 'PROCESSING'
+        and status in ('PENDING', 'PROCESSING')
         and available_at <= now()
         and attempt_count >= ${input.maxAttempts}
       order by created_at asc

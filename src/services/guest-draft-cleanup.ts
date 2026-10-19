@@ -10,13 +10,11 @@ import {
   isUploadPathReferenced,
   listExpiredGuestListings,
   markAbandonedGuestCleanupEventsFailed,
+  markGuestCleanupEventFailed,
+  markGuestCleanupEventProcessed,
+  markGuestCleanupEventRetry,
 } from "@/repositories/guest-drafts";
-import {
-  isImagePathReferenced,
-  markCleanupEventFailed,
-  markCleanupEventProcessed,
-  markCleanupEventRetry,
-} from "@/repositories/lifecycle-jobs";
+import { isImagePathReferenced } from "@/repositories/lifecycle-jobs";
 import { insertOutboxEvent } from "@/repositories/listing-publications";
 
 /**
@@ -142,7 +140,8 @@ export async function runGuestDraftCleanup(
   }
 
   // Phase 2 — storage: bucket-correct deletes from the durable record.
-  // First retire abandoned events that exhausted the attempt budget.
+  // First retire budget-exhausted events (PENDING or PROCESSING with a
+  // lapsed available_at) into a terminal, visible FAILED state.
   summary.failed += await markAbandonedGuestCleanupEventsFailed(sql, {
     maxAttempts: CLEANUP_MAX_ATTEMPTS,
     limit: CLEANUP_BATCH,
@@ -190,15 +189,28 @@ export async function runGuestDraftCleanup(
           break; // retry the whole event later (deletes are idempotent)
         }
       }
+      // Marks are FENCED to this worker's claim generation
+      // (attempt_count at claim): if the lease was outrun and another
+      // run reclaimed the event, every mark below matches zero rows —
+      // a stale worker can never move the current holder's claim.
       if (failure === null) {
-        await markCleanupEventProcessed(sql, event.id);
+        const marked = await markGuestCleanupEventProcessed(sql, {
+          id: event.id,
+          claimAttempt: event.attempt_count,
+        });
+        if (!marked) log.event("mark_fenced_out", { event_id: event.id });
       } else if (event.attempt_count >= CLEANUP_MAX_ATTEMPTS) {
         summary.failed += 1;
-        await markCleanupEventFailed(sql, { id: event.id, error: failure });
+        await markGuestCleanupEventFailed(sql, {
+          id: event.id,
+          claimAttempt: event.attempt_count,
+          error: failure,
+        });
       } else {
         summary.retried += 1;
-        await markCleanupEventRetry(sql, {
+        await markGuestCleanupEventRetry(sql, {
           id: event.id,
+          claimAttempt: event.attempt_count,
           retryAt: new Date(
             Date.now() + CLEANUP_RETRY_BASE_SECONDS * 1000 * event.attempt_count,
           ),

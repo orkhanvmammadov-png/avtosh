@@ -17,6 +17,8 @@ import {
   GUEST_DRAFT_DELETED_EVENT,
   claimGuestCleanupEvents,
   condemnExpiredGuestListing,
+  markGuestCleanupEventProcessed,
+  markGuestCleanupEventRetry,
 } from "@/repositories/guest-drafts";
 import { insertOutboxEvent } from "@/repositories/listing-publications";
 import type { AuthContext } from "@/auth/current-user";
@@ -648,6 +650,123 @@ describe("expired-guest-draft cleanup", () => {
       select status, attempt_count from outbox_events where id = ${mine!.id}
     `;
     expect(done).toMatchObject({ status: "PROCESSED", attempt_count: 2 });
+  });
+
+  it("a stale worker's marks are fenced out by the claim generation (A outrun by B)", async () => {
+    const sql = getSql();
+    const fixture = await expiredGuestListingWithObjects();
+    setStorageProviderForTesting(recordingStorage(null).provider);
+    await withTransaction(async (tx) => {
+      const result = await condemnExpiredGuestListing(tx, fixture.listingId, 0);
+      expect(result.condemned).toBe(true);
+      if (result.condemned) {
+        await insertOutboxEvent(tx, {
+          eventType: GUEST_DRAFT_DELETED_EVENT,
+          aggregateId: fixture.listingId,
+          payload: {
+            listing_id: fixture.listingId,
+            cleanup_image_paths: result.imagePaths.join(","),
+            cleanup_upload_paths: result.uploadPaths.join(","),
+          },
+        });
+      }
+    });
+
+    // Worker A claims (generation 1) and stalls past its lease.
+    const [a] = await claimGuestCleanupEvents(sql, { limit: 10, leaseSeconds: 600, maxAttempts: 5 });
+    expect(a).toBeDefined();
+    await sql`update outbox_events set available_at = now() where id = ${a!.id}`; // lease lapses, no real wait
+    // Worker B reclaims (generation 2) with a live lease.
+    const [b] = await claimGuestCleanupEvents(sql, { limit: 10, leaseSeconds: 600, maxAttempts: 5 });
+    expect(b).toMatchObject({ id: a!.id, attempt_count: a!.attempt_count + 1 });
+
+    // STALE A tries to retry-mark and to complete with ITS generation:
+    // both must match zero rows and leave B's claim untouched.
+    const staleRetry = await markGuestCleanupEventRetry(sql, {
+      id: a!.id,
+      claimAttempt: a!.attempt_count,
+      retryAt: new Date(Date.now() + 60_000),
+      error: "stale",
+    });
+    expect(staleRetry).toBe(false);
+    const staleDone = await markGuestCleanupEventProcessed(sql, {
+      id: a!.id,
+      claimAttempt: a!.attempt_count,
+    });
+    expect(staleDone).toBe(false);
+    const [held] = await sql<{ status: string; attempt_count: number }[]>`
+      select status, attempt_count from outbox_events where id = ${a!.id}
+    `;
+    expect(held).toMatchObject({ status: "PROCESSING", attempt_count: b!.attempt_count });
+
+    // CURRENT B completes with its generation — and a late stale retry
+    // after completion is also a no-op.
+    expect(
+      await markGuestCleanupEventProcessed(sql, { id: b!.id, claimAttempt: b!.attempt_count }),
+    ).toBe(true);
+    expect(
+      await markGuestCleanupEventRetry(sql, {
+        id: a!.id,
+        claimAttempt: b!.attempt_count,
+        retryAt: new Date(),
+        error: "late",
+      }),
+    ).toBe(false);
+    const [done] = await sql<{ status: string }[]>`
+      select status from outbox_events where id = ${a!.id}
+    `;
+    expect(done).toMatchObject({ status: "PROCESSED" });
+  });
+
+  it("attempt-cap boundary: the final claim fails terminally; a PENDING row at the cap is swept FAILED", async () => {
+    const sql = getSql();
+    // (1) Final legitimate attempt: claimable at cap-1, fails → FAILED.
+    const first = await expiredGuestListingWithObjects();
+    setStorageProviderForTesting(recordingStorage(first.finalPath).provider); // storage keeps failing
+    const summary1 = await runGuestDraftCleanup({ graceSeconds: 0 }); // condemn + first claim
+    expect(summary1.listingsDeleted).toBeGreaterThanOrEqual(1);
+    await sql`
+      update outbox_events set status = 'PENDING', attempt_count = 4, available_at = now()
+      where event_type = ${GUEST_DRAFT_DELETED_EVENT} and aggregate_id = ${first.listingId}
+    `;
+    const summary2 = await runGuestDraftCleanup({ graceSeconds: 0 }); // claims to attempt 5 = cap → FAILED
+    expect(summary2.failed).toBeGreaterThanOrEqual(1);
+    const [terminal] = await sql<{ status: string; attempt_count: number }[]>`
+      select status, attempt_count from outbox_events
+      where event_type = ${GUEST_DRAFT_DELETED_EVENT} and aggregate_id = ${first.listingId}
+    `;
+    expect(terminal).toMatchObject({ status: "FAILED", attempt_count: 5 });
+
+    // (2) A PENDING row already at the cap (the stale-retry residue the
+    // fence prevents, but also any historical row): unclaimable, so the
+    // sweep must retire it terminally once available_at lapses.
+    const second = await expiredGuestListingWithObjects();
+    setStorageProviderForTesting(recordingStorage(null).provider);
+    await withTransaction(async (tx) => {
+      const result = await condemnExpiredGuestListing(tx, second.listingId, 0);
+      expect(result.condemned).toBe(true);
+      if (result.condemned) {
+        await insertOutboxEvent(tx, {
+          eventType: GUEST_DRAFT_DELETED_EVENT,
+          aggregateId: second.listingId,
+          payload: { listing_id: second.listingId, cleanup_image_paths: result.imagePaths.join(","), cleanup_upload_paths: result.uploadPaths.join(",") },
+        });
+      }
+    });
+    await sql`
+      update outbox_events set status = 'PENDING', attempt_count = 5, available_at = now()
+      where event_type = ${GUEST_DRAFT_DELETED_EVENT} and aggregate_id = ${second.listingId}
+    `;
+    const watcher = recordingStorage(null);
+    setStorageProviderForTesting(watcher.provider);
+    await runGuestDraftCleanup({ graceSeconds: 0 });
+    const [swept] = await sql<{ status: string }[]>`
+      select status from outbox_events
+      where event_type = ${GUEST_DRAFT_DELETED_EVENT} and aggregate_id = ${second.listingId}
+    `;
+    expect(swept).toMatchObject({ status: "FAILED" });
+    // It was retired, never claimed: no deletes for its paths.
+    expect(watcher.deleted.map((d) => d.path)).not.toContain(second.finalPath);
   });
 
   it("retires an abandoned event that exhausted its attempt budget as FAILED", async () => {
