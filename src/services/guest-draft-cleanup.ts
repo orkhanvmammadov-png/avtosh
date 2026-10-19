@@ -3,33 +3,56 @@ import { startJobRun } from "@/lib/jobs/log";
 import { getSql, withTransaction } from "@/lib/server/db/client";
 import { getStorageProvider } from "@/providers/storage/factory";
 import {
-  deleteExpiredGuestListing,
+  GUEST_DRAFT_DELETED_EVENT,
+  claimGuestCleanupEvents,
+  condemnExpiredGuestListing,
   deleteExpiredGuestSessions,
+  isUploadPathReferenced,
   listExpiredGuestListings,
-  listListingStoragePaths,
 } from "@/repositories/guest-drafts";
+import {
+  isImagePathReferenced,
+  markCleanupEventFailed,
+  markCleanupEventProcessed,
+  markCleanupEventRetry,
+} from "@/repositories/lifecycle-jobs";
+import { insertOutboxEvent } from "@/repositories/listing-publications";
 
 /**
  * Expired guest-draft cleanup (deferred-login PR A; prepared, NOT yet
- * scheduled as a Production cron).
+ * scheduled as a Production cron). Two phases, mirroring the sealed
+ * O.12 storage-cleanup doctrine (durable candidates + execution-time
+ * re-check + backoff), because database cascades never reach private
+ * storage and a transaction must never span a storage network call:
  *
- * Database cascades do NOT delete private-storage objects, so the
- * order per listing is: enumerate the listing's storage paths from
- * the authoritative rows (processed finals in listing_images, temps
- * in listing_image_uploads — defensive for the later guest-image PR;
- * guests cannot upload today) → delete each object (idempotent:
- * providers treat a missing object as success) → ONLY on full storage
- * success, delete the listing row inside a transaction that re-checks
- * under lock that it is STILL an unclaimed guest draft whose session
- * expired past the grace window. A storage failure leaves the row in
- * place, so the next run retries — objects can never be orphaned by a
- * row deleted first. Sessions are removed last, only once they own no
- * listings. Every step is bounded and safe to run concurrently with
- * itself (the guarded DELETE makes double-processing a no-op).
+ * 1. CONDEMN (transaction, no network): per candidate listing,
+ *    condemnExpiredGuestListing locks the listings row, re-checks
+ *    under the lock that it is still an unclaimed guest draft past
+ *    the grace window, enumerates finals/temps, deletes the row, and
+ *    — in the SAME transaction — records a GUEST_DRAFT_DELETED outbox
+ *    event carrying the bucket-separated paths. The row lock is the
+ *    exclusion protocol with verify-and-claim (PR C): a claim is a
+ *    single guarded transaction on the same listings row, so either
+ *    the claim wins and the condemn re-check skips (storage never
+ *    touched), or the condemn wins and the claim's guarded write
+ *    matches zero rows. A successful claim can therefore never lose
+ *    storage objects, regardless of which operation starts first.
+ *
+ * 2. STORAGE (no transaction): claimed events (skip-locked) drive the
+ *    deletes — processed finals from imagesBucket, temp objects from
+ *    uploadsBucket — each path behind an execution-time reference
+ *    re-check. A storage failure returns the event to PENDING with
+ *    backoff (FAILED after the attempt budget), so deletion stays
+ *    retryable without ever resurrecting business rows.
+ *
+ * Sessions are removed last, only once they own no listings. Every
+ * step is bounded and safe to run concurrently with itself.
  */
 
 const CLEANUP_BATCH = 25;
 const CLEANUP_MAX_BATCHES = 20;
+const CLEANUP_MAX_ATTEMPTS = 5;
+const CLEANUP_RETRY_BASE_SECONDS = 600;
 
 function graceSecondsFromEnv(): number {
   const parsed = Number.parseInt(
@@ -41,9 +64,19 @@ function graceSecondsFromEnv(): number {
 
 export interface GuestDraftCleanupSummary {
   listingsDeleted: number;
+  events: number;
   objectsDeleted: number;
-  sessionsDeleted: number;
+  retained: number;
+  retried: number;
   failed: number;
+  sessionsDeleted: number;
+}
+
+function splitPaths(csv: string | undefined): string[] {
+  return (csv ?? "")
+    .split(",")
+    .map((path) => path.trim())
+    .filter((path) => path.length > 0);
 }
 
 export async function runGuestDraftCleanup(
@@ -52,48 +85,113 @@ export async function runGuestDraftCleanup(
   const log = startJobRun("cleanup-guest-drafts");
   const started = Date.now();
   const graceSeconds = options.graceSeconds ?? graceSecondsFromEnv();
-  const bucket = listingImageConfig().imagesBucket;
+  const config = listingImageConfig();
   const storage = getStorageProvider();
   const sql = getSql();
   const summary: GuestDraftCleanupSummary = {
     listingsDeleted: 0,
+    events: 0,
     objectsDeleted: 0,
-    sessionsDeleted: 0,
+    retained: 0,
+    retried: 0,
     failed: 0,
+    sessionsDeleted: 0,
   };
 
+  // Phase 1 — condemn: row deletion + durable storage record, atomic.
   for (let batch = 0; batch < CLEANUP_MAX_BATCHES; batch += 1) {
     const expired = await listExpiredGuestListings(sql, graceSeconds, CLEANUP_BATCH);
     if (expired.length === 0) break;
     let progressed = 0;
     for (const row of expired) {
-      const paths = await listListingStoragePaths(sql, row.id);
-      let storageOk = true;
-      for (const path of paths) {
-        try {
-          await storage.deleteObject(bucket, path);
-          summary.objectsDeleted += 1;
-        } catch {
-          storageOk = false;
-          summary.failed += 1;
-          log.event("storage_delete_failed", { listing_id: row.id });
-          break; // retry this listing on a later run
+      const condemned = await withTransaction(async (tx) => {
+        const result = await condemnExpiredGuestListing(tx, row.id, graceSeconds);
+        if (!result.condemned) {
+          return false;
         }
-      }
-      if (!storageOk) continue;
-      const deleted = await withTransaction(async (tx) =>
-        deleteExpiredGuestListing(tx, row.id, graceSeconds),
-      );
-      if (deleted) {
+        if (result.imagePaths.length > 0 || result.uploadPaths.length > 0) {
+          await insertOutboxEvent(tx, {
+            eventType: GUEST_DRAFT_DELETED_EVENT,
+            aggregateId: row.id,
+            payload: {
+              listing_id: row.id,
+              cleanup_image_paths: result.imagePaths.join(","),
+              cleanup_upload_paths: result.uploadPaths.join(","),
+            },
+          });
+        }
+        return true;
+      });
+      if (condemned) {
         summary.listingsDeleted += 1;
         progressed += 1;
       }
     }
-    // Nothing progressed (all failures/races): stop instead of
-    // re-selecting the same rows for CLEANUP_MAX_BATCHES loops.
+    // Nothing progressed (claims/races won everywhere): stop instead
+    // of re-selecting the same rows for CLEANUP_MAX_BATCHES loops.
     if (progressed === 0) break;
   }
 
+  // Phase 2 — storage: bucket-correct deletes from the durable record.
+  for (let batch = 0; batch < CLEANUP_MAX_BATCHES; batch += 1) {
+    const events = await claimGuestCleanupEvents(sql, CLEANUP_BATCH);
+    if (events.length === 0) break;
+    for (const event of events) {
+      summary.events += 1;
+      let failure: string | null = null;
+      const targets: { bucket: string; path: string; kind: "image" | "upload" }[] = [
+        ...splitPaths(event.payload.cleanup_image_paths).map((path) => ({
+          bucket: config.imagesBucket,
+          path,
+          kind: "image" as const,
+        })),
+        ...splitPaths(event.payload.cleanup_upload_paths).map((path) => ({
+          bucket: config.uploadsBucket,
+          path,
+          kind: "upload" as const,
+        })),
+      ];
+      for (const target of targets) {
+        // Authoritative re-check AT EXECUTION TIME — never trust the
+        // event payload alone (O.12 doctrine).
+        const referenced =
+          target.kind === "image"
+            ? await isImagePathReferenced(sql, target.path)
+            : await isUploadPathReferenced(sql, target.path);
+        if (referenced) {
+          summary.retained += 1;
+          log.event("candidate_retained", { event_id: event.id, path: target.path });
+          continue;
+        }
+        try {
+          await storage.deleteObject(target.bucket, target.path);
+          summary.objectsDeleted += 1;
+        } catch (error) {
+          failure = error instanceof Error ? error.message : "storage delete failed";
+          log.event("delete_failed", { event_id: event.id, path: target.path });
+          break; // retry the whole event later (deletes are idempotent)
+        }
+      }
+      if (failure === null) {
+        await markCleanupEventProcessed(sql, event.id);
+      } else if (event.attempt_count >= CLEANUP_MAX_ATTEMPTS) {
+        summary.failed += 1;
+        await markCleanupEventFailed(sql, { id: event.id, error: failure });
+      } else {
+        summary.retried += 1;
+        await markCleanupEventRetry(sql, {
+          id: event.id,
+          retryAt: new Date(
+            Date.now() + CLEANUP_RETRY_BASE_SECONDS * 1000 * event.attempt_count,
+          ),
+          error: failure,
+        });
+      }
+    }
+    if (events.length < CLEANUP_BATCH) break;
+  }
+
+  // Phase 3 — sessions that no longer own anything.
   for (let batch = 0; batch < CLEANUP_MAX_BATCHES; batch += 1) {
     const deleted = await deleteExpiredGuestSessions(sql, graceSeconds, CLEANUP_BATCH);
     summary.sessionsDeleted += deleted;

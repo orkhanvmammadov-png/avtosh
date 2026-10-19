@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { generateSessionToken } from "@/auth/otp-crypto";
 import { ApiError } from "@/lib/api/errors";
-import { closeSql, getSql } from "@/lib/server/db/client";
+import { closeSql, getSql, withTransaction } from "@/lib/server/db/client";
 import { setStorageProviderForTesting } from "@/providers/storage/factory";
 import type { StorageProvider } from "@/providers/storage/types";
 import {
@@ -13,7 +13,11 @@ import {
 } from "@/services/guest-drafts";
 import { runGuestDraftCleanup } from "@/services/guest-draft-cleanup";
 import { createDraft, getOwnedListingDto, updateDraft } from "@/services/listing-drafts";
-import { deleteExpiredGuestListing } from "@/repositories/guest-drafts";
+import {
+  GUEST_DRAFT_DELETED_EVENT,
+  condemnExpiredGuestListing,
+} from "@/repositories/guest-drafts";
+import { insertOutboxEvent } from "@/repositories/listing-publications";
 import type { AuthContext } from "@/auth/current-user";
 import { createTestUserSession } from "./helpers/session";
 
@@ -47,6 +51,28 @@ async function expectApiError(
     return error as ApiError;
   }
   throw new Error(`expected ApiError ${code}, but the call succeeded`);
+}
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** The PR-C claim contract: ONE guarded transactional write on the
+    listings row. Cleanup's condemn locks the same row, so these two
+    can only serialize — never interleave against storage. */
+async function simulateClaim(
+  sql: Parameters<typeof condemnExpiredGuestListing>[0],
+  listingId: string,
+  sessionId: string,
+  userId: string,
+): Promise<number> {
+  const rows = await sql<{ id: string }[]>`
+    update listings
+    set owner_id = ${userId}, guest_session_id = null
+    where id = ${listingId}
+      and guest_session_id = ${sessionId}
+      and owner_id is null
+    returning id
+  `;
+  return rows.length;
 }
 
 async function expireSession(sessionId: string): Promise<void> {
@@ -196,6 +222,35 @@ describe("capability issuance, caps and expiry", () => {
     );
   });
 
+  it("parallel same-IP creation cannot exceed the hourly caps (advisory-lock serialized)", async () => {
+    process.env.GUEST_SESSIONS_IP_MAX_PER_HOUR = "2";
+    process.env.GUEST_DRAFTS_IP_MAX_PER_HOUR = "100";
+    const sessionsIp = `iphash-${randomUUID()}`;
+    const sessionResults = await Promise.allSettled(
+      Array.from({ length: 5 }, () =>
+        createGuestDraft({ presentedToken: null, ipHash: sessionsIp, categoryCode: "CAR" }),
+      ),
+    );
+    const sessionWins = sessionResults.filter((r) => r.status === "fulfilled");
+    expect(sessionWins).toHaveLength(2); // exactly the cap, under true concurrency
+    for (const r of sessionResults) {
+      if (r.status === "rejected") {
+        expect(r.reason).toBeInstanceOf(ApiError);
+        expect((r.reason as ApiError).code).toBe("GUEST_RATE_LIMITED");
+      }
+    }
+
+    process.env.GUEST_SESSIONS_IP_MAX_PER_HOUR = "100";
+    process.env.GUEST_DRAFTS_IP_MAX_PER_HOUR = "3";
+    const draftsIp = `iphash-${randomUUID()}`;
+    const draftResults = await Promise.allSettled(
+      Array.from({ length: 6 }, () =>
+        createGuestDraft({ presentedToken: null, ipHash: draftsIp, categoryCode: "CAR" }),
+      ),
+    );
+    expect(draftResults.filter((r) => r.status === "fulfilled")).toHaveLength(3);
+  });
+
   it("expiry works at query time — no cleanup required", async () => {
     const { listing, issuedToken } = await createGuestDraft({
       presentedToken: null,
@@ -324,9 +379,9 @@ describe("authenticated seller path is unchanged", () => {
 describe("expired-guest-draft cleanup", () => {
   function recordingStorage(failPath: string | null): {
     provider: StorageProvider;
-    deleted: string[];
+    deleted: { bucket: string; path: string }[];
   } {
-    const deleted: string[] = [];
+    const deleted: { bucket: string; path: string }[] = [];
     const provider: StorageProvider = {
       async createSignedUploadUrl() {
         throw new Error("unused");
@@ -337,11 +392,11 @@ describe("expired-guest-draft cleanup", () => {
       async uploadObject() {
         throw new Error("unused");
       },
-      async deleteObject(_bucket, path) {
+      async deleteObject(bucket, path) {
         if (failPath !== null && path === failPath) {
           throw new Error("storage outage");
         }
-        deleted.push(path);
+        deleted.push({ bucket, path });
       },
       async createSignedReadUrl() {
         throw new Error("unused");
@@ -350,7 +405,12 @@ describe("expired-guest-draft cleanup", () => {
     return { provider, deleted };
   }
 
-  it("deletes storage objects before rows, retries after failures, idempotent", async () => {
+  async function expiredGuestListingWithObjects(): Promise<{
+    listingId: string;
+    sessionId: string;
+    finalPath: string;
+    tempPath: string;
+  }> {
     const sql = getSql();
     const { listing, issuedToken } = await createGuestDraft({
       presentedToken: null,
@@ -358,64 +418,161 @@ describe("expired-guest-draft cleanup", () => {
       categoryCode: "CAR",
     });
     const session = await resolveGuestSession(issuedToken!);
-    const objectPath = `listings/${randomUUID()}.webp`;
+    const finalPath = `listings/${randomUUID()}.webp`;
+    const tempPath = `uploads/guest-test/${randomUUID()}`;
     await sql`
       insert into listing_images (listing_id, storage_path, mime_type, file_size_bytes, is_primary)
-      values (${listing.id}, ${objectPath}, 'image/webp', 1234, true)
+      values (${listing.id}, ${finalPath}, 'image/webp', 1234, true)
+    `;
+    await sql`
+      insert into listing_image_uploads
+        (listing_id, user_id, temp_storage_path, declared_mime_type, declared_size_bytes, expires_at)
+      values (${listing.id}, ${seller.user.id}, ${tempPath}, 'image/webp', 1234, now() + interval '1 hour')
     `;
     await expireSession(session!.sessionId);
+    return { listingId: listing.id, sessionId: session!.sessionId, finalPath, tempPath };
+  }
 
-    // First run: storage deletion keeps failing → the ROW must survive
-    // the whole run (objects can never be orphaned by a row-first delete).
-    const failing = recordingStorage(objectPath);
+  it("a claim that wins the row lock first makes cleanup skip — storage untouched (interleaving A)", async () => {
+    const sql = getSql();
+    const fixture = await expiredGuestListingWithObjects();
+    const storage = recordingStorage(null);
+    setStorageProviderForTesting(storage.provider);
+
+    // The claim transaction takes the listings row lock FIRST and
+    // holds it while cleanup starts and blocks on its condemn lock.
+    const claimTx = withTransaction(async (tx) => {
+      const claimed = await simulateClaim(tx, fixture.listingId, fixture.sessionId, seller.user.id);
+      await delay(600);
+      return claimed;
+    });
+    await delay(150); // the claim holds the row lock now
+    const cleanup = runGuestDraftCleanup({ graceSeconds: 0 });
+    const [claimed] = await Promise.all([claimTx, cleanup]);
+
+    expect(claimed).toBe(1);
+    // The summary may count OTHER tests' expired leftovers — the
+    // invariant is about THIS listing: row kept, owner set, image
+    // row intact, no storage delete, no durable cleanup record.
+    const [row] = await sql<{ owner_id: string | null }[]>`
+      select owner_id from listings where id = ${fixture.listingId}
+    `;
+    expect(row?.owner_id).toBe(seller.user.id);
+    const [image] = await sql<{ id: string }[]>`
+      select id from listing_images where listing_id = ${fixture.listingId}
+    `;
+    expect(image).toBeDefined();
+    // No object of this listing was deleted and no durable cleanup
+    // record exists for it — a successful claim never loses storage.
+    expect(storage.deleted.map((d) => d.path)).not.toContain(fixture.finalPath);
+    expect(storage.deleted.map((d) => d.path)).not.toContain(fixture.tempPath);
+    const [event] = await sql<{ id: string }[]>`
+      select id from outbox_events
+      where event_type = ${GUEST_DRAFT_DELETED_EVENT} and aggregate_id = ${fixture.listingId}
+    `;
+    expect(event).toBeUndefined();
+  });
+
+  it("a condemn that wins first makes the claim fail cleanly; storage dies only afterwards (interleaving B)", async () => {
+    const sql = getSql();
+    const fixture = await expiredGuestListingWithObjects();
+    const storage = recordingStorage(null);
+    setStorageProviderForTesting(storage.provider);
+
+    // Cleanup's condemn step (exact service semantics: locked
+    // re-check + row delete + durable record in ONE transaction)
+    // takes the row lock first and holds it while the claim arrives.
+    const condemnTx = withTransaction(async (tx) => {
+      const result = await condemnExpiredGuestListing(tx, fixture.listingId, 0);
+      expect(result.condemned).toBe(true);
+      if (result.condemned) {
+        await insertOutboxEvent(tx, {
+          eventType: GUEST_DRAFT_DELETED_EVENT,
+          aggregateId: fixture.listingId,
+          payload: {
+            listing_id: fixture.listingId,
+            cleanup_image_paths: result.imagePaths.join(","),
+            cleanup_upload_paths: result.uploadPaths.join(","),
+          },
+        });
+      }
+      await delay(600);
+      return result;
+    });
+    await delay(150); // condemn holds the row lock now
+    const claimPromise = simulateClaim(sql, fixture.listingId, fixture.sessionId, seller.user.id);
+    const [condemned, claimed] = await Promise.all([condemnTx, claimPromise]);
+
+    expect(condemned.condemned).toBe(true);
+    expect(claimed).toBe(0); // the claim failed cleanly — zero rows
+    // Storage is deleted only now, from the durable record.
+    const summary = await runGuestDraftCleanup({ graceSeconds: 0 });
+    expect(summary.objectsDeleted).toBeGreaterThanOrEqual(2);
+    expect(storage.deleted).toContainEqual({ bucket: "listing-images", path: fixture.finalPath });
+    expect(storage.deleted).toContainEqual({ bucket: "listing-uploads", path: fixture.tempPath });
+  });
+
+  it("deletes finals from imagesBucket and temps from uploadsBucket, with retry on failure", async () => {
+    const sql = getSql();
+    const fixture = await expiredGuestListingWithObjects();
+
+    // Run 1: the TEMP delete keeps failing → event returns to PENDING
+    // with backoff; the row deletion itself already committed.
+    const failing = recordingStorage(fixture.tempPath);
     setStorageProviderForTesting(failing.provider);
     const first = await runGuestDraftCleanup({ graceSeconds: 0 });
-    expect(first.failed).toBeGreaterThanOrEqual(1);
-    const [survivor] = await sql<{ id: string }[]>`
-      select id from listings where id = ${listing.id}
+    expect(first.listingsDeleted).toBeGreaterThanOrEqual(1);
+    expect(first.retried).toBeGreaterThanOrEqual(1);
+    expect(failing.deleted).toContainEqual({ bucket: "listing-images", path: fixture.finalPath });
+    const [pending] = await sql<{ status: string; attempt_count: number; available_at: Date }[]>`
+      select status, attempt_count, available_at from outbox_events
+      where event_type = ${GUEST_DRAFT_DELETED_EVENT} and aggregate_id = ${fixture.listingId}
     `;
-    expect(survivor).toBeDefined();
+    expect(pending).toMatchObject({ status: "PENDING", attempt_count: 1 });
+    expect(pending!.available_at.getTime()).toBeGreaterThan(Date.now());
 
-    // Second run (storage recovered): object deleted, then row, then session.
+    // Run 2 (backoff elapsed, storage recovered): both bucket/path
+    // pairs are deleted and the event completes.
+    await sql`
+      update outbox_events set available_at = now()
+      where event_type = ${GUEST_DRAFT_DELETED_EVENT} and aggregate_id = ${fixture.listingId}
+    `;
     const recovered = recordingStorage(null);
     setStorageProviderForTesting(recovered.provider);
     const second = await runGuestDraftCleanup({ graceSeconds: 0 });
-    expect(recovered.deleted).toContain(objectPath);
-    expect(second.listingsDeleted).toBeGreaterThanOrEqual(1);
-    const [gone] = await sql<{ id: string }[]>`
-      select id from listings where id = ${listing.id}
+    expect(second.objectsDeleted).toBeGreaterThanOrEqual(2);
+    expect(recovered.deleted).toContainEqual({ bucket: "listing-images", path: fixture.finalPath });
+    expect(recovered.deleted).toContainEqual({ bucket: "listing-uploads", path: fixture.tempPath });
+    const [processed] = await sql<{ status: string }[]>`
+      select status from outbox_events
+      where event_type = ${GUEST_DRAFT_DELETED_EVENT} and aggregate_id = ${fixture.listingId}
     `;
-    expect(gone).toBeUndefined();
-    const [sessionGone] = await sql<{ id: string }[]>`
-      select id from guest_draft_sessions where id = ${session!.sessionId}
-    `;
-    expect(sessionGone).toBeUndefined();
+    expect(processed).toMatchObject({ status: "PROCESSED" });
 
-    // Idempotent: a further run finds nothing to do for this listing.
+    // Idempotent: nothing left to claim for this listing.
     const third = await runGuestDraftCleanup({ graceSeconds: 0 });
     expect(third.failed).toBe(0);
+    const [sessionGone] = await sql<{ id: string }[]>`
+      select id from guest_draft_sessions where id = ${fixture.sessionId}
+    `;
+    expect(sessionGone).toBeUndefined();
   });
 
-  it("never deletes a listing that was claimed between selection and deletion", async () => {
+  it("the execution-time re-check retains a path that is still referenced", async () => {
     const sql = getSql();
-    const { listing, issuedToken } = await createGuestDraft({
-      presentedToken: null,
-      ipHash: null,
-      categoryCode: "CAR",
-    });
-    const session = await resolveGuestSession(issuedToken!);
-    await expireSession(session!.sessionId);
-    // Simulate a PR-C claim racing the cleanup: the row now has a real
-    // owner — the guarded DELETE must be a no-op.
+    const fixture = await expiredGuestListingWithObjects();
+    // Another LIVE listing references the same final path (defense in
+    // depth, O.12 doctrine: never trust the event payload alone).
+    const live = await createDraft(seller, "CAR");
     await sql`
-      update listings set owner_id = ${seller.user.id}, guest_session_id = null
-      where id = ${listing.id}
+      insert into listing_images (listing_id, storage_path, mime_type, file_size_bytes, is_primary)
+      values (${live.id}, ${fixture.finalPath}, 'image/webp', 1234, true)
     `;
-    const deleted = await deleteExpiredGuestListing(sql, listing.id, 0);
-    expect(deleted).toBe(false);
-    const [stillThere] = await sql<{ id: string }[]>`
-      select id from listings where id = ${listing.id}
-    `;
-    expect(stillThere).toBeDefined();
+    const storage = recordingStorage(null);
+    setStorageProviderForTesting(storage.provider);
+    const summary = await runGuestDraftCleanup({ graceSeconds: 0 });
+    expect(summary.retained).toBeGreaterThanOrEqual(1);
+    expect(storage.deleted.map((d) => d.path)).not.toContain(fixture.finalPath);
+    expect(storage.deleted).toContainEqual({ bucket: "listing-uploads", path: fixture.tempPath });
   });
 });

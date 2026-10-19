@@ -196,11 +196,46 @@ export async function listExpiredGuestListings(
   `;
 }
 
-/** Storage objects belonging to a listing: processed finals + temps. */
-export async function listListingStoragePaths(
+/**
+ * Condemns ONE expired guest listing: locks the listings row, re-checks
+ * under that lock that it is STILL an unclaimed guest draft whose
+ * session expired past the grace window, enumerates its storage paths
+ * (finals and temps separately — they live in different buckets), and
+ * deletes the row. All inside the caller's transaction, no network.
+ *
+ * RACE-SAFE EXCLUSION CONTRACT with verify-and-claim (PR C): a claim
+ * MUST be a single transaction whose guarded write targets the
+ * listings row (`... where id = $ and guest_session_id = $session and
+ * owner_id is null`). PostgreSQL row locking then leaves exactly two
+ * interleavings: the claim commits first and this function's locked
+ * re-check finds owner_id set (or the row re-homed) and condemns
+ * nothing — storage is never touched; or this function commits first,
+ * the row is gone, and the claim's guarded write matches zero rows —
+ * a clean, retryable failure. Storage objects are deleted ONLY from
+ * the durable record written in this same transaction, after commit,
+ * so no interleaving can strip images from a successfully claimed
+ * listing.
+ */
+export async function condemnExpiredGuestListing(
   sql: Sql,
   listingId: string,
-): Promise<string[]> {
+  graceSeconds: number,
+): Promise<
+  | { condemned: false }
+  | { condemned: true; imagePaths: string[]; uploadPaths: string[] }
+> {
+  const locked = await sql<{ id: string }[]>`
+    select l.id
+    from listings l
+    join guest_draft_sessions s on s.id = l.guest_session_id
+    where l.id = ${listingId}
+      and l.owner_id is null
+      and s.expires_at < now() - make_interval(secs => ${graceSeconds})
+    for update of l
+  `;
+  if (locked.length === 0) {
+    return { condemned: false };
+  }
   const finals = await sql<{ storage_path: string }[]>`
     select storage_path from listing_images where listing_id = ${listingId}
   `;
@@ -208,35 +243,65 @@ export async function listListingStoragePaths(
     select temp_storage_path from listing_image_uploads
     where listing_id = ${listingId}
   `;
-  return [
-    ...finals.map((row) => row.storage_path),
-    ...temps.map((row) => row.temp_storage_path),
-  ];
+  await sql`delete from listings where id = ${listingId}`;
+  return {
+    condemned: true,
+    imagePaths: finals.map((row) => row.storage_path),
+    uploadPaths: temps.map((row) => row.temp_storage_path),
+  };
 }
 
+export interface GuestCleanupEventRow {
+  id: string;
+  attempt_count: number;
+  payload: {
+    listing_id?: string;
+    cleanup_image_paths?: string;
+    cleanup_upload_paths?: string;
+  };
+}
+
+export const GUEST_DRAFT_DELETED_EVENT = "GUEST_DRAFT_DELETED";
+
 /**
- * Deletes ONE expired guest listing after an authoritative re-check
- * under lock (still guest-owned, session still expired past grace) —
- * a claim or clock skew between selection and deletion must never
- * destroy a user's listing. Row children (images, features, uploads)
- * cascade; storage objects are the caller's responsibility BEFORE
- * this commits.
+ * Claims a bounded batch of guest-draft storage-cleanup events
+ * (`for update skip locked` — overlapping runs are safe). Scoped to
+ * GUEST_DRAFT_DELETED only; the sealed O.12/O.13 cleanup event types
+ * stay with runImageCleanup.
  */
-export async function deleteExpiredGuestListing(
+export async function claimGuestCleanupEvents(
   sql: Sql,
-  listingId: string,
-  graceSeconds: number,
-): Promise<boolean> {
-  const rows = await sql<{ id: string }[]>`
-    delete from listings l
-    using guest_draft_sessions s
-    where l.id = ${listingId}
-      and l.owner_id is null
-      and s.id = l.guest_session_id
-      and s.expires_at < now() - make_interval(secs => ${graceSeconds})
-    returning l.id
+  limit: number,
+): Promise<GuestCleanupEventRow[]> {
+  return sql<GuestCleanupEventRow[]>`
+    update outbox_events
+    set status = 'PROCESSING', attempt_count = attempt_count + 1
+    where id in (
+      select id from outbox_events
+      where event_type = ${GUEST_DRAFT_DELETED_EVENT}
+        and status = 'PENDING'
+        and available_at <= now()
+      order by created_at asc
+      for update skip locked
+      limit ${limit}
+    )
+    returning id, attempt_count, payload
   `;
-  return rows.length > 0;
+}
+
+/** Execution-time re-check for TEMP objects (uploads bucket): a path
+    still named by any listing_image_uploads row is not an orphan. */
+export async function isUploadPathReferenced(
+  sql: Sql,
+  tempStoragePath: string,
+): Promise<boolean> {
+  const rows = await sql<{ referenced: boolean }[]>`
+    select exists (
+      select 1 from listing_image_uploads
+      where temp_storage_path = ${tempStoragePath}
+    ) as referenced
+  `;
+  return rows[0]!.referenced;
 }
 
 /** Expired sessions that no longer own any listing, bounded. */

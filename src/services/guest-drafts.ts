@@ -80,9 +80,13 @@ export interface GuestDraftCreationResult {
 
 /**
  * Creates a guest draft, minting a capability when the caller has
- * none. Order: per-IP brakes → session (locked) → per-session live
- * cap → category validation → insert. The live-draft cap is enforced
- * under the session row lock, so concurrent creates serialize.
+ * none. The counts and the inserts they guard run in ONE transaction
+ * serialized per client IP by a transaction-scoped advisory lock, so
+ * concurrent requests from the same IP cannot exceed the hourly
+ * session/draft caps (lock order: advisory IP lock → session row).
+ * Requests with no derivable client IP carry no per-IP brake — the
+ * per-session live-draft cap (enforced under the session row lock)
+ * and the fixed session lifetime still bound them.
  */
 export async function createGuestDraft(input: {
   presentedToken: string | null;
@@ -91,26 +95,9 @@ export async function createGuestDraft(input: {
 }): Promise<GuestDraftCreationResult> {
   assertEnabled();
   const limits = guestDraftLimits();
-  const sql = getSql();
   const hourAgo = new Date(Date.now() - 3_600_000);
 
   const existing = await resolveGuestSession(input.presentedToken);
-
-  if (input.ipHash !== null) {
-    if (
-      existing === null &&
-      (await countGuestSessionsForIpSince(sql, input.ipHash, hourAgo)) >=
-        limits.sessionsPerIpPerHour
-    ) {
-      throw new ApiError("GUEST_RATE_LIMITED", "Too many requests. Try again later.");
-    }
-    if (
-      (await countGuestDraftsForIpSince(sql, input.ipHash, hourAgo)) >=
-      limits.draftsPerIpPerHour
-    ) {
-      throw new ApiError("GUEST_RATE_LIMITED", "Too many requests. Try again later.");
-    }
-  }
 
   const category = await findActiveCategoryByCode(input.categoryCode);
   if (category === undefined) {
@@ -120,32 +107,61 @@ export async function createGuestDraft(input: {
     );
   }
 
-  let issuedToken: string | null = null;
-  let sessionId: string;
-  if (existing !== null) {
-    sessionId = existing.sessionId;
-  } else {
-    issuedToken = generateSessionToken();
-    const session = await insertGuestSession(sql, {
-      tokenHash: hashSessionToken(issuedToken),
-      ipHash: input.ipHash,
-      expiresAt: new Date(Date.now() + GUEST_SESSION_TTL_SECONDS * 1000),
-    });
-    sessionId = session.id;
-  }
+  const rateLimited = (): ApiError =>
+    new ApiError("GUEST_RATE_LIMITED", "Too many requests. Try again later.");
 
-  const listing = await withTransaction(async (tx) => {
-    const locked = await lockActiveGuestSession(tx, sessionId);
-    if (locked === undefined) {
-      throw notFound(); // expired between resolution and creation
+  const { listing, issuedToken } = await withTransaction(async (tx) => {
+    if (input.ipHash !== null) {
+      // Serializes every same-IP create across connections for the
+      // rest of this transaction; released automatically at commit or
+      // rollback. hashtextextended collisions across distinct IPs only
+      // over-serialize — they never relax a cap.
+      await tx`
+        select pg_advisory_xact_lock(hashtextextended(${"guest_ip:" + input.ipHash}, 0))
+      `;
+      if (
+        existing === null &&
+        (await countGuestSessionsForIpSince(tx, input.ipHash, hourAgo)) >=
+          limits.sessionsPerIpPerHour
+      ) {
+        throw rateLimited();
+      }
+      if (
+        (await countGuestDraftsForIpSince(tx, input.ipHash, hourAgo)) >=
+        limits.draftsPerIpPerHour
+      ) {
+        throw rateLimited();
+      }
     }
+
+    let token: string | null = null;
+    let sessionId: string;
+    if (existing !== null) {
+      const locked = await lockActiveGuestSession(tx, existing.sessionId);
+      if (locked === undefined) {
+        throw notFound(); // expired between resolution and creation
+      }
+      sessionId = existing.sessionId;
+    } else {
+      token = generateSessionToken();
+      const session = await insertGuestSession(tx, {
+        tokenHash: hashSessionToken(token),
+        ipHash: input.ipHash,
+        expiresAt: new Date(Date.now() + GUEST_SESSION_TTL_SECONDS * 1000),
+      });
+      sessionId = session.id; // brand-new row: invisible to others until commit
+    }
+
     if ((await countLiveGuestDrafts(tx, sessionId)) >= GUEST_MAX_LIVE_DRAFTS) {
       throw new ApiError(
         "GUEST_DRAFT_LIMIT",
         `At most ${GUEST_MAX_LIVE_DRAFTS} unfinished guest listings are allowed.`,
       );
     }
-    return createGuestDraftListing(tx, sessionId, category.id);
+    return {
+      listing: await createGuestDraftListing(tx, sessionId, category.id),
+      issuedToken: token,
+    };
   });
 
   return { listing: await buildOwnerListingDto(listing), issuedToken };
