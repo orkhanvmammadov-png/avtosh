@@ -312,6 +312,44 @@ export async function getImageUploadForUpdate(
   return rows[0];
 }
 
+/**
+ * ACTOR-SCOPED terminal status mark (PR B race fix): a stale request
+ * whose upload was re-homed by a claim (PR C) matches zero rows here
+ * and cannot mark the new owner's upload FAILED/EXPIRED. Returns
+ * whether the mark landed — callers gate temp-object deletion on it,
+ * so cleanup can never remove a temp object a claimed upload still
+ * needs. Non-terminal flows and the O.12 edit-image service keep the
+ * unscoped markImageUploadStatus below.
+ */
+export async function markImageUploadStatusScoped(
+  sql: Sql,
+  input: {
+    uploadId: string;
+    status: "FAILED" | "EXPIRED";
+    owner:
+      | { kind: "user"; userId: string }
+      | { kind: "guest"; sessionId: string };
+  },
+): Promise<boolean> {
+  const rows =
+    input.owner.kind === "user"
+      ? await sql<{ id: string }[]>`
+          update listing_image_uploads
+          set status = ${input.status}::image_upload_status
+          where id = ${input.uploadId} and user_id = ${input.owner.userId}
+          returning id
+        `
+      : await sql<{ id: string }[]>`
+          update listing_image_uploads
+          set status = ${input.status}::image_upload_status
+          where id = ${input.uploadId}
+            and guest_session_id = ${input.owner.sessionId}
+            and user_id is null
+          returning id
+        `;
+  return rows.length > 0;
+}
+
 export async function markImageUploadStatus(
   sql: Sql,
   uploadId: string,

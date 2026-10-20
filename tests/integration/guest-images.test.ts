@@ -109,6 +109,21 @@ async function newGuestDraft(): Promise<{
 const guestTempPath = (sessionId: string, listingId: string, uploadId: string) =>
   `uploads/guest/${sessionId}/${listingId}/${uploadId}`;
 
+/** Final object paths carry a per-attempt nonce — read the committed
+    row's path instead of predicting it. */
+async function storagePathOf(imageId: string): Promise<string> {
+  const rows = await getSql()<{ storage_path: string }[]>`
+    select storage_path from listing_images where id = ${imageId}
+  `;
+  expect(rows[0]).toBeDefined();
+  return rows[0]!.storage_path;
+}
+
+function finalsIn(store: ReturnType<typeof memoryStorage>): string[] {
+  const bucket = listingImageConfig().imagesBucket;
+  return [...store.objects.keys()].filter((key) => key.startsWith(`${bucket}/`));
+}
+
 /** Authorize + simulate the client's signed upload into temp storage. */
 async function issueAndPut(
   store: ReturnType<typeof memoryStorage>,
@@ -196,7 +211,7 @@ describe("guest image lifecycle", () => {
     expect(first.revision).toBeGreaterThanOrEqual(1);
     // Real WebP processing happened; the temp object was cleaned up.
     const config = listingImageConfig();
-    expect(store.objects.has(`${config.imagesBucket}/listings/${firstUpload}.webp`)).toBe(true);
+    expect(store.objects.has(`${config.imagesBucket}/${await storagePathOf(first.image.id)}`)).toBe(true);
     expect(
       store.objects.has(
         `${config.uploadsBucket}/${guestTempPath(session.sessionId, listingId, firstUpload)}`,
@@ -229,6 +244,7 @@ describe("guest image lifecycle", () => {
     expect(Number(after!.n)).toBe(3);
 
     // Reorder + explicit primary + delete-with-promotion.
+    const secondPath = await storagePathOf(second.image.id);
     const reordered = await reorderGuestImages(session, listingId, [
       b.image.id,
       second.image.id,
@@ -247,7 +263,7 @@ describe("guest image lifecycle", () => {
     // The deleted final object went away from the images bucket.
     expect(store.deleted).toContainEqual({
       bucket: config.imagesBucket,
-      path: `listings/${second.image.id}.webp`,
+      path: secondPath,
     });
   });
 
@@ -266,7 +282,7 @@ describe("guest image lifecycle", () => {
     `;
     expect(row).toMatchObject({ status: "FAILED" });
     const config = listingImageConfig();
-    expect(store.objects.has(`${config.imagesBucket}/listings/${uploadId}.webp`)).toBe(false);
+    expect(finalsIn(store)).toHaveLength(0);
     expect(
       store.objects.has(
         `${config.uploadsBucket}/${guestTempPath(session.sessionId, listingId, uploadId)}`,
@@ -372,8 +388,8 @@ describe("scoping, IDOR and expiry", () => {
       "LISTING_NOT_FOUND",
     );
     // Nothing was processed for the in-flight upload.
-    const config = listingImageConfig();
-    expect(store.objects.has(`${config.imagesBucket}/listings/${uploadId}.webp`)).toBe(false);
+    void uploadId;
+    expect(finalsIn(store)).toHaveLength(0);
     const [images] = await getSql()<{ n: string }[]>`
       select count(*)::text as n from listing_images where listing_id = ${listingId}
     `;
@@ -470,12 +486,12 @@ describe("claim and cleanup interplay", () => {
       select count(*)::text as n from listing_images where listing_id = ${listingId}
     `;
     expect(Number(images!.n)).toBe(0);
-    const config = listingImageConfig();
-    expect(store.objects.has(`${config.imagesBucket}/listings/${uploadId}.webp`)).toBe(false);
+    expect(finalsIn(store)).toHaveLength(0); // no orphan object from any attempt
     // The upload row was re-homed (PR C contract), so the seller can
     // finish it through the AUTHENTICATED flow.
     const result = await confirmUpload(seller, listingId, uploadId);
     expect(result.image.id).toBe(uploadId);
+    expect(store.objects.has(`${listingImageConfig().imagesBucket}/${await storagePathOf(uploadId)}`)).toBe(true);
     // And the guest session (no listings, no upload rows) is sweepable.
     await sql`update guest_draft_sessions set expires_at = now() - interval '1 minute' where id = ${sessionId}`;
     await runGuestDraftCleanup({ graceSeconds: 0 });
@@ -492,7 +508,8 @@ describe("claim and cleanup interplay", () => {
     const config = listingImageConfig();
     const { listingId, session, sessionId } = await newGuestDraft();
     const confirmedId = await issueAndPut(store, session, listingId);
-    await confirmGuestUpload(session, listingId, confirmedId);
+    const confirmed = await confirmGuestUpload(session, listingId, confirmedId);
+    const confirmedPath = await storagePathOf(confirmed.image.id);
     const pendingId = await issueAndPut(store, session, listingId); // stays pending
     const pendingTemp = guestTempPath(sessionId, listingId, pendingId);
 
@@ -504,13 +521,13 @@ describe("claim and cleanup interplay", () => {
 
     expect(store.deleted).toContainEqual({
       bucket: config.imagesBucket,
-      path: `listings/${confirmedId}.webp`,
+      path: confirmedPath,
     });
     expect(store.deleted).toContainEqual({
       bucket: config.uploadsBucket,
       path: pendingTemp,
     });
-    expect(store.objects.has(`${config.imagesBucket}/listings/${confirmedId}.webp`)).toBe(false);
+    expect(store.objects.has(`${config.imagesBucket}/${confirmedPath}`)).toBe(false);
     expect(store.objects.has(`${config.uploadsBucket}/${pendingTemp}`)).toBe(false);
     const [listingGone] = await sql<{ id: string }[]>`
       select id from listings where id = ${listingId}
@@ -520,6 +537,165 @@ describe("claim and cleanup interplay", () => {
       select id from guest_draft_sessions where id = ${sessionId}
     `;
     expect(sessionGone).toBeUndefined();
+  });
+});
+
+describe("stale guest attempts cannot damage a claimed upload", () => {
+  async function claimAndRehome(listingId: string, sessionId: string): Promise<void> {
+    await withTransaction(async (tx) => {
+      await tx`
+        update listings set owner_id = ${seller.user.id}, guest_session_id = null
+        where id = ${listingId} and guest_session_id = ${sessionId} and owner_id is null
+      `;
+      await tx`
+        update listing_image_uploads set user_id = ${seller.user.id}, guest_session_id = null
+        where listing_id = ${listingId} and guest_session_id = ${sessionId}
+      `;
+    });
+  }
+
+  it("a paused guest confirmation's compensation never deletes the claimed owner's image object", async () => {
+    const sql = getSql();
+    const base = memoryStorage();
+    const config = listingImageConfig();
+    // Gate exactly the FIRST final-object write (the guest attempt's);
+    // later writes (the seller's) pass through untouched.
+    const gate = barrier();
+    let gated = true;
+    const provider: StorageProvider = {
+      ...base.provider,
+      async uploadObject(bucket, path, data, contentType) {
+        if (bucket === config.imagesBucket && gated) {
+          gated = false;
+          await gate.reached;
+        }
+        return base.provider.uploadObject(bucket, path, data, contentType);
+      },
+    };
+    setStorageProviderForTesting(provider);
+
+    const { listingId, session, sessionId } = await newGuestDraft();
+    const uploadId = await issueAndPut(base, session, listingId);
+
+    // Guest confirmation passes its prechecks and pauses AT its final
+    // storage write…
+    const guestConfirm = confirmGuestUpload(session, listingId, uploadId).then(
+      () => "confirmed" as const,
+      (error) => (error instanceof ApiError ? error.code : "unexpected"),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100)); // let it reach the gate (download+processing are in-memory)
+    // …the claim re-homes listing + uploads, and the OWNER completes
+    // the SAME upload through the authenticated flow.
+    await claimAndRehome(listingId, sessionId);
+    const owned = await confirmUpload(seller, listingId, uploadId);
+    const ownedPath = await storagePathOf(owned.image.id);
+    expect(base.objects.has(`${config.imagesBucket}/${ownedPath}`)).toBe(true);
+
+    // Release the stale guest attempt: it writes ITS OWN nonce object,
+    // fails its guest-scoped final transaction, and compensates only
+    // its own object — the owner's row AND object must survive.
+    gate.reach();
+    const outcome = await guestConfirm;
+    expect(["LISTING_NOT_FOUND", "IMAGE_UPLOAD_NOT_FOUND"]).toContain(outcome);
+    const [row] = await sql<{ id: string; storage_path: string }[]>`
+      select id, storage_path from listing_images where id = ${uploadId}
+    `;
+    expect(row).toMatchObject({ id: uploadId, storage_path: ownedPath });
+    expect(base.objects.has(`${config.imagesBucket}/${ownedPath}`)).toBe(true);
+    expect(finalsIn(base)).toHaveLength(1); // the stale attempt's object is gone
+  });
+
+  it("a stale guest invalid-byte failure cannot FAIL the claimed upload or delete its temp object", async () => {
+    const sql = getSql();
+    const base = memoryStorage();
+    const config = listingImageConfig();
+    const gate = barrier();
+    let gated = true;
+    const provider: StorageProvider = {
+      ...base.provider,
+      async downloadObject(bucket, path) {
+        if (bucket === config.uploadsBucket && gated) {
+          gated = false;
+          await gate.reached;
+        }
+        return base.provider.downloadObject(bucket, path);
+      },
+    };
+    setStorageProviderForTesting(provider);
+
+    const { listingId, session, sessionId } = await newGuestDraft();
+    const uploadId = await issueAndPut(base, session, listingId, Buffer.from("garbage"));
+    const tempKey = `${config.uploadsBucket}/${guestTempPath(sessionId, listingId, uploadId)}`;
+
+    // Guest confirm passes its scoped read, pauses at the byte
+    // download; the claim re-homes in that window.
+    const guestConfirm = confirmGuestUpload(session, listingId, uploadId).then(
+      () => "confirmed" as const,
+      (error) => (error instanceof ApiError ? error.code : "unexpected"),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await claimAndRehome(listingId, sessionId);
+    gate.reach();
+    const outcome = await guestConfirm;
+    expect(outcome).toBe("IMAGE_INVALID_FORMAT"); // the guest still gets the honest error
+
+    // But the claimed owner's upload row and temp object are intact…
+    const [row] = await sql<{ status: string; user_id: string | null }[]>`
+      select status, user_id from listing_image_uploads where id = ${uploadId}
+    `;
+    expect(row).toMatchObject({ status: "PENDING", user_id: seller.user.id });
+    expect(base.objects.has(tempKey)).toBe(true);
+
+    // …and the owner's OWN failure handling still works normally.
+    await expectApiError(
+      () => confirmUpload(seller, listingId, uploadId),
+      "IMAGE_INVALID_FORMAT",
+    );
+    const [after] = await sql<{ status: string }[]>`
+      select status from listing_image_uploads where id = ${uploadId}
+    `;
+    expect(after).toMatchObject({ status: "FAILED" });
+    expect(base.objects.has(tempKey)).toBe(false);
+  });
+
+  it("a stale signed-URL failure cannot FAIL an upload row the claim re-homed", async () => {
+    const sql = getSql();
+    const base = memoryStorage();
+    const gate = barrier();
+    let gated = true;
+    const provider: StorageProvider = {
+      ...base.provider,
+      async createSignedUploadUrl(bucket, path, ttl) {
+        if (gated) {
+          gated = false;
+          await gate.reached;
+          throw new Error("signing outage");
+        }
+        return base.provider.createSignedUploadUrl(bucket, path, ttl);
+      },
+    };
+    setStorageProviderForTesting(provider);
+
+    const { listingId, session, sessionId } = await newGuestDraft();
+    // Issuance commits the upload row, then pauses at URL signing; the
+    // claim re-homes listing + uploads in that window; signing then
+    // fails and the stale FAILED mark must land nowhere.
+    const issuance = createGuestUploadAuthorization(session, listingId, {
+      mimeType: "image/png",
+      sizeBytes: 100,
+    }).then(
+      () => "issued" as const,
+      (error) => (error instanceof ApiError ? error.code : "unexpected"),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await claimAndRehome(listingId, sessionId);
+    gate.reach();
+    expect(await issuance).toBe("INTERNAL_ERROR");
+
+    const [row] = await sql<{ status: string; user_id: string | null }[]>`
+      select status, user_id from listing_image_uploads where listing_id = ${listingId}
+    `;
+    expect(row).toMatchObject({ status: "PENDING", user_id: seller.user.id });
   });
 });
 

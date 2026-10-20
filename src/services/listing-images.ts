@@ -29,7 +29,7 @@ import {
   insertImageUpload,
   insertListingImage,
   listListingImages,
-  markImageUploadStatus,
+  markImageUploadStatusScoped,
   promoteNextPrimaryImage,
   setImageSortOrder,
   setPrimaryImage,
@@ -271,7 +271,13 @@ async function createUploadAuthorizationFor(
       maxSizeBytes: config.maxUploadBytes,
     };
   } catch {
-    await markImageUploadStatus(getSql(), uploadId, "FAILED");
+    // Scoped: if a claim re-homed this fresh upload row in the gap,
+    // the stale mark lands nowhere and the new owner's row stays usable.
+    await markImageUploadStatusScoped(getSql(), {
+      uploadId,
+      status: "FAILED",
+      owner: actor,
+    });
     throw new ApiError(
       "INTERNAL_ERROR",
       "Could not prepare the upload. Please try again.",
@@ -335,8 +341,7 @@ async function confirmUploadFor(
     throw new ApiError("IMAGE_UPLOAD_NOT_FOUND", "Upload is not usable.");
   }
   if (upload.expires_at.getTime() <= Date.now()) {
-    await markImageUploadStatus(sql, uploadId, "EXPIRED");
-    await deleteTempQuietly(upload.temp_storage_path);
+    await failUploadScoped(actor, uploadId, "EXPIRED", upload.temp_storage_path);
     throw new ApiError("IMAGE_UPLOAD_EXPIRED", "The upload window has expired.");
   }
 
@@ -352,8 +357,7 @@ async function confirmUploadFor(
     );
   }
   if (original.length > config.maxUploadBytes) {
-    await markImageUploadStatus(sql, uploadId, "FAILED");
-    await deleteTempQuietly(upload.temp_storage_path);
+    await failUploadScoped(actor, uploadId, "FAILED", upload.temp_storage_path);
     throw new ApiError(
       "IMAGE_TOO_LARGE",
       `Images must be at most ${config.maxUploadBytes} bytes.`,
@@ -367,8 +371,7 @@ async function confirmUploadFor(
       webpQuality: config.webpQuality,
     });
   } catch (error) {
-    await markImageUploadStatus(sql, uploadId, "FAILED");
-    await deleteTempQuietly(upload.temp_storage_path);
+    await failUploadScoped(actor, uploadId, "FAILED", upload.temp_storage_path);
     if (error instanceof ImageProcessingError) {
       throw new ApiError(
         error.reason === "INVALID_FORMAT"
@@ -380,13 +383,18 @@ async function confirmUploadFor(
     throw new ApiError("IMAGE_PROCESSING_FAILED", "The image could not be processed.");
   }
 
-  // Opaque, deterministic final path (image id = upload id): no owner,
-  // listing, or seller identifiers in the object key — public signed
-  // URLs therefore reveal nothing internal. Authorization is decided
-  // by PostgreSQL ownership/state via listing_images, never by path
-  // secrecy. A concurrent or retried confirm overwrites the same
-  // object with identical content instead of duplicating it.
-  const finalPath = `listings/${uploadId}.webp`;
+  // Opaque final path: no owner, listing, or seller identifiers in
+  // the object key — public signed URLs reveal nothing internal, and
+  // authorization is decided by PostgreSQL ownership/state via
+  // listing_images, never by path secrecy. The per-ATTEMPT nonce is
+  // the claim-race fix: object bytes and the row commit cannot be
+  // atomic, so two confirmations of one upload (a stale guest attempt
+  // and the claimed owner's attempt, or two concurrent confirms) must
+  // never share an object key — each attempt's compensating delete can
+  // then only ever remove ITS OWN object, and the row's storage_path
+  // always names the bytes its own attempt wrote. The losing attempt
+  // of an idempotent race cleans up its unreferenced object below.
+  const finalPath = `listings/${uploadId}-${randomUUID()}.webp`;
   await storage.uploadObject(
     config.imagesBucket,
     finalPath,
@@ -450,9 +458,17 @@ async function confirmUploadFor(
     });
     imageRow = result.row;
     revision = result.revision;
+    if (!result.inserted && imageRow.storage_path !== finalPath) {
+      // Idempotent race: another confirmation won the row — this
+      // attempt's object is unreferenced by construction; remove it.
+      await storage
+        .deleteObject(config.imagesBucket, finalPath)
+        .catch(() => undefined);
+    }
   } catch (error) {
-    // Compensation: the DB step failed, so the final object must not
-    // linger as an unreferenced success.
+    // Compensation: the DB step failed, so THIS attempt's object (the
+    // nonce path is ours alone — never a claimed owner's bytes) must
+    // not linger as an unreferenced success.
     await storage
       .deleteObject(config.imagesBucket, finalPath)
       .catch(() => undefined);
@@ -478,6 +494,26 @@ export async function confirmGuestUpload(
   uploadId: string,
 ): Promise<ConfirmResult> {
   return confirmUploadFor(guestActor(session), listingId, uploadId);
+}
+
+/** Terminal failure for an upload THIS actor still owns: the scoped
+    mark decides — if a claim re-homed the row mid-flight, neither the
+    status nor the temp object (which the claimed upload still needs
+    for its own confirmation) is touched. */
+async function failUploadScoped(
+  actor: ImageActor,
+  uploadId: string,
+  status: "FAILED" | "EXPIRED",
+  tempPath: string,
+): Promise<void> {
+  const marked = await markImageUploadStatusScoped(getSql(), {
+    uploadId,
+    status,
+    owner: actor,
+  });
+  if (marked) {
+    await deleteTempQuietly(tempPath);
+  }
 }
 
 async function deleteTempQuietly(tempPath: string): Promise<void> {
