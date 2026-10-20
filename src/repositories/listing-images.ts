@@ -17,7 +17,9 @@ export interface ListingImageRow {
 export interface ImageUploadRow {
   id: string;
   listing_id: string;
-  user_id: string;
+  /** NULL only while a guest draft session owns the upload (XOR CHECK
+      listing_image_uploads_exactly_one_owner). */
+  user_id: string | null;
   temp_storage_path: string;
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | "EXPIRED";
   declared_mime_type: string;
@@ -218,6 +220,80 @@ export async function getImageUpload(
   return rows[0];
 }
 
+// --- guest-owned uploads (deferred-login PR B) -------------------------------
+
+export async function insertGuestImageUpload(
+  sql: Sql,
+  input: {
+    id: string;
+    listingId: string;
+    guestSessionId: string;
+    tempStoragePath: string;
+    declaredMimeType: string;
+    declaredSizeBytes: number;
+    expiresAt: Date;
+  },
+): Promise<void> {
+  await sql`
+    insert into listing_image_uploads
+      (id, listing_id, guest_session_id, temp_storage_path,
+       declared_mime_type, declared_size_bytes, expires_at)
+    values
+      (${input.id}, ${input.listingId}, ${input.guestSessionId}, ${input.tempStoragePath},
+       ${input.declaredMimeType}, ${input.declaredSizeBytes}, ${input.expiresAt})
+  `;
+}
+
+export async function getGuestImageUpload(
+  sql: Sql,
+  uploadId: string,
+  listingId: string,
+  guestSessionId: string,
+): Promise<ImageUploadRow | undefined> {
+  const rows = await sql<ImageUploadRow[]>`
+    select id, listing_id, user_id, temp_storage_path, status,
+           declared_mime_type, declared_size_bytes::text as declared_size_bytes,
+           image_id, edit_image_id, expires_at
+    from listing_image_uploads
+    where id = ${uploadId} and listing_id = ${listingId}
+      and guest_session_id = ${guestSessionId} and user_id is null
+  `;
+  return rows[0];
+}
+
+export async function getGuestImageUploadForUpdate(
+  sql: Sql,
+  uploadId: string,
+  listingId: string,
+  guestSessionId: string,
+): Promise<ImageUploadRow | undefined> {
+  const rows = await sql<ImageUploadRow[]>`
+    select id, listing_id, user_id, temp_storage_path, status,
+           declared_mime_type, declared_size_bytes::text as declared_size_bytes,
+           image_id, edit_image_id, expires_at
+    from listing_image_uploads
+    where id = ${uploadId} and listing_id = ${listingId}
+      and guest_session_id = ${guestSessionId} and user_id is null
+    for update
+  `;
+  return rows[0];
+}
+
+/** All uploads a guest session has EVER issued in the window (any
+    status) — the per-session storage-cost brake counts issuance, not
+    survivors. */
+export async function countGuestUploadsForSessionSince(
+  sql: Sql,
+  guestSessionId: string,
+  since: Date,
+): Promise<number> {
+  const rows = await sql<{ count: string }[]>`
+    select count(*)::text as count from listing_image_uploads
+    where guest_session_id = ${guestSessionId} and created_at >= ${since}
+  `;
+  return Number(rows[0]!.count);
+}
+
 /** Same lookup but row-locked inside a transaction. */
 export async function getImageUploadForUpdate(
   sql: Sql,
@@ -234,6 +310,49 @@ export async function getImageUploadForUpdate(
     for update
   `;
   return rows[0];
+}
+
+/**
+ * ACTOR- and STATE-scoped terminal status mark (PR B race fixes): a
+ * stale request whose upload was re-homed by a claim (PR C) matches
+ * zero rows here, and so does a stale failure arriving AFTER another
+ * confirmation completed the upload — FAILED/EXPIRED only ever win
+ * from a pending state, so a COMPLETED row (and with it repeat-confirm
+ * idempotency) can never be regressed. Returns whether the transition
+ * won — callers gate temp-object deletion on it, so cleanup can never
+ * remove a temp object a live upload still needs. Non-terminal flows
+ * and the O.12 edit-image service keep the unscoped
+ * markImageUploadStatus below.
+ */
+export async function markImageUploadStatusScoped(
+  sql: Sql,
+  input: {
+    uploadId: string;
+    status: "FAILED" | "EXPIRED";
+    owner:
+      | { kind: "user"; userId: string }
+      | { kind: "guest"; sessionId: string };
+  },
+): Promise<boolean> {
+  const rows =
+    input.owner.kind === "user"
+      ? await sql<{ id: string }[]>`
+          update listing_image_uploads
+          set status = ${input.status}::image_upload_status
+          where id = ${input.uploadId} and user_id = ${input.owner.userId}
+            and status in ('PENDING', 'PROCESSING')
+          returning id
+        `
+      : await sql<{ id: string }[]>`
+          update listing_image_uploads
+          set status = ${input.status}::image_upload_status
+          where id = ${input.uploadId}
+            and guest_session_id = ${input.owner.sessionId}
+            and user_id is null
+            and status in ('PENDING', 'PROCESSING')
+          returning id
+        `;
+  return rows.length > 0;
 }
 
 export async function markImageUploadStatus(

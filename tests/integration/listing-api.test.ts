@@ -551,7 +551,9 @@ describe("image upload flow", () => {
     const [row] = await sql<{ storage_path: string }[]>`
       select storage_path from listing_images where id = ${imageId}
     `;
-    expect(row.storage_path).toBe(`listings/${imageId}.webp`);
+    // Per-attempt nonce (claim-race fix): still rooted at listings/,
+    // still image-id-prefixed, still free of owner/listing identifiers.
+    expect(row.storage_path).toMatch(new RegExp(`^listings/${imageId}-[0-9a-f-]{36}\\.webp$`));
     expect(row.storage_path).not.toContain(seller.userId);
     expect(row.storage_path).not.toContain(listingId);
     expect(storage.has("listing-images", row.storage_path)).toBe(true);

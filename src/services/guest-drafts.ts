@@ -35,10 +35,12 @@ import type { DraftPatchInput } from "@/validators/listings";
  * feature, a missing/expired/foreign capability and an unknown listing
  * all produce the SAME LISTING_NOT_FOUND — no enumeration oracle.
  *
- * Deliberately absent here (later PRs, per the phased plan): image
- * uploads (listing_image_uploads.user_id is NOT NULL and its queries
- * are user-scoped — guest uploads need their own schema/authorization
- * design), OTP, user creation, claiming, submission, payments.
+ * Deliberately absent here (later PRs, per the phased plan): OTP,
+ * user creation, claiming, submission, payments. Guest image flows
+ * live in listing-images.ts (PR B). PR C's claim transaction must
+ * re-home BOTH the listings row and its pending listing_image_uploads
+ * rows (contract in migration 20261020100000_guest_image_uploads.sql)
+ * so no upload FK can block the claim or guest-session cleanup.
  */
 
 function notFound(): ApiError {

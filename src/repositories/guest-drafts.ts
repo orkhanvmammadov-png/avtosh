@@ -128,6 +128,31 @@ export async function getGuestListing(
   return rows[0];
 }
 
+/**
+ * Minimal locked guest-listing lookup (image flows): the row lock plus
+ * the unexpired-session join, mirroring getOwnedListingForUpdate.
+ * LOCK ORDER for guest flows that need both locks: guest session row
+ * FIRST, listings row SECOND (createGuestDraft and the upload issuance
+ * follow it; condemn/claim lock only the listings row, so no cycle).
+ */
+export async function getGuestListingForUpdate(
+  sql: Sql,
+  listingId: string,
+  sessionId: string,
+): Promise<{ id: string; status: string; revision: number } | undefined> {
+  const rows = await sql<{ id: string; status: string; revision: number }[]>`
+    select l.id, l.status, l.revision
+    from listings l
+    join guest_draft_sessions s
+      on s.id = l.guest_session_id and s.expires_at > now()
+    where l.id = ${listingId}
+      and l.guest_session_id = ${sessionId}
+      and l.owner_id is null
+    for update of l
+  `;
+  return rows[0];
+}
+
 export async function createGuestDraftListing(
   sql: Sql,
   sessionId: string,
@@ -420,6 +445,12 @@ export async function deleteExpiredGuestSessions(
       where expires_at < now() - make_interval(secs => ${graceSeconds})
         and not exists (
           select 1 from listings l where l.guest_session_id = guest_draft_sessions.id
+        )
+        -- PR C transfers upload rows on claim; this guard only keeps a
+        -- missed transfer from crashing the sweep on the RESTRICT FK.
+        and not exists (
+          select 1 from listing_image_uploads u
+          where u.guest_session_id = guest_draft_sessions.id
         )
       limit ${limit}
     )
