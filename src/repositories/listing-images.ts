@@ -313,13 +313,16 @@ export async function getImageUploadForUpdate(
 }
 
 /**
- * ACTOR-SCOPED terminal status mark (PR B race fix): a stale request
- * whose upload was re-homed by a claim (PR C) matches zero rows here
- * and cannot mark the new owner's upload FAILED/EXPIRED. Returns
- * whether the mark landed — callers gate temp-object deletion on it,
- * so cleanup can never remove a temp object a claimed upload still
- * needs. Non-terminal flows and the O.12 edit-image service keep the
- * unscoped markImageUploadStatus below.
+ * ACTOR- and STATE-scoped terminal status mark (PR B race fixes): a
+ * stale request whose upload was re-homed by a claim (PR C) matches
+ * zero rows here, and so does a stale failure arriving AFTER another
+ * confirmation completed the upload — FAILED/EXPIRED only ever win
+ * from a pending state, so a COMPLETED row (and with it repeat-confirm
+ * idempotency) can never be regressed. Returns whether the transition
+ * won — callers gate temp-object deletion on it, so cleanup can never
+ * remove a temp object a live upload still needs. Non-terminal flows
+ * and the O.12 edit-image service keep the unscoped
+ * markImageUploadStatus below.
  */
 export async function markImageUploadStatusScoped(
   sql: Sql,
@@ -337,6 +340,7 @@ export async function markImageUploadStatusScoped(
           update listing_image_uploads
           set status = ${input.status}::image_upload_status
           where id = ${input.uploadId} and user_id = ${input.owner.userId}
+            and status in ('PENDING', 'PROCESSING')
           returning id
         `
       : await sql<{ id: string }[]>`
@@ -345,6 +349,7 @@ export async function markImageUploadStatusScoped(
           where id = ${input.uploadId}
             and guest_session_id = ${input.owner.sessionId}
             and user_id is null
+            and status in ('PENDING', 'PROCESSING')
           returning id
         `;
   return rows.length > 0;

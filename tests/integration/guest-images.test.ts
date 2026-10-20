@@ -242,6 +242,14 @@ describe("guest image lifecycle", () => {
       select count(*)::text as n from listing_images where listing_id = ${listingId}
     `;
     expect(Number(after!.n)).toBe(3);
+    // Only the COMMITTED attempts' objects remain — the losing
+    // concurrent attempt's nonce object was cleaned up, never orphaned.
+    const committedPaths = await sql<{ storage_path: string }[]>`
+      select storage_path from listing_images where listing_id = ${listingId}
+    `;
+    expect(new Set(finalsIn(store))).toEqual(
+      new Set(committedPaths.map((r) => `${config.imagesBucket}/${r.storage_path}`)),
+    );
 
     // Reorder + explicit primary + delete-with-promotion.
     const secondPath = await storagePathOf(second.image.id);
@@ -560,14 +568,16 @@ describe("stale guest attempts cannot damage a claimed upload", () => {
     const config = listingImageConfig();
     // Gate exactly the FIRST final-object write (the guest attempt's);
     // later writes (the seller's) pass through untouched.
-    const gate = barrier();
+    const entered = barrier();
+    const release = barrier();
     let gated = true;
     const provider: StorageProvider = {
       ...base.provider,
       async uploadObject(bucket, path, data, contentType) {
         if (bucket === config.imagesBucket && gated) {
           gated = false;
-          await gate.reached;
+          entered.reach(); // the guest is provably AT its final write now
+          await release.reached;
         }
         return base.provider.uploadObject(bucket, path, data, contentType);
       },
@@ -583,7 +593,7 @@ describe("stale guest attempts cannot damage a claimed upload", () => {
       () => "confirmed" as const,
       (error) => (error instanceof ApiError ? error.code : "unexpected"),
     );
-    await new Promise((resolve) => setTimeout(resolve, 100)); // let it reach the gate (download+processing are in-memory)
+    await entered.reached; // paused at the intended step, by signal
     // …the claim re-homes listing + uploads, and the OWNER completes
     // the SAME upload through the authenticated flow.
     await claimAndRehome(listingId, sessionId);
@@ -594,7 +604,7 @@ describe("stale guest attempts cannot damage a claimed upload", () => {
     // Release the stale guest attempt: it writes ITS OWN nonce object,
     // fails its guest-scoped final transaction, and compensates only
     // its own object — the owner's row AND object must survive.
-    gate.reach();
+    release.reach();
     const outcome = await guestConfirm;
     expect(["LISTING_NOT_FOUND", "IMAGE_UPLOAD_NOT_FOUND"]).toContain(outcome);
     const [row] = await sql<{ id: string; storage_path: string }[]>`
@@ -609,14 +619,16 @@ describe("stale guest attempts cannot damage a claimed upload", () => {
     const sql = getSql();
     const base = memoryStorage();
     const config = listingImageConfig();
-    const gate = barrier();
+    const entered = barrier();
+    const release = barrier();
     let gated = true;
     const provider: StorageProvider = {
       ...base.provider,
       async downloadObject(bucket, path) {
         if (bucket === config.uploadsBucket && gated) {
           gated = false;
-          await gate.reached;
+          entered.reach(); // provably paused at the byte download
+          await release.reached;
         }
         return base.provider.downloadObject(bucket, path);
       },
@@ -633,9 +645,9 @@ describe("stale guest attempts cannot damage a claimed upload", () => {
       () => "confirmed" as const,
       (error) => (error instanceof ApiError ? error.code : "unexpected"),
     );
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await entered.reached;
     await claimAndRehome(listingId, sessionId);
-    gate.reach();
+    release.reach();
     const outcome = await guestConfirm;
     expect(outcome).toBe("IMAGE_INVALID_FORMAT"); // the guest still gets the honest error
 
@@ -661,14 +673,16 @@ describe("stale guest attempts cannot damage a claimed upload", () => {
   it("a stale signed-URL failure cannot FAIL an upload row the claim re-homed", async () => {
     const sql = getSql();
     const base = memoryStorage();
-    const gate = barrier();
+    const entered = barrier();
+    const release = barrier();
     let gated = true;
     const provider: StorageProvider = {
       ...base.provider,
       async createSignedUploadUrl(bucket, path, ttl) {
         if (gated) {
           gated = false;
-          await gate.reached;
+          entered.reach(); // the upload row is committed; paused at signing
+          await release.reached;
           throw new Error("signing outage");
         }
         return base.provider.createSignedUploadUrl(bucket, path, ttl);
@@ -687,15 +701,74 @@ describe("stale guest attempts cannot damage a claimed upload", () => {
       () => "issued" as const,
       (error) => (error instanceof ApiError ? error.code : "unexpected"),
     );
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await entered.reached;
     await claimAndRehome(listingId, sessionId);
-    gate.reach();
+    release.reach();
     expect(await issuance).toBe("INTERNAL_ERROR");
 
     const [row] = await sql<{ status: string; user_id: string | null }[]>`
       select status, user_id from listing_image_uploads where listing_id = ${listingId}
     `;
     expect(row).toMatchObject({ status: "PENDING", user_id: seller.user.id });
+  });
+});
+
+describe("terminal failure cannot regress a completed upload", () => {
+  it("a stale failure after a successful concurrent confirm leaves COMPLETED intact; repeat confirm succeeds", async () => {
+    const sql = getSql();
+    const base = memoryStorage();
+    const config = listingImageConfig();
+    // Attempt B (first download call) pauses at the gate and, when
+    // released, receives GARBAGE bytes → its processing fails and it
+    // attempts a terminal FAILED mark. Attempt A (second call) gets
+    // the real image and completes while B is paused.
+    const entered = barrier();
+    const release = barrier();
+    let call = 0;
+    const provider: StorageProvider = {
+      ...base.provider,
+      async downloadObject(bucket, path) {
+        if (bucket === config.uploadsBucket) {
+          call += 1;
+          if (call === 1) {
+            entered.reach();
+            await release.reached;
+            return Buffer.from("garbage after the gate");
+          }
+        }
+        return base.provider.downloadObject(bucket, path);
+      },
+    };
+    setStorageProviderForTesting(provider);
+
+    const { listingId, session } = await newGuestDraft();
+    const uploadId = await issueAndPut(base, session, listingId);
+    const tempKey = `${config.uploadsBucket}/${guestTempPath(session.sessionId, listingId, uploadId)}`;
+
+    const failing = confirmGuestUpload(session, listingId, uploadId).then(
+      () => "confirmed" as const,
+      (error) => (error instanceof ApiError ? error.code : "unexpected"),
+    );
+    await entered.reached; // B provably paused before its bytes arrive
+    const completed = await confirmGuestUpload(session, listingId, uploadId);
+    expect(completed.image.id).toBe(uploadId);
+    const committedPath = await storagePathOf(uploadId);
+    release.reach();
+    expect(await failing).toBe("IMAGE_INVALID_FORMAT");
+
+    // The stale terminal mark lost: the upload stays COMPLETED with
+    // its image reference, so repeat confirm is still idempotent…
+    const [row] = await sql<{ status: string; image_id: string | null }[]>`
+      select status, image_id from listing_image_uploads where id = ${uploadId}
+    `;
+    expect(row).toMatchObject({ status: "COMPLETED", image_id: uploadId });
+    const repeat = await confirmGuestUpload(session, listingId, uploadId);
+    expect(repeat.image.id).toBe(uploadId);
+    // …the committed image row and ONLY its object survive, and the
+    // loser's gated temp deletion never ran against a won transition.
+    expect(base.objects.has(`${config.imagesBucket}/${committedPath}`)).toBe(true);
+    expect(finalsIn(base)).toEqual([`${config.imagesBucket}/${committedPath}`]);
+    void tempKey; // temp was deleted by the SUCCESSFUL confirm, legitimately
   });
 });
 
