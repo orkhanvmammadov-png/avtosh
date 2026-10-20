@@ -27,11 +27,16 @@ export function guestDraftsEnabled(): boolean {
 export interface GuestDraftLimits {
   sessionsPerIpPerHour: number;
   draftsPerIpPerHour: number;
+  /** Signed-URL issuance brake per guest session per hour (PR B):
+      bounds temp-storage cost even when uploads are never confirmed.
+      Headroom above maxImages × a few retries; never affects sellers. */
+  uploadsPerSessionPerHour: number;
 }
 
 export function guestDraftLimits(): GuestDraftLimits {
   return {
     sessionsPerIpPerHour: envInt("GUEST_SESSIONS_IP_MAX_PER_HOUR", 10),
     draftsPerIpPerHour: envInt("GUEST_DRAFTS_IP_MAX_PER_HOUR", 20),
+    uploadsPerSessionPerHour: envInt("GUEST_UPLOADS_SESSION_MAX_PER_HOUR", 60),
   };
 }
